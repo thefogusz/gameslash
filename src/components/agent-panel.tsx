@@ -15,7 +15,7 @@ export function AgentPanel({ agents, busy, mutate }: {
   return <div className="import-panel agent-panel">
     <div className="studio-heading"><div>
       <span className="eyebrow">AGENT CONNECTIONS</span>
-      <h1>ให้เอเจนต์ช่วยเตรียม คุณเลือกเผยแพร่</h1>
+      <h1>เอเจนต์และการเชื่อมต่อ</h1>
       <p>เชื่อม Dots หรือไคลเอนต์ MCP ผ่าน HTTP และ Bearer token</p>
     </div></div>
     <div className="import-columns">
@@ -73,7 +73,7 @@ const actions: Record<string, string> = {
 };
 export function ActivityPanel({ activity }: { activity: Database["activity"] }) {
   return <div className="import-panel">
-    <div className="studio-heading"><div><span className="eyebrow">RECENT ACTIVITY</span><h1>ความเคลื่อนไหวในสตูดิโอ</h1><p>การจัดการโดยคุณและเอเจนต์ 200 รายการล่าสุด เริ่มบันทึกตั้งแต่เปิดใช้ระบบนี้</p></div></div>
+    <div className="studio-heading"><div><span className="eyebrow">RECENT ACTIVITY</span><h1>ประวัติล่าสุด</h1><p>การจัดการโดยคุณและเอเจนต์ 200 รายการล่าสุด เริ่มบันทึกตั้งแต่เปิดใช้ระบบนี้</p></div></div>
     <div className="agent-list">{activity.length ? activity.map(item => <div className="agent-row" key={item.id}>
       <div><strong>{actions[item.action] || item.action} · {item.title}</strong><p>{item.actor}</p></div>
       <time dateTime={item.at}>{new Date(item.at).toLocaleString("th-TH")}</time>

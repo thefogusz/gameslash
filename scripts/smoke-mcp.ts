@@ -29,6 +29,7 @@ const agentIds: string[] = [];
 const entryIds: string[] = [];
 try {
   assert.equal((await fetch(`${origin}/api/mcp`, { method: "POST", headers: json, body: "{}" })).status, 401);
+  assert.equal((await fetch(`${origin}/api/notifications`)).status,401);
   async function issue(write: boolean) {
     const name = `MCP smoke ${crypto.randomUUID()}`;
     const issued = await manage({ action: "create_agent", name, canWriteDrafts: write });
@@ -69,6 +70,12 @@ try {
   entryIds.push(draft.id);
   assert.equal(draft.status, "draft");
   assert.deepEqual(draft.content,content);
+  const notificationRevision=(await snapshot()).revision;
+  const notifications=await fetch(`${origin}/api/notifications`,{headers});
+  assert.equal(notifications.headers.get("cache-control"),"no-store");
+  const notification=(await notifications.json()).items.find((item:{id:string})=>item.id===draft.id);
+  assert.equal(notification.status,"draft");assert.equal("body" in notification,false);assert.equal("content" in notification,false);
+  assert.equal((await snapshot()).revision,notificationRevision);
   assert.equal((await call(token, "create_draft", { requestId, entry, context })).structuredContent.entry.id, draft.id);
   assert.equal((await call(token, "create_draft", { requestId, entry: { ...entry, title: "Different input" } })).isError, true);
   assert.equal((await call(reader, "get_entry", { id: draft.id })).isError, true);
@@ -88,6 +95,7 @@ try {
   assert.ok(own.items.some((e: {id:string}) => e.id === draft.id));
   const again = (await call(token, "submit_for_review", { id: draft.id, expectedUpdatedAt: feedback.entry.updatedAt })).structuredContent.entry;
   await manage({ action: "review", id: draft.id, expectedUpdatedAt: again.updatedAt, decision: "publish", note: "Private review note" });
+  assert.equal((await (await fetch(`${origin}/api/notifications`,{headers})).json()).items.some((item:{id:string})=>item.id===draft.id),false);
   assert.equal((await call(reader, "get_entry", { id: draft.id })).structuredContent.review, null);
   const publicHtml=await (await fetch(`${origin}/item/${draft.id}`)).text();
   assert.equal(publicHtml.includes("Private review note"),false);

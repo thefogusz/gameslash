@@ -20,7 +20,7 @@ export function ConnectionsPanel({ openAgents, openInbox, entries, categories, c
   const [copied, setCopied] = useState(false);
   useEffect(() => { setEndpoint(`${window.location.origin}/api/mcp`); }, []);
   return <div className="connections-panel">
-    <div className="studio-heading"><div><span className="eyebrow">SOURCES & CONNECTIONS</span><h1>ให้เอเจนต์หา คุณเลือกสิ่งที่ลงเว็บ</h1><p>เชื่อมเครื่องมือค้นข้อมูลกับเอเจนต์ แล้วส่งผลงานกลับมาที่กล่องรอตรวจ</p></div></div>
+    <div className="studio-heading"><div><span className="eyebrow">SOURCES & CONNECTIONS</span><h1>แหล่งข้อมูล</h1><p>เชื่อมเครื่องมือค้นข้อมูลกับเอเจนต์ แล้วส่งผลงานกลับมาที่กล่องรอตรวจ</p></div></div>
     <CollectionPanel refreshCatalog={refreshCatalog} entries={entries} categories={categories} createDraft={createDraft} openInbox={openInbox} />
     <details className="connection-agent-guide"><summary>เชื่อม Dots / API อื่น และดูคำสั่งสำหรับเอเจนต์</summary>
     <ol className="connection-flow"><li><b>01</b><strong>แหล่งข้อมูลสาธารณะ</strong><span>โพสต์ เกม และเครื่องมือ</span></li><li><b>02</b><strong>Apify / API อื่น</strong><span>รวบรวมข้อมูลจากต้นทาง</span></li><li><b>03</b><strong>Dots / เอเจนต์</strong><span>คัดกรอง สรุป และตรวจซ้ำ</span></li><li><b>04</b><strong>คุณตรวจใน Console</strong><span>เผยแพร่ หรือส่งกลับให้แก้</span></li></ol>

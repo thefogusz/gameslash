@@ -14,18 +14,22 @@ import {
   LogOut,
   Upload,
   Download,
-  Pencil,
   LayoutTemplate,
   ListFilter,
   RefreshCw,
   LockKeyhole,
   Check,
-  Search,
   GripVertical,
   Loader2,
   Inbox,
   Plug,
+  History,
+  ChevronRight,
 } from "lucide-react";
+import "./console.css";
+import { ContentLibrary } from "./content-library";
+import { NotificationCenter } from "./notification-center";
+import type { DraftNotification } from "@/lib/notifications";
 import { HomeContent } from "./directory";
 import { EntryForm } from "./entry-form";
 import { AgentPanel, ActivityPanel } from "./agent-panel";
@@ -134,21 +138,39 @@ export function Admin() {
     [tab, setTab] = useState<"inbox" | "entries" | "layout" | "import" | "agents" | "activity" | "connections">("inbox");
   const [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
-    [busy, setBusy] = useState(false),
-    [filter, setFilter] = useState("all"),
-    [query, setQuery] = useState("");
+    [busy, setBusy] = useState(false);
+  const [reviewTarget,setReviewTarget]=useState<DraftNotification|null>(null);
+  const [reviewVersion,setReviewVersion]=useState(0);
+  const [refreshing,setRefreshing]=useState(false);
+  const unsaved=useRef(false);
   const [editing, setEditing] = useState<Entry | null>(null);
   async function reload() {
     setError("");
+    setRefreshing(true);
     try {
-      setData(await request("/api/manage"));
+      const next=await request("/api/manage");setData(next);return next as Snapshot;
     } catch (e) {
       setError((e as Error).message);
-    }
+      return null;
+    } finally {setRefreshing(false);}
   }
   useEffect(() => {
     void reload();
   }, []);
+  useEffect(()=>{if(!notice)return;const timer=setTimeout(()=>setNotice(""),5000);return()=>clearTimeout(timer);},[notice]);
+  useEffect(()=>{const warn=(e:BeforeUnloadEvent)=>{if(unsaved.current)e.preventDefault();};window.addEventListener("beforeunload",warn);return()=>window.removeEventListener("beforeunload",warn);},[]);
+  function canLeave(){if(unsaved.current&&!window.confirm("มีการแก้ไขที่ยังไม่ได้บันทึก ต้องการออกจากหน้านี้หรือไม่?"))return false;unsaved.current=false;return true;}
+  function navigate(next:typeof tab){if(next===tab||!canLeave())return;if(next==="inbox"){setReviewTarget(null);setReviewVersion(v=>v+1);}setTab(next);setError("");}
+  async function openNotification(item:DraftNotification){
+    if(!canLeave())return false;
+    const next=await reload();if(!next)return false;
+    const entry=next.entries.find(e=>e.id===item.id);
+    if(!entry){setError("ไม่พบรายการนี้แล้ว");return false;}
+    if(entry.status==="draft"||entry.status==="pending"){setReviewTarget(entry);setReviewVersion(v=>v+1);setTab("inbox");}
+    else {setTab("entries");setEditing(entry);}
+    requestAnimationFrame(()=>document.getElementById("studio-main")?.focus());
+    return true;
+  }
   async function mutate(body: Record<string, unknown>, message: string) {
     setBusy(true);
     setError("");
@@ -187,20 +209,18 @@ export function Admin() {
       updatedAt: new Date().toISOString(),
     });
   }
-  const items =
-    data?.entries.filter(
-      (e) =>
-        (filter === "all" || filter === e.status || filter === e.kind) &&
-        `${e.title} ${e.author}`.toLowerCase().includes(query.toLowerCase()),
-    ) || [];
+  const tabNames={inbox:"กล่องรอตรวจ",entries:"คลังเนื้อหา",layout:"จัดหน้าเว็บไซต์",import:"นำเข้า / ส่งออก",connections:"แหล่งข้อมูล",agents:"เอเจนต์และการเชื่อมต่อ",activity:"ประวัติล่าสุด"};
   return (
     <div className="admin-app">
+      <a href="#studio-main" className="console-skip">ข้ามไปเนื้อหา</a>
       <header className="admin-header">
         <Link className="wordmark" href="/">
           game<span className="wordmark-slash">/</span>slash{" "}
           <span className="admin-badge">STUDIO</span>
         </Link>
+        <div className="studio-breadcrumb"><span>พื้นที่ทำงาน</span><ChevronRight size={15}/><strong>{tabNames[tab]}</strong></div>
         <div>
+          <NotificationCenter revision={data?.revision} onOpen={openNotification}/>
           <Link href="/" target="_blank" className="button">
             <Eye size={15} />
             ดูหน้าเว็บ <ArrowUpRight size={13} />
@@ -221,55 +241,54 @@ export function Admin() {
           </button>
         </div>
       </header>
-      <div className="studio-nav">
-        <button className={tab === "inbox" ? "active" : ""} onClick={() => setTab("inbox")}>
+      <label className="console-mobile-navigation">เมนูจัดการ<select value={tab} onChange={e=>navigate(e.target.value as typeof tab)}>{Object.entries(tabNames).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>
+      <nav className="studio-nav" aria-label="เมนูจัดการเว็บไซต์">
+        <p className="nav-section-label">จัดการเนื้อหา</p>
+        <button aria-current={tab==="inbox"?"page":undefined} className={tab === "inbox" ? "active" : ""} onClick={() => navigate("inbox")}>
           <Inbox size={16} />กล่องรอตรวจ <span>{data?.entries.filter(e => e.status === "pending").length || 0}</span>
         </button>
         <button
           className={tab === "entries" ? "active" : ""}
-          onClick={() => setTab("entries")}
+          aria-current={tab==="entries"?"page":undefined} onClick={() => navigate("entries")}
         >
           <ListFilter size={16} />
           คลังเนื้อหา
         </button>
         <button
           className={tab === "layout" ? "active" : ""}
-          onClick={() => setTab("layout")}
+          aria-current={tab==="layout"?"page":undefined} onClick={() => navigate("layout")}
         >
           <LayoutTemplate size={16} />
           จัดหน้าเว็บไซต์
         </button>
-        <button
-          className={tab === "import" ? "active" : ""}
-          onClick={() => setTab("import")}
-        >
-          <Upload size={16} />
-          นำเข้า JSON
-        </button>
-        <button className={tab === "connections" ? "active" : ""} onClick={() => setTab("connections")}>
+        <p className="nav-section-label">เครื่องมือและระบบ</p>
+        <button aria-current={tab==="connections"?"page":undefined} className={tab === "connections" ? "active" : ""} onClick={() => navigate("connections")}>
           <Plug size={16} />แหล่งข้อมูล
         </button>
-        <button className={tab === "agents" ? "active" : ""} onClick={() => setTab("agents")}>
+        <button aria-current={tab==="agents"?"page":undefined} className={tab === "agents" ? "active" : ""} onClick={() => navigate("agents")}>
           <LockKeyhole size={16} />เอเจนต์
         </button>
-        <button className={tab === "activity" ? "active" : ""} onClick={() => setTab("activity")}>
-          ประวัติล่าสุด
+        <button aria-current={tab==="import"?"page":undefined} className={tab==="import"?"active":""} onClick={()=>navigate("import")}><Upload size={16}/>นำเข้า / ส่งออก</button>
+        <button aria-current={tab==="activity"?"page":undefined} className={tab === "activity" ? "active" : ""} onClick={() => navigate("activity")}>
+          <History size={16}/>ประวัติล่าสุด
         </button>
-        <button className="studio-refresh" onClick={reload}>
-          <RefreshCw size={15} />
-          โหลดข้อมูลล่าสุด
+        <button className="studio-refresh" disabled={refreshing||busy} onClick={()=>{if(canLeave())void reload();}}>
+          <RefreshCw size={17} className={refreshing?"spin":""}/>
+          {refreshing?"กำลังอัปเดต…":"โหลดข้อมูลล่าสุด"}
         </button>
-      </div>
-      <div className="studio-body">
+        <div className="nav-foot"><span className="live-dot"/><span>คุณเป็นผู้ยืนยันเผยแพร่<br/><small>งานจากเอเจนต์เข้าร่างก่อนเสมอ</small></span></div>
+      </nav>
+      <main className="studio-body" id="studio-main" tabIndex={-1}>
         {error && (
           <div className="form-error" role="alert">
             {error}
           </div>
         )}
         {notice && (
-          <div className="success-notice" role="status">
+          <div className="success-notice console-toast" role="status">
             <Check size={15} />
             {notice}
+            <button className="icon-button" aria-label="ปิดข้อความสำเร็จ" onClick={()=>setNotice("")}><X size={16}/></button>
           </div>
         )}
         {!data ? (
@@ -290,127 +309,17 @@ export function Admin() {
                 ระบบบันทึกข้อมูลยังไม่พร้อมใช้งาน กรุณาลองใหม่ภายหลัง
               </div>
             )}
-            {tab === "entries" && (
-              <>
-                <div className="studio-heading">
-                  <div>
-                    <span className="eyebrow">YOUR COLLECTION</span>
-                    <h1>ทุกเรื่องราว เริ่มจากตรงนี้</h1>
-                    <p>ตรวจ แก้ไข และเลือกสิ่งที่จะปรากฏบน gameslash</p>
-                  </div>
-                  <button className="button primary" onClick={newEntry}>
-                    <Plus size={16} />
-                    เพิ่มรายการ
-                  </button>
-                </div>
-                <div className="admin-summary">
-                  <span>
-                    <b>
-                      {
-                        data.entries.filter((e) => e.status === "published")
-                          .length
-                      }
-                    </b>{" "}
-                    เผยแพร่แล้ว
-                  </span>
-                  <span>
-                    <b>
-                      {
-                        data.entries.filter((e) => e.status === "pending")
-                          .length
-                      }
-                    </b>{" "}
-                    รอตรวจสอบ
-                  </span>
-                  <span>
-                    <b>
-                      {data.entries.filter((e) => e.status === "draft").length}
-                    </b>{" "}
-                    ฉบับร่าง
-                  </span>
-                </div>
-                <div className="admin-filter">
-                  <div className="filter-chips">
-                    {[
-                      ["all", "ทั้งหมด"],
-                      ["pending", "รอตรวจ"],
-                      ["draft", "ฉบับร่าง"],
-                      ["game", "เกม"],
-                      ["tool", "เครื่องมือ"],
-                      ["article", "บทความ"],
-                      ["post", "คอมมูนิตี้"],
-                      ["archived", "เก็บเข้าคลัง"],
-                    ].map(([v, l]) => (
-                      <button
-                        key={v}
-                        aria-pressed={filter === v}
-                        onClick={() => setFilter(v)}
-                      >
-                        {l}
-                      </button>
-                    ))}
-                  </div>
-                  <label className="search-box">
-                    <Search size={15} />
-                    <input
-                      value={query}
-                      onChange={(e) => setQuery(e.target.value)}
-                      aria-label="ค้นหาเนื้อหา"
-                      placeholder="ค้นหาในคลัง…"
-                    />
-                  </label>
-                </div>
-                <div className="content-table">
-                  <div className="table-head">
-                    <span>รายการ</span>
-                    <span>ประเภท</span>
-                    <span>สถานะ</span>
-                    <span>จัดการ</span>
-                  </div>
-                  {items.length ? (
-                    items.map((e) => (
-                      <div className="table-row" key={e.id}>
-                        <div>
-                          <strong>{e.title}</strong>
-                          <small>
-                            {e.author} · {e.category}
-                          </small>
-                        </div>
-                        <span>{kindLabels[e.kind]}</span>
-                        <span className={`status status-${e.status}`}>
-                          {
-                            {
-                              published: "เผยแพร่แล้ว",
-                              pending: "รอตรวจสอบ",
-                              draft: "ฉบับร่าง",
-                              archived: "เก็บเข้าคลัง",
-                            }[e.status]
-                          }
-                        </span>
-                        <button
-                          className="button small-button"
-                          onClick={() => setEditing(e)}
-                        >
-                          <Pencil size={13} />
-                          แก้ไข
-                        </button>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="empty-state">ไม่มีรายการในหมวดนี้</div>
-                  )}
-                </div>
-              </>
-            )}
-            {tab === "inbox" && <ReviewPanel entries={data.entries} submissions={data.submissions} agents={data.agents} reviews={data.reviews} busy={busy} edit={setEditing} connect={() => setTab("connections")} decide={async (entry, decision, note) => {
+            {tab === "entries" && <ContentLibrary entries={data.entries} edit={setEditing} create={newEntry} review={entry=>{setReviewTarget(entry);setReviewVersion(v=>v+1);setTab("inbox");}} />}
+            {tab === "inbox" && <ReviewPanel key={reviewVersion} initialTarget={reviewTarget} entries={data.entries} submissions={data.submissions} agents={data.agents} reviews={data.reviews} busy={busy} edit={setEditing} connect={() => setTab("connections")} decide={async (entry, decision, note) => {
               await mutate({ action: "review", id: entry.id, expectedUpdatedAt: entry.updatedAt, decision, note }, { publish: "เผยแพร่แล้ว รายการแสดงบนเว็บทันที", return: "ส่งกลับเป็นฉบับร่างแล้ว เอเจนต์อ่านหมายเหตุและแก้ไขต่อได้", reject: "เก็บรายการเข้าคลังแล้ว สามารถเปิดกลับมาแก้ได้" }[decision]);
             }} />}
-            {tab === "connections" && <ConnectionsPanel refreshCatalog={reload} openAgents={() => setTab("agents")} openInbox={() => setTab("inbox")} entries={data.entries} categories={data.layout.categories} createDraft={async (jobId, sourceUrl, entry) => { await mutate({ action: "collection_draft", jobId, sourceUrl, entry }, "ส่งเข้ากล่องรอตรวจแล้ว"); }} />}
+            {tab === "connections" && <ConnectionsPanel refreshCatalog={async()=>{await reload();}} openAgents={() => setTab("agents")} openInbox={() => setTab("inbox")} entries={data.entries} categories={data.layout.categories} createDraft={async (jobId, sourceUrl, entry) => { await mutate({ action: "collection_draft", jobId, sourceUrl, entry }, "ส่งเข้ากล่องรอตรวจแล้ว"); }} />}
             {tab === "layout" && (
               <LayoutEditor
                 key={data.revision}
                 data={data}
                 busy={busy}
+                onDirty={dirty=>{unsaved.current=dirty;}}
                 save={async (layout, publish) => {
                   await mutate(
                     { action: "layout", layout, publish },
@@ -437,9 +346,9 @@ export function Admin() {
             {tab === "activity" && <ActivityPanel activity={data.activity} />}
           </>
         )}
-      </div>
+      </main>
       {editing && data && (
-        <EditorDialog onClose={() => setEditing(null)}>
+        <EditorDialog onClose={() => {if(canLeave())setEditing(null);}}>
           <div className="drawer-heading">
             <div>
               <span className="eyebrow">CONTENT EDITOR</span>
@@ -448,13 +357,14 @@ export function Admin() {
             <button
               className="icon-button"
               aria-label="ปิดตัวแก้ไข"
-              onClick={() => setEditing(null)}
+              onClick={() => {if(canLeave())setEditing(null);}}
             >
               <X size={20} />
             </button>
           </div>
           <EntryForm
             admin
+            onDirty={()=>{unsaved.current=true;}}
             initial={editing}
             categories={data.layout.categories}
             onSave={async (entry, status) => {
@@ -464,7 +374,7 @@ export function Admin() {
                   ? "บันทึกและเผยแพร่รายการแล้ว"
                   : "บันทึกรายการแล้ว",
               );
-              setEditing(null);
+              unsaved.current=false;setEditing(null);
             }}
           />
         </EditorDialog>
@@ -476,10 +386,12 @@ function LayoutEditor({
   data,
   busy,
   save,
+  onDirty,
 }: {
   data: Snapshot;
   busy: boolean;
   save: (layout: Layout, publish: boolean) => Promise<void>;
+  onDirty:(dirty:boolean)=>void;
 }) {
   const [layout, setLayout] = useState<Layout>(
       structuredClone(data.draftLayout),
@@ -505,6 +417,7 @@ function LayoutEditor({
   }
   const changed = JSON.stringify(layout) !== JSON.stringify(data.draftLayout);
   useEffect(() => {
+    onDirty(changed);
     if (!changed) return;
     const warn = (e: BeforeUnloadEvent) => {
       e.preventDefault();
@@ -517,7 +430,7 @@ function LayoutEditor({
       <div className="studio-heading">
         <div>
           <span className="eyebrow">MAKE IT YOURS</span>
-          <h1>จัดหน้าเว็บ ในแบบที่เห็น</h1>
+          <h1>จัดหน้าเว็บไซต์</h1>
           <p>
             คลิกกรอบในตัวอย่างเพื่อแก้ไข จัดลำดับด้วยปุ่มลูกศร
             แล้วเผยแพร่เมื่อพร้อม
@@ -840,7 +753,7 @@ function ImportPanel({
       <div className="studio-heading">
         <div>
           <span className="eyebrow">FROM DISCOVERY TO COLLECTION</span>
-          <h1>นำเข้ารายการที่รวบรวมมา</h1>
+          <h1>นำเข้าและส่งออก</h1>
           <p>
             วาง JSON จาก Dots หรือเอเจนต์ได้สูงสุดครั้งละ 50 รายการ
             ทุกชิ้นจะเริ่มเป็นฉบับร่าง
@@ -933,7 +846,7 @@ function EditorDialog({
       ref={dialog}
       className="entry-drawer"
       aria-label="แก้ไขรายการ"
-      onCancel={onClose}
+      onCancel={(e)=>{e.preventDefault();onClose();}}
       onClick={(e) => {
         if (e.target === e.currentTarget) {
           const r = e.currentTarget.getBoundingClientRect();

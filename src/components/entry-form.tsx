@@ -18,12 +18,14 @@ export function EntryForm({
   onSave,
   admin = false,
   reviewOnly = false,
+  onDirty,
 }: {
   initial?: Partial<Entry>;
   categories: string[];
   onSave: (entry: EntryInput, status: Entry["status"]) => Promise<void>;
   admin?: boolean;
   reviewOnly?: boolean;
+  onDirty?:()=>void;
 }) {
   const [kind, setKind] = useState<Entry["kind"]>(initial?.kind || "game");
   const [busy, setBusy] = useState(false),
@@ -70,7 +72,7 @@ export function EntryForm({
     }
   }
   return (
-    <form className="entry-form" onSubmit={submit}>
+    <form className="entry-form" onSubmit={submit} onChangeCapture={onDirty}>
       {admin && (
         <label>
           ประเภท
@@ -187,9 +189,9 @@ export function EntryForm({
           />
         </label>
       </div>
-      {admin ? <ImageField label="ภาพปก" value={image} onChange={setImage} onBusy={setCoverBusy}/> : <label>ลิงก์ภาพปก<input value={image} onChange={e=>setImage(e.target.value)} maxLength={2000} placeholder="https://…/cover.jpg"/></label>}
+      {admin ? <ImageField label="ภาพปก" value={image} onChange={url=>{setImage(url);onDirty?.();}} onBusy={setCoverBusy}/> : <label>ลิงก์ภาพปก<input value={image} onChange={e=>setImage(e.target.value)} maxLength={2000} placeholder="https://…/cover.jpg"/></label>}
       <label>คำอธิบายภาพปก<input name="imageAlt" defaultValue={initial?.imageAlt || ""} maxLength={300} placeholder="อธิบายสิ่งที่เห็นในภาพ"/></label>
-      {kind === "article" ? <section><h3>เนื้อหาบทความ</h3><ArticleEditor initial={content} onChange={(doc,text)=>{setContent(doc);setBody(text.slice(0,20000));}} onBusy={setEditorBusy}/></section> : <label>รายละเอียดเพิ่มเติม<textarea name="body" maxLength={20000} rows={kind === "post" ? 8 : 4} value={body} onChange={e=>setBody(e.target.value)} placeholder="วิธีเล่น แพลตฟอร์ม หรือสิ่งที่ควรรู้"/></label>}
+      {kind === "article" ? <section><h3>เนื้อหาบทความ</h3><ArticleEditor initial={content} onChange={(doc,text)=>{setContent(doc);setBody(text.slice(0,20000));onDirty?.();}} onBusy={setEditorBusy}/></section> : <label>รายละเอียดเพิ่มเติม<textarea name="body" maxLength={20000} rows={kind === "post" ? 8 : 4} value={body} onChange={e=>setBody(e.target.value)} placeholder="วิธีเล่น แพลตฟอร์ม หรือสิ่งที่ควรรู้"/></label>}
       {admin && !reviewOnly && (
         <label>
           สถานะ

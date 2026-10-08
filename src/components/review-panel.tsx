@@ -6,7 +6,8 @@ import { kindLabels, type Database, type Entry } from "@/lib/model";
 
 export type SubmissionInfo = Record<string, Partial<Pick<Database["ingestions"][string], "agentId" | "context">>>;
 type Decision = Database["reviews"][string]["decision"];
-export function ReviewPanel({ entries, submissions, agents, reviews, busy, edit, decide, connect }: {
+export function ReviewPanel({ entries, submissions, agents, reviews, busy, edit, decide, connect, initialTarget }: {
+  initialTarget?: {id:string;status:string} | null;
   entries: Entry[];
   submissions: SubmissionInfo;
   agents: { id: string; name: string }[];
@@ -16,9 +17,9 @@ export function ReviewPanel({ entries, submissions, agents, reviews, busy, edit,
   decide: (entry: Entry, decision: Decision, note: string) => Promise<void>;
   connect: () => void;
 }) {
-  const [filter, setFilter] = useState("pending");
+  const [filter, setFilter] = useState(initialTarget?.status==="draft"?"draft":"pending");
   const [query, setQuery] = useState("");
-  const [selectedId, setSelectedId] = useState("");
+  const [selectedId, setSelectedId] = useState(initialTarget?.id||"");
   const tabs = [["pending", "รอตรวจ"], ["draft", "ฉบับร่าง"], ["signals", "คำถาม / ปัญหาจากชุมชน"], ["returned", "ส่งกลับแก้ไข"]];
   const matches = (e: Entry, f: string) => f === "signals" ? ["draft", "pending"].includes(e.status) && !!submissions[e.id]?.context?.signal : f === "returned" ? e.status === "draft" && reviews[e.id]?.decision === "return" : e.status === f;
   const items = entries.filter(e => matches(e, filter) && `${e.title} ${e.author}`.toLowerCase().includes(query.toLowerCase()))
@@ -26,7 +27,7 @@ export function ReviewPanel({ entries, submissions, agents, reviews, busy, edit,
   const selected = items.find(e => e.id === selectedId) || items[0];
   const submitter = (id: string) => agents.find(a => a.id === submissions[id]?.agentId)?.name || (submissions[id]?.agentId ? "เอเจนต์ที่ส่งรายการ" : "ส่งผ่านเว็บ / ผู้ดูแล");
   return <>
-    <div className="studio-heading"><div><span className="eyebrow">REVIEW INBOX</span><h1>เลือกสิ่งดี ๆ ให้คนได้ค้นพบ</h1><p>เปิดอ่านที่มา ตรวจรายละเอียด แล้วเลือกว่าจะเผยแพร่หรือส่งกลับแก้ไข</p></div></div>
+    <div className="studio-heading"><div><span className="eyebrow">REVIEW INBOX</span><h1>กล่องรอตรวจ</h1><p>เลือกอ่านหนึ่งรายการ ตรวจที่มา แล้วเผยแพร่หรือส่งกลับให้แก้</p></div><span className="inbox-total">{entries.filter(e=>e.status==="pending").length} รายการรอคุณตรวจ</span></div>
     <div className="review-toolbar">
       <div className="filter-chips">{tabs.map(([value, label]) => <button key={value} aria-pressed={filter === value} onClick={() => setFilter(value)}>{label} <b>{entries.filter(e => matches(e, value)).length}</b></button>)}</div>
       <label className="search-box"><Search size={15} /><input aria-label="ค้นหาในกล่องรอตรวจ" placeholder="ค้นหารายการ…" value={query} onChange={e => setQuery(e.target.value)} /></label>
