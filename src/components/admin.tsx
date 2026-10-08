@@ -30,6 +30,7 @@ import { HomeContent } from "./directory";
 import { EntryForm } from "./entry-form";
 import { AgentPanel, ActivityPanel } from "./agent-panel";
 import { ReviewPanel, type SubmissionInfo } from "./review-panel";
+import { SpotlightEditor } from "./spotlight-editor";
 import { ConnectionsPanel } from "./connections-panel";
 import {
   kindLabels,
@@ -404,7 +405,7 @@ export function Admin() {
             {tab === "inbox" && <ReviewPanel entries={data.entries} submissions={data.submissions} agents={data.agents} reviews={data.reviews} busy={busy} edit={setEditing} connect={() => setTab("connections")} decide={async (entry, decision, note) => {
               await mutate({ action: "review", id: entry.id, expectedUpdatedAt: entry.updatedAt, decision, note }, { publish: "เผยแพร่แล้ว รายการแสดงบนเว็บทันที", return: "ส่งกลับเป็นฉบับร่างแล้ว เอเจนต์อ่านหมายเหตุและแก้ไขต่อได้", reject: "เก็บรายการเข้าคลังแล้ว สามารถเปิดกลับมาแก้ได้" }[decision]);
             }} />}
-            {tab === "connections" && <ConnectionsPanel openAgents={() => setTab("agents")} />}
+            {tab === "connections" && <ConnectionsPanel refreshCatalog={reload} openAgents={() => setTab("agents")} openInbox={() => setTab("inbox")} entries={data.entries} categories={data.layout.categories} createDraft={async (jobId, sourceUrl, entry) => { await mutate({ action: "collection_draft", jobId, sourceUrl, entry }, "ส่งเข้ากล่องรอตรวจแล้ว"); }} />}
             {tab === "layout" && (
               <LayoutEditor
                 key={data.revision}
@@ -640,38 +641,7 @@ function LayoutEditor({
           </button>
           <div className="inspector-fields">
             {selected === "featured" ? (
-              <>
-                <h3>เกมแนะนำ</h3>
-                <p>ช่องแรกเป็นภาพใหญ่ เลือกได้สูงสุด 5 เกม</p>
-                {Array.from({ length: 5 }, (_, i) => (
-                  <label key={i}>
-                    ช่องที่ {i + 1}
-                    {i === 0 ? " · เกมเด่น" : ""}
-                    <select
-                      value={layout.featuredIds[i] || ""}
-                      onChange={(e) => {
-                        const ids = [...layout.featuredIds];
-                        ids[i] = e.target.value;
-                        setLayout({
-                          ...layout,
-                          featuredIds: ids.filter(Boolean),
-                        });
-                      }}
-                    >
-                      <option value="">ไม่แสดง</option>
-                      {data.entries
-                        .filter(
-                          (e) => e.kind === "game" && e.status === "published",
-                        )
-                        .map((e) => (
-                          <option value={e.id} key={e.id}>
-                            {e.title}
-                          </option>
-                        ))}
-                    </select>
-                  </label>
-                ))}
-              </>
+              <SpotlightEditor layout={layout} entries={data.entries} onChange={setLayout} />
             ) : (
               section && (
                 <>

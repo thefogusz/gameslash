@@ -4,6 +4,7 @@ import { checkDuplicate, collectionContextSchema, consumeLimit, entryInput, entr
 import { ConflictError } from "./postgres-store";
 
 export const managementMutation = z.discriminatedUnion("action", [
+  z.object({ action: z.literal("collection_draft"), revision: z.number().int(), jobId: z.string().uuid(), sourceUrl: z.string().url(), entry: entryInput }),
   z.object({ action: z.literal("review"), revision: z.number().int(), id: entrySchema.shape.id, expectedUpdatedAt: z.iso.datetime(), decision: z.enum(["publish", "return", "reject"]), note: z.string().trim().max(1000).default("") }),
   z.object({ action: z.literal("entry"), revision: z.number().int(), entry: entrySchema }),
   z.object({ action: z.literal("layout"), revision: z.number().int(), layout: layoutSchema, publish: z.boolean() }),
@@ -31,11 +32,20 @@ function newDraft(input: EntryInput, id = crypto.randomUUID()): Entry {
   return { ...input, id, status: "draft", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
 }
 export function manageCatalog(db: Database, input: z.infer<typeof managementMutation>): string | undefined {
-  if (input.action === "entry") {
+  if (input.action === "collection_draft") {
+    const job = db.collectionJobs.find(j => j.id === input.jobId);
+    const candidate = job?.candidates.find(c => c.url === input.sourceUrl);
+    if (!job || !candidate) throw new Error("ไม่พบโพสต์ต้นทางในงานนี้");
+    const id = "collected-" + hash(candidate.url).slice(0, 40);
+    if (db.entries.some(e => e.id === id || (e.sourceUrl === candidate.url && e.status !== "archived"))) throw new Error("โพสต์นี้มีฉบับร่างในคลังแล้ว กรุณาแก้รายการเดิม");
+    const item = saveEntry(db, { ...newDraft(input.entry, id), sourceUrl: candidate.url, status: "pending" });
+    db.provenance[id] = { provider: "Apify", runId: job.runId, reason: `ผู้ดูแลคัดจาก ${job.source.name} และเขียนสรุปเพื่อส่งตรวจ` };
+    log(db, "ผู้ดูแล", "entry.collection_draft", item.title, item.id);
+  } else if (input.action === "entry") {
     const item = saveEntry(db, input.entry);
     log(db, "ผู้ดูแล", `entry.${item.status}`, item.title, item.id);
   } else if (input.action === "layout") {
-    if (input.layout.featuredIds.some(id => !db.entries.some(e => e.id === id && e.kind === "game" && e.status === "published")))
+    if ([...input.layout.featuredIds, ...input.layout.spotlights.flatMap(g => g.entryIds)].some(id => !db.entries.some(e => e.id === id && e.kind === "game" && e.status === "published")))
       throw new Error("เลือกเกมแนะนำจากรายการที่เผยแพร่แล้วเท่านั้น");
     db.draftLayout = input.layout;
     if (input.publish) db.layout = structuredClone(input.layout);

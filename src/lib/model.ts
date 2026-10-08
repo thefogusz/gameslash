@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { sourceSchema, jobSchema } from "./collection-model";
 
 export const kinds = ["game", "tool", "article", "post"] as const;
 export const kindLabels = {
@@ -82,6 +83,12 @@ export const sectionSchema = z.object({
   enabled: z.boolean(),
 });
 export const layoutSchema = z.object({
+  spotlights: z.array(z.object({
+    id: z.string().min(1).max(80),
+    title: z.string().trim().min(1).max(40),
+    badge: z.string().trim().min(1).max(40),
+    entryIds: z.array(z.string().max(100)).max(5).refine(ids => new Set(ids).size === ids.length, "เลือกเกมไม่ซ้ำกัน"),
+  })).max(8).refine(groups => new Set(groups.map(g => g.id)).size === groups.length, "ชุดสไลด์ต้องไม่ซ้ำ").default([]),
   tagline: z.string().trim().min(2).max(120),
   categories: z
     .array(z.string().trim().min(1).max(60))
@@ -122,6 +129,18 @@ export const collectionContextSchema = z.object({
   provider: z.string().trim().min(2).max(60),
   runId: z.string().trim().max(100).optional(),
   reason: z.string().trim().min(10).max(1000),
+  signal: z.object({
+    question: z.string().trim().min(10).max(300),
+    topic: z.enum(["3D และฉาก", "ภาพและแอนิเมชัน", "โค้ดและระบบเกม", "AI และเอเจนต์", "เครื่องมือและ repo", "เผยแพร่และประสิทธิภาพ", "อื่น ๆ"]),
+    evidenceUrls: z.array(z.string().max(2000).refine(publicUrl)).min(1).max(20).refine(urls => new Set(urls).size === urls.length, "ลิงก์หลักฐานต้องไม่ซ้ำ"),
+    solutions: z.array(z.object({
+      title: z.string().trim().min(2).max(120),
+      url: z.string().max(2000).refine(publicUrl),
+      appliesWhen: z.string().trim().min(10).max(500),
+      checkedAt: z.iso.date(),
+      verification: z.enum(["source-reviewed", "tested"]),
+    })).max(8).default([]),
+  }).optional(),
 });
 export const reviewSchema = z.object({
   decision: z.enum(["publish", "return", "reject"]),
@@ -129,6 +148,10 @@ export const reviewSchema = z.object({
   at: z.iso.datetime(),
 });
 export const databaseSchema = z.object({
+  sources: z.array(sourceSchema).max(20).default([]),
+  collectionBudget: z.object({ remaining: z.number().min(0).max(5), verifiedAt: z.iso.datetime(), expiresAt: z.iso.datetime() }).nullable().default(null),
+  collectionJobs: z.array(jobSchema).max(100).default([]),
+  provenance: z.record(z.string(), collectionContextSchema).default({}),
   version: z.literal(1),
   revision: z.number().int().nonnegative(),
   entries: z.array(entrySchema).max(3000),

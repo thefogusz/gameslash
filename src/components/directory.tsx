@@ -1,5 +1,4 @@
 "use client";
-import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -15,7 +14,6 @@ import {
   BookOpen,
   Wrench,
   MessageCircle,
-  Sprout,
   Users,
   Menu,
   X,
@@ -26,6 +24,9 @@ import {
 } from "lucide-react";
 import { kindLabels, type Catalog, type Entry, type Layout } from "@/lib/model";
 import { SubmitPanel } from "./entry-form";
+import { Cover } from "./cover";
+export { Cover } from "./cover";
+import { Spotlight } from "./spotlight";
 export type View =
   | "home"
   | "games"
@@ -40,61 +41,6 @@ const paths = {
   article: "journal",
   post: "community",
 };
-export function Cover({
-  entry,
-  priority = false,
-}: {
-  entry: Entry;
-  priority?: boolean;
-}) {
-  const [failed, setFailed] = useState(false);
-  if (entry.image && !failed)
-    return (
-      <Image
-        fill
-        unoptimized={!entry.image.startsWith("/")}
-        src={entry.image}
-        alt={`ภาพประชาสัมพันธ์ ${entry.title}`}
-        sizes="(max-width: 700px) 90vw, 40vw"
-        priority={priority}
-        onError={() => setFailed(true)}
-        className={`cover-image ${entry.id === "ai-dungeon" ? "contain" : ""}`}
-      />
-    );
-  return (
-    <div
-      className={`cover-fallback art-${entry.id === "infinite-craft" ? "craft" : entry.kind}`}
-      aria-hidden="true"
-    >
-      {entry.id === "infinite-craft" ? (
-        <>
-          <span className="craft-symbol">∞</span>
-          <span className="craft-caption">
-            a little curiosity. infinite possibilities.
-          </span>
-        </>
-      ) : entry.kind === "article" ? (
-        <>
-          <span className="editorial-index">
-            {entry.id === "first-small-game" ? "01" : "02"}
-            <span>/</span>
-          </span>
-          <span className="editorial-caption">THE MAKER’S NOTEBOOK</span>
-        </>
-      ) : entry.id === "ai-town" ? (
-        <>
-          <Sprout size={56} strokeWidth={1} />
-          <span className="fallback-title">a town of possibilities.</span>
-        </>
-      ) : (
-        <>
-          <Gamepad2 size={48} strokeWidth={1} />
-          <span className="fallback-title">{entry.title}</span>
-        </>
-      )}
-    </div>
-  );
-}
 export function GameCard({ entry }: { entry: Entry }) {
   return (
     <Link href={`/item/${entry.id}`} className="game-card">
@@ -189,37 +135,7 @@ export function Featured({
   entries: Entry[];
   layout: Layout;
 }) {
-  const selected = layout.featuredIds
-    .map((id) => entries.find((e) => e.id === id && e.kind === "game"))
-    .filter((e): e is Entry => !!e);
-  if (!selected.length) return null;
-  return (
-    <div className="featured-wall">
-      {selected.map((entry, index) => (
-        <Link
-          href={`/item/${entry.id}`}
-          key={entry.id}
-          className={`feature-tile ${index === 0 ? "feature-main" : ""}`}
-        >
-          <Cover entry={entry} priority={index === 0} />
-          <div className="feature-shade" />
-          {index === 0 && (
-            <span className="feature-badge">
-              <Sparkles size={12} /> เกมแนะนำ
-            </span>
-          )}
-          <div className="feature-copy">
-            <span className="feature-category">{entry.category}</span>
-            <h2>{entry.title}</h2>
-            {index === 0 && <p>{entry.description}</p>}
-          </div>
-          <span className="feature-arrow">
-            <ArrowUpRight size={index === 0 ? 23 : 18} />
-          </span>
-        </Link>
-      ))}
-    </div>
-  );
+  return <Spotlight entries={entries} layout={layout} />;
 }
 export function CatalogSection({
   section,

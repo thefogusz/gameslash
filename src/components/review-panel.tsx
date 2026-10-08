@@ -3,7 +3,7 @@ import { useState } from "react";
 import { ArrowUpRight, Check, Inbox, Pencil, Search } from "lucide-react";
 import { kindLabels, type Database, type Entry } from "@/lib/model";
 
-export type SubmissionInfo = Record<string, Pick<Database["ingestions"][string], "agentId" | "context">>;
+export type SubmissionInfo = Record<string, Partial<Pick<Database["ingestions"][string], "agentId" | "context">>>;
 type Decision = Database["reviews"][string]["decision"];
 export function ReviewPanel({ entries, submissions, agents, reviews, busy, edit, decide, connect }: {
   entries: Entry[];
@@ -18,12 +18,12 @@ export function ReviewPanel({ entries, submissions, agents, reviews, busy, edit,
   const [filter, setFilter] = useState("pending");
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState("");
-  const tabs = [["pending", "รอตรวจ"], ["draft", "ฉบับร่าง"], ["returned", "ส่งกลับแก้ไข"]];
-  const matches = (e: Entry, f: string) => f === "returned" ? e.status === "draft" && reviews[e.id]?.decision === "return" : e.status === f;
+  const tabs = [["pending", "รอตรวจ"], ["draft", "ฉบับร่าง"], ["signals", "คำถาม / ปัญหาจากชุมชน"], ["returned", "ส่งกลับแก้ไข"]];
+  const matches = (e: Entry, f: string) => f === "signals" ? ["draft", "pending"].includes(e.status) && !!submissions[e.id]?.context?.signal : f === "returned" ? e.status === "draft" && reviews[e.id]?.decision === "return" : e.status === f;
   const items = entries.filter(e => matches(e, filter) && `${e.title} ${e.author}`.toLowerCase().includes(query.toLowerCase()))
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   const selected = items.find(e => e.id === selectedId) || items[0];
-  const submitter = (id: string) => agents.find(a => a.id === submissions[id]?.agentId)?.name || (submissions[id] ? "เอเจนต์ที่ส่งรายการ" : "ส่งผ่านเว็บ / ผู้ดูแล");
+  const submitter = (id: string) => agents.find(a => a.id === submissions[id]?.agentId)?.name || (submissions[id]?.agentId ? "เอเจนต์ที่ส่งรายการ" : "ส่งผ่านเว็บ / ผู้ดูแล");
   return <>
     <div className="studio-heading"><div><span className="eyebrow">REVIEW INBOX</span><h1>เลือกสิ่งดี ๆ ให้คนได้ค้นพบ</h1><p>เปิดอ่านที่มา ตรวจรายละเอียด แล้วเลือกว่าจะเผยแพร่หรือส่งกลับแก้ไข</p></div></div>
     <div className="review-toolbar">
@@ -61,9 +61,10 @@ function ReviewDetail({ entry, context, submitter, review, busy, edit, decide }:
     <div className="review-source"><h3>ตรวจต้นทาง</h3>
       {entry.sourceUrl ? <a href={entry.sourceUrl} target="_blank" rel="noreferrer">เปิดโพสต์หรือแหล่งที่มา <ArrowUpRight size={14} /><small>{entry.sourceUrl}</small></a> : <p>ยังไม่มีลิงก์แหล่งที่มา — เพิ่มหรือส่งกลับให้เอเจนต์ตรวจสอบ</p>}
       {entry.url && <a href={entry.url} target="_blank" rel="noreferrer">เปิดเว็บไซต์{entry.kind === "game" ? "เกม" : "ต้นทาง"} <ArrowUpRight size={14} /><small>{entry.url}</small></a>}
-      {context && <div className="review-context"><strong>เอเจนต์รายงานว่าใช้ {context.provider}</strong>{context.runId && <small>Run ID: {context.runId}</small>}<p>{context.reason}</p><small>เหตุผลจากเอเจนต์ ยังต้องตรวจสอบกับต้นทาง</small></div>}
+      {context && <div className="review-context"><strong>รวบรวมผ่าน {context.provider}</strong>{context.runId && <small>Run ID: {context.runId}</small>}<p>{context.reason}</p><small>ข้อมูลประกอบการคัดเลือก ยังต้องตรวจสอบกับต้นทาง</small></div>}
     </div>
     {entry.body && <section className="review-body"><h3>รายละเอียดที่จะเผยแพร่</h3><p>{entry.body}</p></section>}
+    {context?.signal && <section className="review-signal"><span className="eyebrow">COMMUNITY QUESTION → RESEARCH</span><h3>{context.signal.question}</h3><p>{context.signal.topic} · แนบหลักฐาน {context.signal.evidenceUrls.length} ลิงก์</p><p className="field-hint">จำนวนลิงก์ที่เอเจนต์แนบ ยังต้องตรวจว่าเป็นคนละโพสต์และถามปัญหาเดียวกันก่อนเรียกว่าคำถามพบบ่อย</p><div className="review-source">{context.signal.evidenceUrls.map((url, i) => <a key={url} href={url} target="_blank" rel="noreferrer">หลักฐาน {i + 1} <ArrowUpRight size={14} /><small>{url}</small></a>)}</div><h3>แนวทางแก้จากแหล่งสากล</h3>{context.signal.solutions.length ? context.signal.solutions.map(solution => <div className="review-feedback" key={solution.url}><a className="text-link" href={solution.url} target="_blank" rel="noreferrer">{solution.title} <ArrowUpRight size={14} /></a><p>{solution.appliesWhen}</p><small>{solution.verification === "tested" ? "เอเจนต์ระบุว่าทดลองแล้ว" : "ตรวจเอกสาร ยังไม่ได้ทดลอง"} · ตรวจเมื่อ {solution.checkedAt}</small></div>) : <p>รอค้นและตรวจแหล่งอ้างอิงเพิ่มเติม</p>}<p className="field-hint">ส่วนนี้เป็นหลักฐานสำหรับผู้ตรวจ หากจะเผยแพร่คำตอบ ให้ใส่คำอธิบายและลิงก์อ้างอิงในเนื้อหาบทความด้วย</p></section>}
     {entry.image && <a className="text-link" href={entry.image} target="_blank" rel="noreferrer">เปิดภาพปกเพื่อตรวจสอบ <ArrowUpRight size={14} /></a>}
     {review && <div className="review-feedback"><strong>ผลตรวจครั้งล่าสุด · { { publish: "เผยแพร่", return: "ส่งกลับแก้ไข", reject: "ไม่รับรายการ" }[review.decision]}</strong><p>{review.note || "ไม่มีหมายเหตุเพิ่มเติม"}</p></div>}
     {entry.status === "pending" ? <div className="review-decision">

@@ -169,6 +169,7 @@ const entries: Entry[] = [
   }),
 ];
 const layout: Layout = {
+  spotlights: [],
   tagline: "เกมใหม่ ไอเดียใหม่ ความเป็นไปได้ไม่สิ้นสุด",
   categories: [
     "RPG",
@@ -241,5 +242,9 @@ export function seedDatabase(): Database {
     activity: [],
     ingestions: {},
     reviews: {},
+    sources: [],
+    collectionBudget: null,
+    collectionJobs: [],
+    provenance: {},
   });
 }

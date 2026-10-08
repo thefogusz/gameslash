@@ -13,11 +13,13 @@ export function EntryForm({
   categories,
   onSave,
   admin = false,
+  reviewOnly = false,
 }: {
   initial?: Partial<Entry>;
   categories: string[];
   onSave: (entry: EntryInput, status: Entry["status"]) => Promise<void>;
   admin?: boolean;
+  reviewOnly?: boolean;
 }) {
   const [kind, setKind] = useState<Entry["kind"]>(initial?.kind || "game");
   const [busy, setBusy] = useState(false),
@@ -49,7 +51,7 @@ export function EntryForm({
     try {
       await onSave(
         parsed.data,
-        admin ? (data.get("status") as Entry["status"]) : "pending",
+        admin && !reviewOnly ? (data.get("status") as Entry["status"]) : "pending",
       );
     } catch (e) {
       setError(e instanceof Error ? e.message : "ส่งรายการไม่สำเร็จ");
@@ -201,7 +203,7 @@ export function EntryForm({
           }
         />
       </label>
-      {admin && (
+      {admin && !reviewOnly && (
         <label>
           สถานะ
           <select name="status" defaultValue={initial?.status || "draft"}>
@@ -226,7 +228,7 @@ export function EntryForm({
       )}
       <div className="form-end">
         <p>
-          {admin
+          {admin && !reviewOnly
             ? "รายการสถานะเผยแพร่จะอัปเดตบนเว็บทันที"
             : "ทีมงานจะตรวจรายการก่อนเผยแพร่"}
         </p>
@@ -238,7 +240,7 @@ export function EntryForm({
           ) : (
             <Send size={16} />
           )}{" "}
-          {busy ? "กำลังบันทึก…" : admin ? "บันทึกรายการ" : "ส่งให้ทีมงานตรวจ"}
+          {busy ? "กำลังบันทึก…" : admin && !reviewOnly ? "บันทึกรายการ" : "ส่งให้ทีมงานตรวจ"}
         </button>
       </div>
     </form>

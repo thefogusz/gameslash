@@ -40,7 +40,9 @@ try {
   assert.equal(JSON.stringify(await snapshot()).includes(token), false);
   const initialized = await rpc(token, "initialize", { protocolVersion: "2025-11-25", capabilities: {}, clientInfo: { name: "gameslash-test", version: "1.0.0" } });
   assert.ok(initialized.serverInfo);
-  assert.equal((await rpc(token, "tools/list")).tools.length, 6);
+  assert.equal((await rpc(token, "tools/list")).tools.length, 8);
+  assert.equal((await call(reader, "list_collections")).isError, true);
+  assert.ok(Array.isArray((await call(token, "list_collections")).structuredContent.jobs));
   assert.ok((await call(token, "get_categories")).structuredContent.categories.length);
   const entry = { kind: "game", title: "MCP local verification", description: "Private temporary entry for integration testing.", author: "Smoke test", category: "ปริศนา", url: `https://example.com/${crypto.randomUUID()}`, sourceUrl: "https://example.com/source" };
   const requestId = crypto.randomUUID();
