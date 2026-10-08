@@ -32,15 +32,15 @@ export const metadata: Metadata = {
     siteName: "GameSlash",
     locale: "th_TH",
     images: [{
-      url: "/images/gameslash-social-v1.png",
+      url: "/images/gameslash-social-v2.png",
       width: 1730,
       height: 909,
-      alt: "GameSlash รวมเกมเอไอ — โลกแฟนตาซี ไซไฟ และหมู่บ้านเกม",
+      alt: "GameSlash แพลตฟอร์มรวมเกมเอไอ — RPG ผจญภัย ปริศนา และจำลอง",
     }],
   },
   twitter: {
     card: "summary_large_image",
-    images: ["/images/gameslash-social-v1.png"],
+    images: ["/images/gameslash-social-v2.png"],
   },
 };
 export default function RootLayout({
