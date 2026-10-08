@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { ToolPopularity } from "./tool-popularity";
 import { ArticleContent } from "./article-content";
 import { ArrowUpRight, Check, Inbox, Pencil, Search } from "lucide-react";
 import { kindLabels, type Database, type Entry } from "@/lib/model";
@@ -58,7 +59,7 @@ function ReviewDetail({ entry, context, submitter, review, busy, edit, decide }:
   }
   return <article className="review-detail">
     <div className="review-detail-top"><span className={`status status-${entry.status}`}>{entry.status === "pending" ? "รอคุณตรวจ" : "กำลังเตรียมฉบับร่าง"}</span><button className="button small-button" disabled={busy} onClick={() => edit(entry)}><Pencil size={13} />แก้ไขข้อมูล</button></div>
-    <h2>{entry.title}</h2><p className="review-description">{entry.description}</p>
+    <h2>{entry.title}</h2>{entry.kind === "tool" && <ToolPopularity popularity={entry.popularity} />}<p className="review-description">{entry.description}</p>
     <dl className="review-facts"><div><dt>ผู้สร้าง / ผู้เขียน</dt><dd>{entry.author}</dd></div><div><dt>ประเภทและหมวด</dt><dd>{kindLabels[entry.kind]} · {entry.category}</dd></div><div><dt>ส่งโดย</dt><dd>{submitter}</dd></div></dl>
     <div className="review-source"><h3>ตรวจต้นทาง</h3>
       {entry.sourceUrl ? <a href={entry.sourceUrl} target="_blank" rel="noreferrer">เปิดโพสต์หรือแหล่งที่มา <ArrowUpRight size={14} /><small>{entry.sourceUrl}</small></a> : <p>ยังไม่มีลิงก์แหล่งที่มา — เพิ่มหรือส่งกลับให้เอเจนต์ตรวจสอบ</p>}

@@ -28,6 +28,9 @@ function saveEntry(db: Database, input: Entry) {
     createdAt: old?.createdAt || new Date().toISOString(),
     updatedAt: new Date(Math.max(Date.now(), old ? Date.parse(old.updatedAt) + 1 : 0)).toISOString(),
   };
+  // Older clients omit popularity; null explicitly clears an assessment.
+  if (item.kind === "tool" && item.popularity === undefined && old?.popularity) item.popularity = old.popularity;
+  if (item.kind !== "tool") delete item.popularity;
   validateGameTags(db, item, old);
   checkDuplicate(db.entries, item);
   db.entries = old ? db.entries.map(e => e.id === item.id ? item : e) : [item, ...db.entries];

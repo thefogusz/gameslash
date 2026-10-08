@@ -34,6 +34,7 @@ export function EntryForm({
   const [kind, setKind] = useState<Entry["kind"]>(initial?.kind || "game");
   const [category, setCategory] = useState(initial?.category || "");
   const [customCategory, setCustomCategory] = useState(false);
+  const [popularityScore, setPopularityScore] = useState(String(initial?.popularity?.score || ""));
   const categoryOptions = [...new Set([
     ...(kind === "tool" ? toolWorkflowCategories : kind === "game" ? categories : kind === "article" ? ["ข่าว AI game", "อัปเดตเครื่องมือ", "เทคนิคทำเกม"] : ["พูดคุย", "โชว์ผลงาน", "ขอฟีดแบ็ก"]),
     ...(initial?.kind === kind && initial.category ? [initial.category] : []),
@@ -60,6 +61,11 @@ export function EntryForm({
       image,
       imageAlt: data.get("imageAlt") || "",
       body,
+      popularity: kind === "tool" && admin && popularityScore ? {
+        score: Number(popularityScore), reason: data.get("popularityReason"),
+        sources: String(data.get("popularitySources") || "").split(/\r?\n/).map(s => s.trim()).filter(Boolean),
+        checkedAt: data.get("popularityDate"),
+      } : null,
       ...(kind === "article" ? { content } : {}),
       tags: kind === "game" ? gameTags : kind === "tool" ? initial?.tags || [] : String(data.get("tags") || "")
         .split(",")
@@ -195,6 +201,19 @@ export function EntryForm({
       {admin ? <ImageField label="ภาพปก" value={image} onChange={url=>{setImage(url);onDirty?.();}} onBusy={setCoverBusy}/> : <label>ลิงก์ภาพปก<input value={image} onChange={e=>setImage(e.target.value)} maxLength={2000} placeholder="https://…/cover.jpg"/></label>}
       <label>คำอธิบายภาพปก<input name="imageAlt" defaultValue={initial?.imageAlt || ""} maxLength={300} placeholder="อธิบายสิ่งที่เห็นในภาพ"/></label>
       {kind === "article" ? <section><h3>เนื้อหาบทความ</h3><ArticleEditor initial={content} onChange={(doc,text)=>{setContent(doc);setBody(text.slice(0,20000));onDirty?.();}} onBusy={setEditorBusy}/></section> : <label>รายละเอียดเพิ่มเติม<textarea name="body" maxLength={20000} rows={kind === "post" ? 8 : 4} value={body} onChange={e=>setBody(e.target.value)} placeholder="วิธีเล่น แพลตฟอร์ม หรือสิ่งที่ควรรู้"/></label>}
+      {admin && kind === "tool" && <fieldset className="popularity-editor">
+        <legend>ดาวความนิยมของเครื่องมือ</legend>
+        <p className="field-hint">ประเมินฐานผู้ใช้ ผลงานและระบบนิเวศ และการเป็นที่รู้จัก พร้อมหลักฐาน ไม่ใช่คะแนนคุณภาพหรือรีวิวผู้ใช้</p>
+        <ConsoleSelect label="ดาวความนิยม" value={popularityScore} onChange={value => { setPopularityScore(value); onDirty?.(); }}>
+          <option value="">ยังไม่ประเมิน / นำคะแนนออก</option>
+          {[1,2,3,4,5].map(score => <option value={score} key={score}>{score} ดาว</option>)}
+        </ConsoleSelect>
+        {popularityScore && <>
+          <label>เหตุผลจากหลักฐาน<textarea name="popularityReason" required minLength={20} maxLength={400} rows={3} defaultValue={initial?.popularity?.reason} /></label>
+          <label>แหล่งข้อมูล HTTPS (หนึ่งลิงก์ต่อบรรทัด สูงสุด 5)<textarea name="popularitySources" required rows={3} defaultValue={initial?.popularity?.sources.join("\n")} /></label>
+          <label>วันที่ตรวจข้อมูล<input name="popularityDate" type="date" required defaultValue={initial?.popularity?.checkedAt || new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok" })} /></label>
+        </>}
+      </fieldset>}
       {admin && !reviewOnly && (
         <div className="console-field">
           สถานะ

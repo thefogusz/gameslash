@@ -18,6 +18,13 @@ const url = z
   .trim()
   .max(2000)
   .refine((v) => !v || publicUrl(v), "ใช้ลิงก์ HTTPS ของเว็บไซต์สาธารณะ");
+export const toolPopularitySchema = z.object({
+  score: z.number().int().min(1).max(5),
+  reason: z.string().trim().min(20).max(400),
+  sources: z.array(z.string().max(2000).refine(publicUrl)).min(1).max(5)
+    .refine(values => new Set(values).size === values.length, "แหล่งข้อมูลต้องไม่ซ้ำ"),
+  checkedAt: z.iso.date(),
+});
 export const entryInput = z
   .object({
     kind: z.enum(kinds),
@@ -38,9 +45,11 @@ export const entryInput = z
     image: z.union([z.literal(""), imageUrl]).default(""),
     imageAlt: z.string().max(300).optional(),
     content: articleDocumentSchema.optional(),
+    popularity: toolPopularitySchema.nullable().optional(),
     body: z.string().trim().max(20000).default(""),
     tags: z.array(z.string().trim().min(1).max(60)).max(20).default([]),
   })
+  .refine(v => !v.popularity || v.kind === "tool", { message: "ดาวความนิยมใช้กับเครื่องมือเท่านั้น", path: ["popularity"] })
   .refine((v) => !["game", "tool"].includes(v.kind) || !!v.url, {
     message: "กรุณาใส่ลิงก์เว็บไซต์ต้นทาง",
     path: ["url"],

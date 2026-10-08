@@ -2589,3 +2589,20 @@ textarea {
 .tag-suggestion summary { font-weight:650; cursor:pointer; }
 .tag-suggestion label { margin-top:12px; }
 @media(max-width:600px) { .tag-picker-results { grid-template-columns:repeat(2,minmax(0,1fr)); } .game-tag-picker { padding:12px; } }
+.popularity-stars { display:inline-flex; gap:3px; color:var(--muted); flex-shrink:0; }
+.popularity-stars .filled { color:var(--accent); fill:var(--accent); }
+.tool-popularity { font-size:13px; color:var(--muted); }
+.tool-popularity summary { display:flex; align-items:center; flex-wrap:wrap; gap:8px; min-height:36px; cursor:pointer; list-style:none; }
+.tool-popularity summary::-webkit-details-marker { display:none; }
+.tool-popularity summary:focus-visible,.popularity-method summary:focus-visible { outline:2px solid var(--accent); outline-offset:3px; border-radius:4px; }
+.tool-popularity strong { color:var(--ink); }
+.popularity-evidence { padding:12px 0; border-top:1px solid var(--line); line-height:1.75; overflow-wrap:anywhere; }
+.popularity-evidence p + p { margin-top:8px; }
+.popularity-evidence ul { padding-left:18px; margin-top:8px; }
+.popularity-evidence a { color:var(--accent); text-decoration:underline; text-underline-offset:3px; }
+.popularity-unrated { font-size:13px; color:var(--muted); min-height:36px; display:flex; align-items:center; }
+.popularity-method { margin:-8px 0 20px; font-size:14px; line-height:1.8; color:var(--muted); max-width:80ch; }
+.popularity-method summary { cursor:pointer; width:fit-content; }
+.popularity-method p { margin-top:10px; }
+.popularity-editor { display:grid; gap:14px; min-width:0; padding:18px; border:1px solid var(--line); border-radius:10px; }
+.popularity-editor legend { padding:0 6px; font-weight:650; }

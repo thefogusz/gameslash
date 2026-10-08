@@ -113,3 +113,10 @@ Game/source links are included on each detail page. Images are original promotio
 - AI Town: https://www.convex.dev/ai-town and https://github.com/a16z-infra/ai-town
 
 Implementation references: [Next.js installation](https://nextjs.org/docs/app/getting-started/installation), [Vercel Blob SDK](https://vercel.com/docs/vercel-blob/using-blob-sdk), [conditional writes](https://vercel.com/docs/vercel-blob#conditional-writes).
+
+### Tool popularity assessments
+
+Tool entries may include `popularity: { score, reason, sources, checkedAt }`.
+Scores are editorial popularity tiers (integer 1–5), not user reviews or quality ratings. Research adoption, released work/ecosystem and recognition; 5 requires strong evidence across all three. Missing evidence must remain unrated, not be translated into low popularity. `sources` requires 1–5 distinct public HTTPS URLs; `checkedAt` is YYYY-MM-DD.
+
+The public tool card exposes rationale and sources. Console editors and MCP draft tools share the schema; agent drafts still require human publication. Existing clients may omit this optional field without erasing an existing assessment; explicitly send `null` to clear it. Changing an entry to a non-tool kind removes its tool-only rating. No external analytics or automatic user counts are implied.

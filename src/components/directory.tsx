@@ -524,6 +524,11 @@ export function Directory({
               {kind === "tool" && <div className="tool-directory-heading" id="tool-directory">
                 <h2>รวมเครื่องมือ</h2><span role="status" aria-live="polite">{results.length} เครื่องมือ</span>
               </div>}
+              {kind === "tool" && <details className="popularity-method">
+                <summary>ดาวความนิยมคิดจากอะไร?</summary>
+                <p>Gameslash ประเมินจากหลักฐานฐานผู้ใช้ ผลงานและระบบนิเวศ และการเป็นที่รู้จักในวงการทำเกม คลิกดาวของแต่ละเครื่องมือเพื่อดูเหตุผล แหล่งข้อมูล และวันที่ตรวจ เป็นการประเมินเชิงเปรียบเทียบ ไม่ใช่ยอดผู้ใช้แบบเรียลไทม์หรือคะแนนคุณภาพ</p>
+                <p>5 ดาว: แพร่หลายและมีหลักฐานเด่นครบทั้งสามด้าน · 4 ดาว: เป็นที่ยอมรับ มีหลักฐานหลายด้าน · 3 ดาว: มีชุมชนหรือผลงานชัดเจนในกลุ่มเฉพาะ · 2 ดาว: เริ่มมีการนำไปใช้ในกลุ่มเล็ก · 1 ดาว: มีหลักฐานว่ายังมีผู้ใช้น้อยมาก · หากหลักฐานไม่เพียงพอจะยังไม่ให้ดาว</p>
+              </details>}
               {kind === "tool" && (
                 <div className="filter-chips tool-categories" role="group" aria-label="ประเภทเครื่องมือ">
                   <button type="button" aria-pressed={!category} onClick={() => updateFilters({ category: "" })}>ทั้งหมด</button>
