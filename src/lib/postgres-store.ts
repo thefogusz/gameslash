@@ -11,7 +11,6 @@ export function databaseClient() {
     idle_timeout: 20,
     connect_timeout: 10,
     prepare: false,
-    connection: { statement_timeout: 15000 },
   }));
 }
 
@@ -66,6 +65,7 @@ export async function updatePostgres(
   revision?: number,
 ): Promise<Database> {
   return sql.begin(async (tx) => {
+    await tx`SET LOCAL statement_timeout = '15s'`;
     // ponytail: serialize writes to preserve the current catalog revision API;
     // move to per-entry revisions when independent concurrent editing is needed.
     await tx`SELECT id FROM gameslash_state WHERE id = 1 FOR UPDATE`;

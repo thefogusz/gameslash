@@ -8,14 +8,18 @@ import { createTables, initializePostgres, readPostgres, updatePostgres, Conflic
 test("Postgres migration, concurrent writes, rollback and draft isolation", {
   skip: !process.env.GAMESLASH_TEST_DATABASE_URL,
 }, async () => {
+  assert.ok(!new URL(process.env.GAMESLASH_TEST_DATABASE_URL!).hostname.includes("-pooler."),
+    "Use DATABASE_URL_UNPOOLED so the test schema cannot be ignored by the pooler");
   // Dedicated, randomly named schema; never query the production tables.
   const schema = "gameslash_test_" + crypto.randomUUID().replaceAll("-", "");
   const admin = postgres(process.env.GAMESLASH_TEST_DATABASE_URL!, { max: 1, onnotice: () => {} });
   const sql = postgres(process.env.GAMESLASH_TEST_DATABASE_URL!, {
-    max: 3, prepare: false, connection: { search_path: schema }, onnotice: () => {},
+    max: 3, prepare: false, connection: { options: `-c search_path=${schema}` }, onnotice: () => {},
   });
   try {
     await admin`CREATE SCHEMA ${admin(schema)}`;
+    const [session] = await sql`SELECT current_schema() AS schema`;
+    assert.equal(session.schema, schema, "Refuse to test outside the isolated schema");
     await createTables(sql);
     await assert.rejects(readPostgres(sql), /not been migrated/);
     const seed = seedDatabase();
