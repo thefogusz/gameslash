@@ -26,7 +26,6 @@ import {
   SlidersHorizontal,
   ExternalLink,
   Pencil,
-  Globe,
 } from "lucide-react";
 import { kindLabels as contentKindLabels, type Catalog, type Entry, type Layout } from "@/lib/model";
 import { SubmitPanel } from "./entry-form";
@@ -291,14 +290,9 @@ function Detail({ entry }: { entry: Entry }) {
       {entry.kind === "article" && entry.image && <div className="detail-cover"><Cover entry={entry} priority /></div>}
       <ArticleContent content={guideContent} body={entry.body}/>
       {entry.kind === "game" && (
-        <div className="source-note">
-          <Globe size={18} />
-          <p>
-            เกมนี้อยู่บนเว็บไซต์ของผู้สร้าง
-            <br />
-            <span>gameslash รวบรวมข้อมูลและลิงก์เพื่อช่วยให้คุณค้นพบเกม</span>
-          </p>
-        </div>
+        <p className="game-source-note">
+          เกมนี้อยู่บนเว็บไซต์ของผู้สร้าง · gameslash รวบรวมข้อมูลและลิงก์เพื่อช่วยให้คุณค้นพบเกม
+        </p>
       )}
       {entry.sourceUrl && (
         <a

@@ -695,7 +695,7 @@ a:focus-visible {
 .detail-game .tags span { background:var(--raise); border-color:transparent; color:#c6c4d3; padding:6px 10px; }
 .detail-game .article-prose { max-width:680px; font-size:17px; line-height:1.95; color:#d1cfdd; }
 .detail-game .article-prose > * + * { margin-top:28px; }
-.detail-game .source-note { max-width:680px; margin-top:36px; }
+.game-source-note { max-width:680px; margin:24px 0; font-size:12px; line-height:1.7; color:var(--muted); }
 .spotlight-main .game-metadata { margin-top:14px; }
 .feature-cta { display:inline-flex; align-items:center; gap:10px; color:var(--accent); font-size:13px; font-weight:700; margin-top:16px; }
 .editorial-skill-guide { margin:32px 0; }
