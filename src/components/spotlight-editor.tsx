@@ -4,10 +4,11 @@ export function SpotlightEditor({ layout, entries, onChange }: { layout: Layout;
   const groups = layout.spotlights.length ? layout.spotlights : layout.featuredIds.length ? [{ id: "featured", title: "คัดสรร", badge: "เกมแนะนำ", entryIds: layout.featuredIds }] : [];
   const save = (spotlights: Layout["spotlights"]) => onChange({ ...layout, spotlights, featuredIds: [] });
   const games = entries.filter(e => e.kind === "game" && e.status === "published");
-  const titles = ["คัดสรร", "มาแรง", "ยอดนิยม"];
+  const titles = ["คัดสรร", "ติดเทรนด์", "ยอดนิยม"];
   return <><h3>สไลด์เกมเด่น</h3><p>เลือกชุดเด่นและเกมที่ต้องการแนะนำ ชุดละไม่เกิน 5 เกม</p>
     <p className="field-hint">“มาใหม่”, “สำหรับคุณ” และ “ถูกใจ” จัดให้อัตโนมัติ หมวดเกม เช่น RPG อยู่ในตัวกรอง ไม่ใช้เป็นแท็บเกมเด่น</p>
-    <p className="field-hint">มาแรงและยอดนิยมเป็นชุดที่ผู้ดูแลคัดเลือก พร้อมคำอธิบายบนหน้าเว็บ ไม่ใช่ยอดไลก์รวม ไลก์แต่ละคนเก็บในเบราว์เซอร์เท่านั้น</p>
+    <p className="field-hint">ติดเทรนด์และยอดนิยมเป็นชุดที่ผู้ดูแลคัดเลือก พร้อมคำอธิบายบนหน้าเว็บ ชุดเดิมชื่อ “มาแรง” จะแสดงในแท็บ “ติดเทรนด์”</p>
+    <p className="field-hint">“ผู้เล่นมากที่สุด” รอการเชื่อมสถิติจำนวนผู้เล่นจริง ยังไม่สามารถจัดอันดับด้วยการเลือกเกมเองได้</p>
     {groups.map((group, index) => <fieldset className="spotlight-editor-group" key={group.id}><legend>ชุดที่ {index + 1}</legend>
       <label>ชุดเกมเด่น<select value={group.title} onChange={e => save(groups.map(g => g.id === group.id ? { ...g, title: e.target.value } : g))}>
         {!titles.includes(group.title) && <option value={group.title} disabled>{group.title} — กรุณาเลือกชุดเด่น</option>}
