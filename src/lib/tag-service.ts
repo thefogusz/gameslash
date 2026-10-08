@@ -10,7 +10,7 @@ export function validateGameTags(db: Database, entry: Entry, old?: Entry) {
     // Keep legacy values editable without promoting them into the shared registry.
     if (old?.kind === "game" && old.tags.includes(value)) return value;
     const tag = findGameTag(tags, value);
-    if (!tag) throw new Error(`ไม่พบแท็ก “${value}” กรุณาเลือกจากคลังหรือเสนอแท็กให้ Dots ตรวจ`);
+    if (!tag) throw new Error(`ไม่พบแท็ก “${value}” กรุณาเลือกจากคลังหรือเสนอแท็กใหม่`);
     return tag.name;
   }))];
   if (entry.status === "published" && db.tagRequests.some(r => r.entryId === entry.id && r.status === "pending"))

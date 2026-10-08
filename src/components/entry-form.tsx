@@ -163,8 +163,8 @@ export function EntryForm({
       </div>
       {kind === "game" && <>
         <GameTagPicker value={gameTags} onChange={tags => { setGameTags(tags); onDirty?.(); }} />
-        <details className="tag-suggestion"><summary>หาแท็กที่ใช่ไม่เจอ? เสนอให้ Dots ตรวจ</summary>
-          <p>Dots จะตรวจจากลิงก์เกมที่คุณส่ง พร้อมวิเคราะห์ว่าใช้แท็กเดิมได้หรือควรเพิ่มแท็กใหม่ คำขอนี้ยังไม่เพิ่มแท็กเข้าคลังทันที</p>
+        <details className="tag-suggestion"><summary>หาแท็กที่ใช่ไม่เจอ? เสนอแท็กใหม่</summary>
+          <p>เสนอชื่อแท็กที่เหมาะกับเกมของคุณ พร้อมคำอธิบายสั้น ๆ เพื่อให้ทีมงานพิจารณา</p>
           <label>ชื่อแท็กที่เสนอ<input name="tagName" maxLength={60} placeholder="เสนอหนึ่งแท็กต่อครั้ง" /></label>
           <label>เกมมีลักษณะนี้อย่างไร?<textarea name="tagReason" maxLength={600} rows={3} placeholder="อธิบายวิธีเล่นหรือจุดที่ตรวจสอบได้จากเว็บไซต์เกม" /></label>
         </details>
