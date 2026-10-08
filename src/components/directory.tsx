@@ -1,7 +1,9 @@
 "use client";
 import { ArticleContent } from "./article-content";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { directorySorts, filterDirectory } from "@/lib/directory-filters";
 import {
   ArrowUpRight,
   ArrowRight,
@@ -320,64 +322,45 @@ export function Directory({
   catalog,
   view,
   admin = false,
-  initialCategory = "",
-  initialSort = "curated",
   submitType,
   item,
 }: {
   catalog: Catalog;
   view: View;
   admin?: boolean;
-  initialCategory?: string;
-  initialSort?: string;
   submitType?: string;
   item?: Entry;
 }) {
-  const [query, setQuery] = useState(""),
-    [category, setCategory] = useState(initialCategory),
-    [menu, setMenu] = useState(false);
-  const [sort, setSort] = useState(initialSort);
-  useEffect(() => setCategory(initialCategory), [initialCategory]);
-  useEffect(() => setSort(initialSort), [initialSort]);
+  const [menu, setMenu] = useState(false);
+  const params = useSearchParams();
+  const query = params.get("q") || "";
+  const category = params.get("category") || "";
+  const tag = params.get("tag") || "";
+  const requestedSort = params.get("sort") || "curated";
+  const sort = Object.hasOwn(directorySorts, requestedSort) ? requestedSort : "curated";
+  function updateFilters(values: Record<string, string>, replace = false) {
+    const url = new URL(window.location.href);
+    for (const [key, value] of Object.entries(values)) {
+      if (value) url.searchParams.set(key, value);
+      else url.searchParams.delete(key);
+    }
+    window.history[replace ? "replaceState" : "pushState"](null, "", url.pathname + url.search);
+  }
   const searching = !!query.trim();
   const browse =
     searching || ["games", "tools", "journal", "community"].includes(view);
-  const kind = searching
-    ? "game"
-    : view === "tools"
+  const kind = view === "tools"
       ? "tool"
       : view === "journal"
         ? "article"
         : view === "community"
           ? "post"
           : "game";
-  const categories =
-    kind === "game"
-      ? catalog.layout.categories
-      : [
-          ...new Set(
-            catalog.entries
-              .filter((e) => e.kind === kind)
-              .map((e) => e.category),
-          ),
-        ];
-  const results = catalog.entries
-    .filter(
-      (e) =>
-        e.kind === kind &&
-        (!category || e.category === category) &&
-        (!query ||
-          `${e.title} ${e.description} ${e.author} ${e.tags.join(" ")}`
-            .toLocaleLowerCase()
-            .includes(query.toLocaleLowerCase())),
-    )
-    .sort((a, b) =>
-      sort === "az"
-        ? a.title.localeCompare(b.title, "th")
-        : sort === "new"
-          ? b.createdAt.localeCompare(a.createdAt)
-          : 0,
-    );
+  const entries = catalog.entries.filter(e => e.kind === kind);
+  const categories = [...new Set([...(kind === "game" ? catalog.layout.categories : []), ...entries.map(e => e.category), ...(category ? [category] : [])])];
+  const tags = [...new Set([...entries.flatMap(e => e.tags), ...(tag ? [tag] : [])])].sort((a,b) => a.localeCompare(b,"th"));
+  const results = filterDirectory(entries, { kind, query, category, tag, sort }, kind === "game" ? catalog.layout.featuredIds : []);
+  const filtered = !!(query || category || tag || sort !== "curated");
   const titles = {
     game: ["ค้นพบเกม", "ค้นหาเกมตามชื่อ ผู้สร้าง หรือหมวดหมู่"],
     tool: ["เครื่องมือทำเกม", "รวมเครื่องมือสำหรับสร้างและเผยแพร่เกม"],
@@ -385,8 +368,7 @@ export function Directory({
     post: ["คอมมูนิตี้", "แชร์ผลงาน ถามคำถาม และขอฟีดแบ็ก"],
   };
   function reset() {
-    setQuery("");
-    setCategory("");
+    updateFilters({ q: "", category: "", tag: "", sort: "" });
   }
   return (
     <>
@@ -414,13 +396,12 @@ export function Directory({
         <label className="search-box">
           <Search size={16} />
           <input
-            aria-label="ค้นหาเกม"
+            aria-label={`ค้นหา${kindLabels[kind]}`}
             value={query}
             onChange={(e) => {
-              setQuery(e.target.value);
-              setCategory("");
+              updateFilters({ q: e.target.value }, true);
             }}
-            placeholder="ค้นหาเกม"
+            placeholder={`ค้นหา${kindLabels[kind]}`}
           />
         </label>
         <div className="topbar-end">
@@ -529,38 +510,28 @@ export function Directory({
                   )}
                 </div>
               </div>
-              <div className="filter-row">
-                <div className="filter-chips">
-                  <button
-                    aria-pressed={!category}
-                    onClick={() => setCategory("")}
-                  >
-                    ทั้งหมด
-                  </button>
-                  {categories.map((c) => (
-                    <button
-                      key={c}
-                      aria-pressed={category === c}
-                      onClick={() => setCategory(c)}
-                    >
-                      {c}
-                    </button>
-                  ))}
-                </div>
-                <label className="sort-control">
-                  <span className="sr-only">เรียงลำดับ</span>
-                  <select
-                    value={sort}
-                    onChange={(e) => setSort(e.target.value)}
-                  >
-                    <option value="curated">คัดสรรโดยทีมงาน</option>
-                    <option value="new">เพิ่มล่าสุด</option>
-                    <option value="az">ตามชื่อ</option>
+              <div className="directory-filters" role="group" aria-label="ตัวกรองรายการ">
+                <label>หมวดหมู่
+                  <select value={category} onChange={e => updateFilters({ category: e.target.value })}>
+                    <option value="">ทุกหมวดหมู่ ({entries.length})</option>
+                    {categories.map(c => <option key={c} value={c}>{c} ({entries.filter(e => e.category === c).length})</option>)}
                   </select>
                 </label>
+                <label>{kind === "game" ? "แท็ก / แพลตฟอร์ม" : "แท็ก"}
+                  <select value={tag} onChange={e => updateFilters({ tag: e.target.value })}>
+                    <option value="">ทุกแท็ก</option>
+                    {tags.map(t => <option key={t} value={t}>{t} ({entries.filter(e => e.tags.includes(t)).length})</option>)}
+                  </select>
+                </label>
+                <label>เรียงลำดับ
+                  <select value={sort} onChange={e => updateFilters({ sort: e.target.value === "curated" ? "" : e.target.value })}>
+                    {Object.entries(directorySorts).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                  </select>
+                </label>
+                <button className="button secondary filter-reset" onClick={reset} disabled={!filtered}><X size={16} />ล้างตัวกรอง</button>
               </div>
-              <p className="result-count">
-                {results.length} {kindLabels[kind]}
+              <p className="result-count" role="status" aria-live="polite">
+                พบ {results.length} จาก {entries.length} {kindLabels[kind]}
               </p>
               {!results.length ? (
                 <Empty onReset={reset} />

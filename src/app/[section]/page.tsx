@@ -43,8 +43,6 @@ export default async function Page({
       catalog={publicData(db)}
       admin={admin}
       view={section as View}
-      initialCategory={query.category}
-      initialSort={query.sort}
       submitType={query.type}
     />
   );
