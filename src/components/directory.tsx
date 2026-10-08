@@ -453,22 +453,6 @@ export function Directory({
             >
               หน้าแรก
             </Link>
-            <Link
-              href="/games"
-              className={
-                view === "games" && !category
-                  ? "sidebar-link active"
-                  : "sidebar-link"
-              }
-            >
-              เกมทั้งหมด
-              <span className="side-count">
-                {catalog.entries.filter((e) => e.kind === "game").length}
-              </span>
-            </Link>
-            <Link href="/games?sort=new" className="sidebar-link">
-              ใหม่ล่าสุด
-            </Link>
           </div>
           <div className="sidebar-group">
             {catalog.layout.categories.map((c, i) => {
