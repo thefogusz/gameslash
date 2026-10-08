@@ -450,6 +450,13 @@ export function Directory({
                 view === "home" ? "sidebar-link active" : "sidebar-link"
               }
             >
+              หน้าแรก
+            </Link>
+            <Link
+              href="/games"
+              className={view === "games" && !category ? "sidebar-link active" : "sidebar-link"}
+              onClick={() => setMenu(false)}
+            >
               ค้นพบเกม
             </Link>
           </div>
