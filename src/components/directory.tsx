@@ -534,25 +534,25 @@ export function Directory({
                   ))}
                 </div>
               )}
-              {kind !== "tool" && <div className="directory-filters" role="group" aria-label="ตัวกรองรายการ">
-                <label>หมวดหมู่
+              {kind !== "tool" && <div className={`directory-filters${kind === "article" ? " news-filters" : ""}`} role="group" aria-label="ตัวกรองรายการ">
+                <label><span className={kind === "article" ? "sr-only" : undefined}>หมวดหมู่</span>
                   <select value={category} onChange={e => updateFilters({ category: e.target.value })}>
                     <option value="">ทุกหมวดหมู่ ({entries.length})</option>
                     {categories.map(c => <option key={c} value={c}>{c} ({entries.filter(e => e.category === c).length})</option>)}
                   </select>
                 </label>
-                <label>{kind === "game" ? "แท็ก / แพลตฟอร์ม" : "แท็ก"}
+                <label><span className={kind === "article" ? "sr-only" : undefined}>{kind === "game" ? "แท็ก / แพลตฟอร์ม" : "แท็ก"}</span>
                   <select value={tag} onChange={e => updateFilters({ tag: e.target.value })}>
                     <option value="">ทุกแท็ก</option>
                     {tags.map(t => <option key={t} value={t}>{t} ({entries.filter(e => e.tags.includes(t)).length})</option>)}
                   </select>
                 </label>
-                <label>เรียงลำดับ
+                <label><span className={kind === "article" ? "sr-only" : undefined}>เรียงลำดับ</span>
                   <select value={sort} onChange={e => updateFilters({ sort: e.target.value === "curated" ? "" : e.target.value })}>
                     {Object.entries(directorySorts).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                   </select>
                 </label>
-                <button className="button secondary filter-reset" onClick={reset} disabled={!filtered}><X size={16} />ล้างตัวกรอง</button>
+                {(kind !== "article" || filtered) && <button className="button secondary filter-reset" onClick={reset} disabled={!filtered}><X size={16} />ล้างตัวกรอง</button>}
               </div>}
               {kind !== "tool" && <p className="result-count" role="status" aria-live="polite">
                 พบ {results.length} จาก {entries.length} {kindLabels[kind]}
