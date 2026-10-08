@@ -53,7 +53,7 @@ export function AgentPanel({ agents, busy, mutate }: {
         <label>MCP URL<input value={endpoint} readOnly /></label>
         <p>Transport: Streamable HTTP<br />Header: <code>Authorization: Bearer YOUR_AGENT_TOKEN</code></p>
         <p>คีย์ทั่วไป: ค้นรายการเดิม → สร้างฉบับร่าง → ส่งตรวจ · คีย์จัดการเว็บ: แก้ไข เผยแพร่ และจัดหน้าเว็บได้โดยตรง</p>
-        <p>ใช้ได้กับไคลเอนต์ที่กำหนด Bearer token เองได้ การเชื่อมผ่าน OAuth ยังไม่รองรับ</p>
+        <p>ChatGPT / Dots: เพิ่ม URL นี้ใน Plugins → Add custom MCP server เลือก OAuth และลงทะเบียนไคลเอนต์ด้วย CIMD ไม่ต้องกรอก Client ID หรือ Client Secret จากนั้นยืนยันด้วยรหัสผ่านผู้ดูแล Gameslash</p>
       </div>
     </div>
     <h2>คีย์ที่ใช้งานอยู่ ({activeAgents.length})</h2>

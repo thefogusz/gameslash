@@ -142,10 +142,11 @@ export function saveSiteEntry(db: Database, agentId: string, id: Entry["id"], ex
   manageCatalog(db, { action: "entry", revision: db.revision, entry }, agent.name);
   return db.entries.find(e => e.id === id)!;
 }
-export function authenticateAgent(db: Database, token: string) {
+export function authenticateAgent(db: Database, token: string, resource?: string) {
   if (!/^gs_[A-Za-z0-9_-]{43}$/.test(token)) return null;
   const digest = Buffer.from(hash(token));
   return db.agents.find(a => !a.revokedAt && Date.parse(a.expiresAt) > Date.now() &&
+    !db.oauthGrants.some(grant => grant.agentId === a.id && (grant.accessExpiresAt <= Date.now() || (resource && grant.resource !== resource))) &&
     timingSafeEqual(Buffer.from(a.tokenHash), digest)) ?? null;
 }
 export function agentEntries(db: Database, agentId: string) {

@@ -1,6 +1,7 @@
 import { gameTags, tagKey, tagSuggestionSchema } from "@/lib/game-tags";
 import { requestGameTags, requireTagAgent, resolveGameTag, tagResolutionSchema } from "@/lib/tag-service";
 import { createMcpHandler } from "mcp-handler";
+import { oauthOrigin, oauthScope } from "@/lib/oauth";
 import { z } from "zod";
 import { readBody, checkOrigin } from "@/lib/auth";
 import { collectionContextSchema, reviewSchema, entryInput, entrySchema, layoutSchema, kinds, type Entry } from "@/lib/model";
@@ -30,9 +31,9 @@ export async function POST(request: Request) {
   try {
     if (request.headers.has("origin")) checkOrigin(request);
     const token = request.headers.get("authorization")?.match(/^Bearer (\S+)$/i)?.[1] || "";
-    const agent = authenticateAgent(await readDatabase(), token);
+    const agent = authenticateAgent(await readDatabase(), token, `${oauthOrigin(request)}/api/mcp`);
     if (!agent) return Response.json({ error: "Invalid or expired agent token" }, {
-      status: 401, headers: { "WWW-Authenticate": 'Bearer realm="gameslash"', "Cache-Control": "no-store" },
+      status: 401, headers: { "WWW-Authenticate": `Bearer realm="gameslash", resource_metadata="${oauthOrigin(request)}/.well-known/oauth-protected-resource", scope="${oauthScope}"`, "Cache-Control": "no-store" },
     });
     const body = await readBody(request, 3 * 1024 * 1024);
     const handler = createMcpHandler(server => {

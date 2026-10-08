@@ -241,6 +241,8 @@ export function seedDatabase(): Database {
     draftLayout: structuredClone(layout),
     limits: {},
     agents: [],
+    oauthCodes: [],
+    oauthGrants: [],
     activity: [],
     ingestions: {},
     reviews: {},

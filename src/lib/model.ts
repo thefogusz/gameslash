@@ -158,6 +158,16 @@ export const databaseSchema = z.object({
     z.object({ count: z.number(), reset: z.number() }),
   ),
   agents: z.array(agentSchema).max(50).default([]),
+  oauthCodes: z.array(z.object({
+    hash: z.string().regex(/^[a-f0-9]{64}$/),
+    clientId: z.string().max(300), redirectUri: z.string().max(2000),
+    challenge: z.string().regex(/^[A-Za-z0-9_-]{43}$/), resource: z.string().max(2000),
+    canWriteDrafts: z.boolean(), expiresAt: z.number(),
+  })).max(50).default([]),
+  oauthGrants: z.array(z.object({
+    agentId: z.string().uuid(), clientId: z.string().max(300), resource: z.string().max(2000),
+    refreshHash: z.string().regex(/^[a-f0-9]{64}$/), accessExpiresAt: z.number(),
+  })).max(50).default([]),
   activity: z.array(activitySchema).max(200).default([]),
   ingestions: z.record(z.string(), z.object({
     agentId: z.string().uuid(),
