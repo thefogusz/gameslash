@@ -455,7 +455,7 @@ export function Directory({
                     style={{
                       background: [
                         "#b99df0",
-                        "#6ff0cf",
+                        "var(--accent)",
                         "#b2db72",
                         "#ffd363",
                         "#ff8174",

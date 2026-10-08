@@ -6,8 +6,10 @@
   --ink: #f1effa;
   --muted: #9a97af;
   --line: #ffffff12;
-  --accent: #79dfc4;
-  --accent-light: #15342d;
+  --accent: #d6aa32;
+  --accent-hover: #e6bd50;
+  --accent-ink: #241c08;
+  --accent-light: #332a16;
   --ease: cubic-bezier(0.22, 0.68, 0, 1.1);
   --font-body: var(--font-thai), Anuphan, system-ui, sans-serif;
   --gut: clamp(16px, 3vw, 36px);
@@ -66,7 +68,7 @@ a:focus-visible {
   outline-offset: 4px;
 }
 ::selection {
-  background: #79dfc440;
+  background: #d6aa3240;
 }
 .sr-only {
   position: absolute;
@@ -85,7 +87,7 @@ a:focus-visible {
   left: 15px;
   z-index: 100;
   background: var(--accent);
-  color: #0b241e;
+  color: var(--accent-ink);
   padding: 12px;
   border-radius: 8px;
 }
@@ -179,7 +181,7 @@ a:focus-visible {
   color: var(--muted);
 }
 .search-box:focus-within {
-  border-color: #79dfc47a;
+  border-color: #d6aa327a;
 }
 .submit-nav {
   flex-shrink: 0;
@@ -210,12 +212,12 @@ a:focus-visible {
 .button.primary,
 .button.dark {
   background: var(--accent);
-  color: #0b2921;
+  color: var(--accent-ink);
   border-color: var(--accent);
 }
 .button.primary:hover,
 .button.dark:hover {
-  background: #9cecd6;
+  background: var(--accent-hover);
 }
 .icon-button {
   width: 36px;
@@ -368,7 +370,7 @@ a:focus-visible {
   padding: 2px 8px;
   border-radius: 5px;
   background: var(--accent);
-  color: #13251f;
+  color: var(--accent-ink);
   margin-bottom: 6px;
 }
 .feature-copy h2 {
@@ -401,7 +403,7 @@ a:focus-visible {
   border-radius: 999px;
   background: #0b0c14b8;
   color: var(--accent);
-  border: 1px solid #79dfc488;
+  border: 1px solid #d6aa3288;
   backdrop-filter: blur(6px);
 }
 .feature-arrow {
@@ -541,7 +543,7 @@ a:focus-visible {
   padding: 2px 8px;
   border-radius: 5px;
   background: var(--accent);
-  color: #13251f;
+  color: var(--accent-ink);
 }
 .cover-link {
   position: absolute;
@@ -1017,8 +1019,8 @@ form select:focus,
 .inspector-fields textarea:focus,
 .inspector-fields select:focus {
   outline: none;
-  border-color: #79dfc48c;
-  box-shadow: 0 0 0 3px #79dfc40a;
+  border-color: #d6aa328c;
+  box-shadow: 0 0 0 3px #d6aa320a;
 }
 form input::placeholder,
 form textarea::placeholder {
@@ -1907,7 +1909,7 @@ textarea {
     width: auto;
     z-index: 40;
     background: var(--surface);
-    border: 1px solid #79dfc488;
+    border: 1px solid #d6aa3288;
     padding: 8px 12px;
   }
   .topbar .search-box:focus-within input {
@@ -2598,10 +2600,10 @@ textarea {
 .game-tag-picker legend { font-weight:700; padding:0 6px; }
 .game-tag-picker p,.tag-suggestion p { color:#abb2c2; font-size:14px; line-height:1.6; margin:8px 0 14px; }
 .tag-chips { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
-.tag-chips button { display:flex; align-items:center; gap:12px; border:1px solid #365c53; border-radius:20px; background:#18332d; color:#adf2df; padding:7px 12px; font-size:14px; }
+.tag-chips button { display:flex; align-items:center; gap:12px; border:1px solid #665327; border-radius:20px; background:var(--accent-light); color:var(--accent); padding:7px 12px; font-size:14px; }
 .tag-picker-results { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; max-height:260px; overflow:auto; margin-top:12px; }
 .tag-picker-results button { display:flex; flex-direction:column; text-align:left; gap:3px; padding:10px 12px; border:1px solid #303540; border-radius:8px; background:#1a1d27; color:#f0f2f8; min-width:0; overflow-wrap:anywhere; }
-.tag-picker-results button:hover:not(:disabled) { border-color:#79dfc4; background:#233832; }
+.tag-picker-results button:hover:not(:disabled) { border-color:#d6aa32; background:var(--accent-light); }
 .tag-picker-results small { color:#abb2c2; font-size:12px; }
 .tag-picker-results button:disabled { opacity:.45; }
 .tag-suggestion { padding:16px 18px; border:1px solid #303540; border-radius:12px; }
