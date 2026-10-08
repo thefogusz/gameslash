@@ -614,7 +614,6 @@ export function Directory({
             <p>{catalog.layout.tagline}</p>
             <div>
               <Link href="/submit">แนะนำเกม</Link>
-              <Link href="/admin">สำหรับผู้ดูแล</Link>
               <span>© 2026 gameslash</span>
             </div>
           </footer>
