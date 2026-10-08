@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import type { Database } from "@/lib/model";
-import { editorialSkills } from "@/lib/editorial-skills";
+import { editorialScope, editorialSkills } from "@/lib/editorial-skills";
 
 type Agent = Omit<Database["agents"][number], "tokenHash">;
 export function AgentPanel({ agents, busy, mutate }: {
@@ -59,6 +59,7 @@ export function AgentPanel({ agents, busy, mutate }: {
     </div>
     <section className="editorial-skill-guide">
       <h2>ชุดทักษะสำหรับเอเจนต์</h2>
+      <p>{editorialScope}</p>
       <p>เริ่มด้วย <code>get_editorial_skills</code> แล้วส่ง <code>skillId</code> เพื่ออ่านวิธีทำงานแต่ละทักษะ หรืออ่าน resource <code>gameslash://editorial/handbook</code></p>
       <p>MCP จัดการคลังและฉบับร่างได้ตามสิทธิ์ การค้นเว็บสด แปลภาษา ทดสอบเกม และสร้างภาพต้องใช้เครื่องมือของไคลเอนต์ที่เชื่อมต่อ</p>
       <div className="editorial-skill-grid">{editorialSkills.map(skill => <details key={skill.id}><summary>{skill.title}</summary><p>{skill.summary}</p><code>{skill.id}</code><ol>{skill.instructions.map(step => <li key={step}>{step}</li>)}</ol><p>ผลลัพธ์: {skill.deliverable}</p></details>)}</div>

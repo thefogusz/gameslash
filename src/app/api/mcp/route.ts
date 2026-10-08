@@ -9,7 +9,7 @@ import { agentEntries, authenticateAgent, createAgentDraft, editAgentDraft, mana
 import { candidateSchema } from "@/lib/collection-model";
 import { readDatabase, updateDatabase, ConflictError } from "@/lib/store";
 import { saveImage, maxImageBytes } from "@/lib/media";
-import { editorialSkills, editorialHandbook } from "@/lib/editorial-skills";
+import { editorialScope, editorialSkills, editorialHandbook } from "@/lib/editorial-skills";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -46,6 +46,7 @@ export async function POST(request: Request) {
         const skill = input.skillId ? editorialSkills.find(s => s.id === input.skillId) : undefined;
         if (input.skillId && !skill) throw new Error("ไม่พบทักษะ กรุณาอ่านรายการทักษะก่อน");
         return {
+          editorialScope,
           permissions: { canWriteDrafts: current.canWriteDrafts || current.canManageSite, canManageTags: current.canManageTags || current.canManageSite, canManageSite: current.canManageSite },
           execution: "MCP provides catalog access, existing collection posts, image upload and permission-gated editing. Web search, live browsing, translation, gameplay testing and image generation must come from your client tools. No global search or paid collection is started by this tool.",
           ...(skill ? { skill } : { skills: editorialSkills.map(({ id, title, summary, tools }) => ({ id, title, summary, tools })), resource: "gameslash://editorial/handbook", workflow: "Read relevant skills → research with client tools → search_entries → prepare draft → get_entry → submit_for_review" }),

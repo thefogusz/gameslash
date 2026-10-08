@@ -1,5 +1,14 @@
 # Gameslash editorial agents
 
+Gameslash accepts games whose creators used AI to develop them. A creator's
+statement or an attributed source establishing AI-assisted development is enough
+to prepare an entry. Neither a named AI tool nor AI inside gameplay is required.
+Use `สร้างด้วย AI` for development; use `AI ในเกม` only for a documented gameplay
+feature. Do not append disclaimers about missing tool names or unconfirmed
+in-game AI when those details were never claimed. Omit unspecified details and
+focus on the game. This policy is returned with every skill tool response and at
+the beginning of the resource handbook.
+
 Connect using the existing authenticated `/api/mcp` endpoint. Begin with
 `get_editorial_skills({})` to discover the skill index and current permissions,
 then call `get_editorial_skills({ skillId: "global-news" })` (or another returned
