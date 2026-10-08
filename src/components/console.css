@@ -1,5 +1,5 @@
 /* Console tokens are scoped so the public directory keeps its existing identity. */
-.admin-app { --bg:#141618; --surface:#1c1e21; --raise:#272a2e; --ink:#f2f3f4; --muted:#adb2b8; --line:#ffffff17; --accent:#e6b940; --accent-light:#332a16; min-height:100dvh; background:var(--bg); color:var(--ink); font-size:16px; line-height:1.65; padding:68px 0 0 232px; }
+.admin-app { --bg:#141618; --surface:#1c1e21; --raise:#272a2e; --ink:#f2f3f4; --muted:#adb2b8; --line:#ffffff17; --accent:#f4c542; --accent-light:#332a16; min-height:100dvh; background:var(--bg); color:var(--ink); font-size:16px; line-height:1.65; padding:68px 0 0 232px; }
 .admin-app :is(h1,h2,h3) { font-family:var(--font-body); letter-spacing:-.025em; }
 .admin-app .button { min-height:44px; padding:9px 16px; border-radius:8px; font-size:15px; font-weight:650; gap:8px; }
 .admin-app .button.primary { color:var(--accent-ink); background:var(--accent); border-color:transparent; }
@@ -120,7 +120,7 @@
 .admin-app .layout-workspace { grid-template-columns:minmax(0,1fr) 320px; gap:20px; }
 .admin-app .layout-inspector { padding:20px; }
 .admin-app .layout-inspector { background:var(--surface); border-color:var(--line); top:84px; max-height:calc(100dvh - 104px); }
-.admin-app .inspector-item.selected,.admin-app .section-order.selected { color:var(--accent); background:var(--accent-light); border-color:#e6b94050; }
+.admin-app .inspector-item.selected,.admin-app .section-order.selected { color:var(--accent); background:var(--accent-light); border-color:#f4c54250; }
 .admin-app .add-section { color:var(--muted); border-color:var(--line); }
 .admin-app .order-title>span { font-size:12px; color:var(--muted); }
 .admin-app .code-input { font-size:14px !important; line-height:1.75; }
@@ -143,9 +143,9 @@
 .admin-app .article-toolbar button { min-height:44px; font-size:14px; }
 .admin-app .image-field { padding:16px; background:var(--bg); }
 .admin-app .editor-insert { font-size:15px; }
-.admin-app .console-toast { position:fixed; bottom:24px; left:calc(50% + 100px); transform:translateX(-50%); z-index:50; display:flex; gap:12px; align-items:center; max-width:calc(100vw - 32px); width:max-content; margin:0; padding:10px 12px 10px 18px; box-shadow:0 8px 32px #0005; background:var(--accent-light); color:var(--ink); border:1px solid #e6b94040; border-radius:10px; font-size:15px; }
+.admin-app .console-toast { position:fixed; bottom:24px; left:calc(50% + 100px); transform:translateX(-50%); z-index:50; display:flex; gap:12px; align-items:center; max-width:calc(100vw - 32px); width:max-content; margin:0; padding:10px 12px 10px 18px; box-shadow:0 8px 32px #0005; background:var(--accent-light); color:var(--ink); border:1px solid #f4c54240; border-radius:10px; font-size:15px; }
 .notification-center { position:relative; }
-.notification-arrival { position:fixed; right:24px; bottom:24px; display:flex; align-items:center; gap:12px; width:min(440px,calc(100vw - 32px)); padding:12px 16px; border:1px solid #e6b94050; border-radius:12px; background:var(--surface); box-shadow:0 12px 44px #0008; }
+.notification-arrival { position:fixed; right:24px; bottom:24px; display:flex; align-items:center; gap:12px; width:min(440px,calc(100vw - 32px)); padding:12px 16px; border:1px solid #f4c54250; border-radius:12px; background:var(--surface); box-shadow:0 12px 44px #0008; }
 .notification-arrival>svg { color:var(--accent); flex-shrink:0; }
 .notification-arrival>button:not(.icon-button) { text-align:left; font-size:15px; line-height:1.7; padding:0; }
 .notification-trigger { position:relative; width:44px; height:44px; border:1px solid var(--line); border-radius:9px; display:grid; place-items:center; background:var(--bg); }
@@ -161,7 +161,7 @@
 .notification-list>button>span { flex:1; min-width:0; }
 .notification-list strong { display:block; font-size:15px; line-height:1.65; font-weight:600; margin:4px 0; }
 .admin-app .notification-list :is(small,time) { font-size:13px; color:var(--muted); }
-.notification-list>button.unread { background:#e6b94009; }
+.notification-list>button.unread { background:#f4c54209; }
 .notification-list>button.unread>i { margin-top:10px; width:7px; height:7px; background:var(--accent); border-radius:50%; flex-shrink:0; }
 .notification-panel>footer { padding:12px 20px; display:grid; gap:6px; }
 .notification-panel>footer button { display:flex; align-items:center; gap:8px; padding:8px 0; min-height:44px; color:var(--accent); font-size:14px; }

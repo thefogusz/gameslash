@@ -6,9 +6,9 @@
   --ink: #f1effa;
   --muted: #9a97af;
   --line: #ffffff12;
-  --accent: #e6b940;
-  --accent-hover: #f0cc69;
-  --accent-ink: #241c08;
+  --accent: #f4c542;
+  --accent-hover: #ffda66;
+  --accent-ink: #090a0f;
   --accent-light: #332a16;
   --ease: cubic-bezier(0.22, 0.68, 0, 1.1);
   --font-body: var(--font-thai), Anuphan, system-ui, sans-serif;
@@ -68,7 +68,7 @@ a:focus-visible {
   outline-offset: 4px;
 }
 ::selection {
-  background: #e6b94040;
+  background: #f4c54240;
 }
 .sr-only {
   position: absolute;
@@ -181,7 +181,7 @@ a:focus-visible {
   color: var(--muted);
 }
 .search-box:focus-within {
-  border-color: #e6b9407a;
+  border-color: #f4c5427a;
 }
 .submit-nav {
   flex-shrink: 0;
@@ -403,7 +403,7 @@ a:focus-visible {
   border-radius: 999px;
   background: #0b0c14b8;
   color: var(--accent);
-  border: 1px solid #e6b94088;
+  border: 1px solid #f4c54288;
   backdrop-filter: blur(6px);
 }
 .feature-arrow {
@@ -1019,8 +1019,8 @@ form select:focus,
 .inspector-fields textarea:focus,
 .inspector-fields select:focus {
   outline: none;
-  border-color: #e6b9408c;
-  box-shadow: 0 0 0 3px #e6b9400a;
+  border-color: #f4c5428c;
+  box-shadow: 0 0 0 3px #f4c5420a;
 }
 form input::placeholder,
 form textarea::placeholder {
@@ -1909,7 +1909,7 @@ textarea {
     width: auto;
     z-index: 40;
     background: var(--surface);
-    border: 1px solid #e6b94088;
+    border: 1px solid #f4c54288;
     padding: 8px 12px;
   }
   .topbar .search-box:focus-within input {
@@ -2603,7 +2603,7 @@ textarea {
 .tag-chips button { display:flex; align-items:center; gap:12px; border:1px solid #665327; border-radius:20px; background:var(--accent-light); color:var(--accent); padding:7px 12px; font-size:14px; }
 .tag-picker-results { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; max-height:260px; overflow:auto; margin-top:12px; }
 .tag-picker-results button { display:flex; flex-direction:column; text-align:left; gap:3px; padding:10px 12px; border:1px solid #303540; border-radius:8px; background:#1a1d27; color:#f0f2f8; min-width:0; overflow-wrap:anywhere; }
-.tag-picker-results button:hover:not(:disabled) { border-color:#e6b940; background:var(--accent-light); }
+.tag-picker-results button:hover:not(:disabled) { border-color:#f4c542; background:var(--accent-light); }
 .tag-picker-results small { color:#abb2c2; font-size:12px; }
 .tag-picker-results button:disabled { opacity:.45; }
 .tag-suggestion { padding:16px 18px; border:1px solid #303540; border-radius:12px; }
