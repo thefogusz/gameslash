@@ -3,6 +3,8 @@ import { Directory, type View } from "@/components/directory";
 import { publicData } from "@/lib/model";
 import { readDatabase } from "@/lib/store";
 import { isAdmin } from "@/lib/auth";
+import { collectionSchema, indexable, jsonLd, pageMetadata, sectionSeo } from "@/lib/seo";
+import { filterDirectory } from "@/lib/directory-filters";
 const sections = ["games", "tools", "journal", "community", "submit"];
 export const dynamic = "force-dynamic";
 export async function generateMetadata({
@@ -11,18 +13,9 @@ export async function generateMetadata({
   params: Promise<{ section: string }>;
 }) {
   const { section } = await params;
-  return {
-    title:
-      (
-        {
-          games: "ค้นพบเกม",
-          tools: "เครื่องมือ",
-          journal: "ข่าว AI game",
-          community: "คอมมูนิตี้",
-          submit: "ส่งเกมของคุณ",
-        } as Record<string, string>
-      )[section] || "gameslash",
-  };
+  if (!sections.includes(section)) notFound();
+  const seo = sectionSeo[section];
+  return { ...pageMetadata(`/${section}`, seo.title, seo.description), ...(section === "submit" || !indexable ? { robots: { index: false, follow: true } } : {}) };
 }
 export default async function Page({
   params,
@@ -39,11 +32,14 @@ export default async function Page({
     searchParams,
   ]);
   return (
+    <>
+    {section !== "submit" && !Object.values(query).some(Boolean) && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(collectionSchema(`/${section}`, sectionSeo[section].title, filterDirectory(publicData(db).entries, { kind: sectionSeo[section].kind!, query: "", category: "", tag: "", sort: "curated" }, db.layout.featuredIds))) }} />}
     <Directory
       catalog={publicData(db)}
       admin={admin}
       view={section as View}
       submitType={query.type}
     />
+    </>
   );
 }

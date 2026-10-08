@@ -92,6 +92,27 @@ In Console → แหล่งข้อมูล, each collection run with resul
 
 If a local development process crashes during a write, an old `.data/write.lock` can remain. Stop local server processes and confirm none is writing before removing that single lock file. Do not delete the catalog to clear a lock.
 
+## SEO and a future custom domain
+
+Public pages have canonical URLs, Thai/English descriptions, social cards and JSON-LD (`WebSite`, `CollectionPage`/`ItemList`, `WebPage`, `BreadcrumbList`, and the matching `VideoGame`, `SoftwareApplication`, `Article` or `DiscussionForumPosting`). Markup uses published catalog data only; editorial tool popularity is not a user review rating. Filtered directory URLs canonicalize to the main directory and omit the unfiltered item-list markup. `/sitemap.xml` reads current published entries; admin and submission pages are noindex, and Vercel preview/development deployments are noindex with crawling disabled.
+
+Keyword coverage follows the actual content, without search-volume claims:
+
+| Page | Thai intent | English intent |
+| --- | --- | --- |
+| Home / games | เกม AI, เกมเอไอ, รวมเกม AI, เกมที่มี AI, เกมสร้างด้วย AI, RPG, ผจญภัย, ปริศนา, จำลอง | AI games, AI-powered games, AI NPC games, generative AI games, AI game directory |
+| Tools | เครื่องมือ AI สร้างเกม, ภาพ, แอนิเมชัน, โค้ด, ระบบ NPC | AI game development tools, game art, animation, coding, intelligent characters |
+| Journal | ข่าวเกม AI, บทความพัฒนาเกม, เทคนิคสร้างเกมด้วย AI | AI gaming news, game development articles, generative AI workflows |
+| Community | คอมมูนิตี้คนสร้างเกม AI, ไอเดียสร้างเกม | AI game dev community, game development ideas |
+
+This is a Thai site with bilingual discovery copy, not separate translated pages; no fake English hreflang URLs are emitted. Meta keywords are descriptive metadata, not a Google ranking mechanism. Add substantive bilingual entries for additional search intents.
+
+Until a custom domain is connected, leave `GAMESLASH_SITE_URL` unset; it defaults to `https://gameslash.vercel.app`. Once the domain is live with HTTPS, set it to the origin only (e.g. `https://your-domain.example`) in Production and redeploy. It updates canonical links, sitemap, JSON-LD and social image origins together. Then redirect old public URLs permanently to matching paths, verify the new property in Search Console, submit `/sitemap.xml`, and use Google's site-move process where applicable. Do not redirect MCP/OAuth endpoints blindly: `GAMESLASH_OAUTH_ORIGIN`, registered clients and existing grants are separate and need a planned migration/reconnection.
+
+Set `GOOGLE_SITE_VERIFICATION` to the Search Console HTML-tag verification token when available. Deployment alone does not submit a sitemap or confirm indexing/rich results.
+
+References: [Next.js metadata](https://nextjs.org/docs/app/api-reference/functions/generate-metadata), [JSON-LD and escaping](https://nextjs.org/docs/app/guides/json-ld), [sitemap](https://nextjs.org/docs/app/api-reference/file-conventions/metadata/sitemap), [robots](https://nextjs.org/docs/app/api-reference/file-conventions/metadata/robots), [Google structured-data guidelines](https://developers.google.com/search/docs/appearance/structured-data/sd-policies), [canonical URLs](https://developers.google.com/search/docs/crawling-indexing/consolidate-duplicate-urls), [multilingual sites](https://developers.google.com/search/docs/specialty/international/managing-multi-regional-sites), [VideoGame](https://schema.org/VideoGame), [SoftwareApplication](https://schema.org/SoftwareApplication).
+
 ## Checks
 
 ```sh

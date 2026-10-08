@@ -607,6 +607,11 @@ export function Directory({
           ) : (
             <HomeContent catalog={catalog} />
           )}
+          {view === "home" && <section className="discovery-about" aria-label="เกี่ยวกับ GameSlash">
+            <h2>GameSlash — แพลตฟอร์มรวมเกม AI</h2>
+            <p>ค้นพบเกมที่มี AI NPC เกมสร้างด้วย AI และประสบการณ์ใหม่ ๆ ทั้ง RPG ผจญภัย ปริศนา และจำลอง พร้อมเครื่องมือสร้างเกมและข่าวสำหรับคนสร้างเกม</p>
+            <p lang="en">Discover AI games, intelligent NPCs and generative AI experiences, from RPGs and adventures to puzzle and simulation games. Explore AI game development tools and gaming news.</p>
+          </section>}
           <footer className="site-footer">
             <Link href="/" className="wordmark small">
               game<span className="wordmark-slash">/</span>slash

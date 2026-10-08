@@ -3,6 +3,7 @@ import { Directory } from "@/components/directory";
 import { publicData } from "@/lib/model";
 import { readDatabase } from "@/lib/store";
 import { isAdmin } from "@/lib/auth";
+import { entrySchema, jsonLd, pageMetadata } from "@/lib/seo";
 export const dynamic = "force-dynamic";
 export async function generateMetadata({
   params,
@@ -13,7 +14,8 @@ export async function generateMetadata({
   const e = (await readDatabase()).entries.find(
     (e) => e.id === id && e.status === "published",
   );
-  return { title: e?.title || "ไม่พบรายการ", description: e?.description };
+  if (!e) notFound();
+  return { ...pageMetadata(`/item/${e.id}`, e.title, e.description, e.image || undefined), keywords: e.tags };
 }
 export default async function Page({
   params,
@@ -26,6 +28,9 @@ export default async function Page({
   const item = catalog.entries.find((e) => e.id === id);
   if (!item) notFound();
   return (
+    <>
+    <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(entrySchema(item)) }} />
     <Directory catalog={catalog} admin={admin} view="detail" item={item} />
+    </>
   );
 }

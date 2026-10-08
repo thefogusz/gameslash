@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Anuphan, Chakra_Petch } from "next/font/google";
 import "./globals.css";
 import { GamePreferencesProvider } from "@/components/game-preferences";
+import { absoluteUrl, indexable, jsonLd, seoDescription, seoKeywords, siteOrigin } from "@/lib/seo";
 const geist = Geist({
   subsets: ["latin"],
   variable: "--font-geist",
@@ -19,13 +20,16 @@ const chakra = Chakra_Petch({
   display: "swap",
 });
 export const metadata: Metadata = {
-  metadataBase: new URL("https://gameslash.vercel.app"),
+  metadataBase: new URL(siteOrigin()),
   title: {
     default: "GameSlash รวมเกมเอไอ",
     template: "%s · gameslash",
   },
   description:
-    "พื้นที่รวมเกม AI บทความ เครื่องมือ และคอมมูนิตี้สำหรับคนชอบสร้างเกม ค้นพบเกมแล้วไปต่อที่เว็บไซต์ผู้สร้าง",
+    seoDescription,
+  keywords: seoKeywords,
+  robots: { index: indexable, follow: true, googleBot: { index: indexable, follow: true, "max-image-preview": "large" } },
+  verification: { google: process.env.GOOGLE_SITE_VERIFICATION },
   applicationName: "gameslash",
   openGraph: {
     type: "website",
@@ -53,7 +57,10 @@ export default function RootLayout({
       lang="th"
       className={`${geist.variable} ${anuphan.variable} ${chakra.variable}`}
     >
-      <body><GamePreferencesProvider>{children}</GamePreferencesProvider></body>
+      <body>
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd({ "@context": "https://schema.org", "@type": "WebSite", "@id": absoluteUrl("/#website"), name: "GameSlash", alternateName: ["GameSlash รวมเกมเอไอ", "GameSlash AI Games"], url: absoluteUrl("/"), description: seoDescription, inLanguage: "th" }) }} />
+        <GamePreferencesProvider>{children}</GamePreferencesProvider>
+      </body>
     </html>
   );
 }
