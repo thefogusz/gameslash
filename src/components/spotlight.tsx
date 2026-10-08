@@ -15,7 +15,7 @@ export function Spotlight({ entries, layout }: { entries: Entry[]; layout: Layou
   const liked = games.filter(e => likedIds.includes(e.id));
   const groups = [
     ...(manual.length ? manual : [{ id: "auto-curated", title: "คัดสรร", badge: "เกมแนะนำ", entries: games.slice(0, 5) }]),
-    { id: "auto-new", title: "มาใหม่", badge: "เพิ่งเพิ่มใน Gameslash", entries: [...games].sort((a,b) => b.createdAt.localeCompare(a.createdAt)).slice(0,5) },
+    { id: "auto-new", title: "มาใหม่", badge: "เพิ่มล่าสุดใน Gameslash", entries: [...games].sort((a,b) => b.createdAt.localeCompare(a.createdAt)).slice(0,5) },
     { id: "personal", title: "สำหรับคุณ", badge: "แนะนำสำหรับคุณ", entries: recommended.map(item => item.entry) },
     { id: "liked", title: `ถูกใจ${ready ? ` (${liked.length})` : ""}`, badge: "เกมที่คุณถูกใจ", entries: liked.slice(0,5) },
   ];
@@ -25,7 +25,7 @@ export function Spotlight({ entries, layout }: { entries: Entry[]; layout: Layou
   const note = group.id === "personal"
     ? !ready ? "กำลังอ่านความชอบจากเบราว์เซอร์นี้…" : !liked.length ? "กดหัวใจบนเกมที่ชอบ เพื่อเริ่มแนะนำเกมตามแนวของคุณ" : !recommended.length ? "เกมที่คุณเก็บไว้ยังเปิดดูได้ในแท็บถูกใจ" : recommended.some(item => item.score > 0) ? "เรียงจากแนวเกมและแท็กที่คล้ายกับเกมที่คุณถูกใจ" : "ยังไม่มีเกมแนวเดียวกันเพิ่ม ลองค้นพบเกมอื่นที่คัดสรรให้"
     : group.id === "liked" ? "ถูกใจเก็บเฉพาะเบราว์เซอร์นี้ ไม่ต้องสมัครสมาชิก หากล้างข้อมูลเว็บไซต์ รายการนี้จะหายไป"
-    : group.id === "auto-new" ? "เกมที่เพิ่งเพิ่มเข้าคลัง Gameslash ไม่ใช่วันเปิดตัวเกม"
+    : group.id === "auto-new" ? "เรียงตามวันที่เพิ่มเข้าคลัง Gameslash ล่าสุด ไม่ใช่วันเปิดตัวเกม"
     : /popular|trending|ยอดนิยม|มาแรง|เทรน/i.test(group.title) ? "ชุดเด่นที่ผู้ดูแลคัดเลือก ไม่ใช่อันดับจากยอดไลก์หรือจำนวนผู้เล่น" : "เกมเด่นที่คัดสรรให้ลองค้นพบ · กดหัวใจเพื่อบอกแนวที่คุณชอบ";
   return <section className="spotlight" aria-label="ชุดเกมเด่น">
     <div className="spotlight-tabs" aria-label="เลือกชุดเกมเด่น">{groups.map(g => <button key={g.id} aria-pressed={g.id === group.id} onClick={() => setGroupId(g.id)}>{g.title}</button>)}</div>

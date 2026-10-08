@@ -2,7 +2,7 @@ import type { Entry } from "./model";
 
 export const directorySorts = {
   curated: "แนะนำก่อน",
-  new: "เพิ่งเพิ่ม",
+  new: "เพิ่มล่าสุด",
   updated: "อัปเดตล่าสุด",
   oldest: "เพิ่มก่อน",
   az: "ชื่อ A–Z",
