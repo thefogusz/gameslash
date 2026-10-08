@@ -5,6 +5,7 @@ import { seedDatabase } from "../src/lib/seed";
 import { databaseSchema, publicData } from "../src/lib/model";
 import { authenticateAgent, manageCatalog } from "../src/lib/catalog-service";
 import { authorizationSchema, exchangeOAuthToken, isChatGPTClient, issueAuthorizationCode, readOAuthForm, validateAuthorization } from "../src/lib/oauth";
+import { GET as authorizationPage } from "../src/app/oauth/authorize/route";
 
 const verifier = randomBytes(32).toString("base64url");
 process.env.SESSION_SECRET = "oauth-test-session-secret-isolated-123456";
@@ -95,4 +96,22 @@ test("form parser rejects duplicate fields, wrong content type and oversized bod
   await assert.rejects(readOAuthForm(form("code=a&code=b")), /invalid_request/);
   await assert.rejects(readOAuthForm(form("code=" + "x".repeat(16_384))), /invalid_request/);
   await assert.rejects(readOAuthForm(new Request("https://example.com", { method: "POST", body: "code=a" })), /invalid_request/);
+});
+
+test("consent CSP permits the ChatGPT callback redirect while keeping other form destinations blocked", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalPassword = process.env.ADMIN_PASSWORD;
+  process.env.ADMIN_PASSWORD = "isolated-oauth-test-password-123456";
+  globalThis.fetch = async () => Response.json({ client_id: input.client_id, redirect_uris: [input.redirect_uri] });
+  try {
+    const response = await authorizationPage(new Request(`https://gameslash.vercel.app/oauth/authorize?${new URLSearchParams(input)}`));
+    assert.equal(response.status, 200);
+    const csp = response.headers.get("Content-Security-Policy")!;
+    assert.equal(csp.split(";").map(value => value.trim()).find(value => value.startsWith("form-action")), "form-action 'self' https://chatgpt.com");
+    assert.ok(csp.includes("frame-ancestors 'none'"));
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalPassword === undefined) delete process.env.ADMIN_PASSWORD;
+    else process.env.ADMIN_PASSWORD = originalPassword;
+  }
 });
