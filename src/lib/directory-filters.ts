@@ -1,6 +1,6 @@
 import type { Entry } from "./model";
 
-export const toolWorkflowCategories = ["ไอเดียและออกแบบ", "เอนจินเกม", "เขียนโค้ด", "ภาพและเสียง", "ทดสอบเกม"];
+export const toolWorkflowCategories = ["ไอเดียและออกแบบ", "เอนจินเกม", "เขียนโค้ด", "ภาพและเสียง", "AI ในเกม", "ทดสอบเกม"];
 
 export function gameMakingTools(entries: Entry[]) {
   return entries.filter(e => e.kind === "tool" && e.category !== "เผยแพร่");

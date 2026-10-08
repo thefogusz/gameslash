@@ -1,5 +1,6 @@
 "use client";
 import { ArticleContent } from "./article-content";
+import { ToolsGuide, ToolDirectoryCard } from "./tools-guide";
 import Link from "next/link";
 import { useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
@@ -374,7 +375,7 @@ export function Directory({
   const filtered = !!(query || category || tag || likedOnly || sort !== "curated");
   const titles = {
     game: ["ค้นพบเกม", "ค้นหาเกมตามชื่อ ผู้สร้าง หรือหมวดหมู่"],
-    tool: ["เครื่องมือทำเกม", "เลือกเครื่องมือตามขั้นตอน ตั้งแต่วางไอเดีย สร้างเกม ทำภาพและเสียง ไปจนถึงทดสอบ"],
+    tool: ["สร้างเกมด้วย AI", "ไกด์ตั้งแต่ยังไม่มีไอเดียจนเกมพร้อมให้คนเล่น พร้อมรวมเครื่องมือที่ใช้ในแต่ละขั้น"],
     article: ["บทความ", "คู่มือและประสบการณ์สำหรับคนทำเกม"],
     post: ["คอมมูนิตี้", "แชร์ผลงาน ถามคำถาม และขอฟีดแบ็ก"],
   };
@@ -502,7 +503,7 @@ export function Directory({
             onClick={() => setMenu(false)}
           />
         )}
-        <main id="main" className="main-content">
+        <main id="main" className={`main-content${kind === "tool" ? " tools-page" : ""}`}>
           {browse ? (
             <>
               <div className="page-heading">
@@ -521,6 +522,13 @@ export function Directory({
                   )}
                 </div>
               </div>
+              {kind === "tool" && !searching && <>
+                <a className="tools-directory-jump" href="#tool-directory">ดูรวมเครื่องมือ <ArrowRight size={16} /></a>
+                <ToolsGuide entries={entries} />
+              </>}
+              {kind === "tool" && <div className="tool-directory-heading" id="tool-directory">
+                <h2>รวมเครื่องมือ</h2><span role="status" aria-live="polite">{results.length} เครื่องมือ</span>
+              </div>}
               {kind === "tool" && (
                 <div className="filter-chips tool-categories" role="group" aria-label="ประเภทเครื่องมือ">
                   <button type="button" aria-pressed={!category} onClick={() => updateFilters({ category: "" })}>ทั้งหมด</button>
@@ -549,20 +557,20 @@ export function Directory({
                 </label>
                 <button className="button secondary filter-reset" onClick={reset} disabled={!filtered}><X size={16} />ล้างตัวกรอง</button>
               </div>}
-              <p className="result-count" role="status" aria-live="polite">
+              {kind !== "tool" && <p className="result-count" role="status" aria-live="polite">
                 พบ {results.length} จาก {entries.length} {kindLabels[kind]}
-              </p>
+              </p>}
               {likedOnly && !ready ? <p role="status">กำลังอ่านรายการที่ถูกใจ…</p> : !results.length ? (
                 <Empty onReset={reset} />
               ) : (
                 <div
-                  className={`entries entries-${kind} template-grid browse-grid`}
+                  className={kind === "tool" ? "tool-directory-grid" : `entries entries-${kind} template-grid browse-grid`}
                 >
                   {results.map((e) =>
                     kind === "game" ? (
                       <GameCard key={e.id} entry={e} />
                     ) : kind === "tool" ? (
-                      <ToolCard key={e.id} entry={e} />
+                      <ToolDirectoryCard key={e.id} entry={e} />
                     ) : kind === "article" ? (
                       <ArticleCard key={e.id} entry={e} />
                     ) : (

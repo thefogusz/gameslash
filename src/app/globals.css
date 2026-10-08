@@ -707,6 +707,45 @@ a:focus-visible {
 .tool-categories button:hover { border-color: var(--accent); }
 .tool-categories button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
 .tool-categories button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.tools-page { width: 100%; max-width: 1080px; margin-inline: auto; }
+.tools-directory-jump { display: inline-flex; align-items: center; gap: 8px; color: var(--accent); font-size: 15px; margin-top: -12px; }
+.tools-guide { display: grid; gap: 12px; margin: 28px 0 44px; max-width: 860px; }
+.tools-guide-step { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 16px; padding: 20px 22px; border-radius: 16px; background: var(--surface); }
+.tools-step-number { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; color: var(--accent); background: var(--raise); font-size: 18px; font-weight: 700; }
+.tools-guide-step h2 { font-size: 20px; line-height: 40px; }
+.tools-guide-step p, .tools-guide-step li { font-size: 16px; line-height: 1.8; color: var(--ink); }
+.tools-guide-step ul { display: grid; gap: 4px; margin-top: 8px; padding-left: 20px; }
+.tools-step-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.tools-step-links:empty { display: none; }
+.tools-step-links a { display: inline-flex; align-items: center; min-height: 40px; border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px; font-size: 14px; }
+.tools-step-links a:hover { border-color: var(--accent); color: var(--accent); }
+.tools-idea { display: grid; gap: 12px; margin-top: 16px; padding: 16px 18px; border-radius: 12px; background: var(--bg); }
+.tools-idea-label { font-size: 14px; color: var(--muted); }
+.tools-idea .tools-idea-title { font-size: 21px; font-weight: 700; line-height: 1.5; color: var(--ink); }
+.tools-idea-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.tools-idea-actions .button { min-height: 44px; font-size: 14px; }
+.tools-idea textarea { width: 100%; min-height: 100px; resize: vertical; border: 1px solid var(--line); border-radius: 8px; background: transparent; padding: 10px; color: var(--muted); font: inherit; font-size: 14px; line-height: 1.7; }
+.tools-idea .tools-copy-status { color: var(--accent); font-size: 14px; }
+.tools-copy-status:empty { display: none; }
+.tool-directory-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; margin-bottom: 12px; scroll-margin-top: 100px; }
+.tool-directory-heading h2 { font-size: 24px; }
+.tool-directory-heading > span { font-size: 14px; color: var(--muted); }
+.tool-directory-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: 12px; }
+.tool-directory-card { display: flex; flex-direction: column; gap: 8px; padding: 18px; border-radius: 14px; background: var(--surface); scroll-margin-top: 100px; }
+.tool-directory-card:target { outline: 2px solid var(--accent); outline-offset: 3px; }
+.tool-directory-card-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.tool-directory-card h3 { font-size: 18px; }
+.tool-directory-card-heading > span { font-size: 13px; color: var(--muted); }
+.tool-directory-card > p { font-size: 15px; line-height: 1.8; color: var(--ink); }
+.tool-directory-card > a { display: inline-flex; align-items: center; gap: 4px; align-self: flex-start; min-height: 44px; margin-top: auto; color: var(--accent); font-size: 15px; }
+.tool-directory-card > a:hover { text-decoration: underline; }
+@media (max-width: 600px) {
+  .tools-guide-step { grid-template-columns: 32px minmax(0, 1fr); gap: 12px; padding: 16px; }
+  .tools-step-number { width: 32px; height: 32px; border-radius: 9px; }
+  .tools-guide-step h2 { font-size: 18px; line-height: 32px; }
+  .tools-idea { padding: 14px; margin-left: -44px; margin-top: 20px; }
+  .tools-idea .tools-idea-title { font-size: 19px; }
+}
 .result-count {
   font-size: 14px;
   color: var(--muted);
