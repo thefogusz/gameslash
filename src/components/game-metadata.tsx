@@ -1,0 +1,12 @@
+import { gamePlatforms, gameStatusTags, isGameStatus } from "@/lib/game-tags";
+
+export function GameMetadata({ tags, compact = false }: { tags: string[]; compact?: boolean }) {
+  const statuses = tags.filter(isGameStatus);
+  const platforms = tags.filter(tag => gamePlatforms.includes(tag));
+  const genres = tags.filter(tag => !isGameStatus(tag) && !gamePlatforms.includes(tag));
+  return <div className={`game-metadata${compact ? " compact" : ""}`}>
+    {statuses.length > 0 && <div className="game-meta-row"><span className="game-meta-label">สถานะ</span>{statuses.map(name => <span className="game-status" key={name} title={gameStatusTags.find(t => t.name === name)?.thai}>{name}<span>{gameStatusTags.find(t => t.name === name)?.thai}</span></span>)}</div>}
+    {platforms.length > 0 && <div className="game-meta-row"><span className="game-meta-label">แพลตฟอร์ม</span>{platforms.map(name => <span className="game-platform" key={name}>{name}</span>)}</div>}
+    {!compact && genres.length > 0 && <div className="game-meta-row"><span className="game-meta-label">ลักษณะเกม</span><div className="tags">{genres.map(name => <span key={name}>{name}</span>)}</div></div>}
+  </div>;
+}

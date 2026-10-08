@@ -1,6 +1,7 @@
 "use client";
 import { ArticleContent, legacyGuideDocument } from "./article-content";
 import { ToolDirectoryCard } from "./tool-directory-card";
+import { GameMetadata } from "./game-metadata";
 import { FilterSelect } from "./filter-select";
 import Link from "next/link";
 import { useRef, useState } from "react";
@@ -60,13 +61,9 @@ export function GameCard({ entry }: { entry: Entry }) {
         <h3>{entry.title}</h3>
         <ArrowUpRight size={15} />
       </div>
-      <p>
-        {entry.author}
-        <span>·</span>
-        {entry.tags.find((t) => t === "AI ในเกม" || t === "สร้างด้วย AI") ||
-          entry.tags[0] ||
-          entry.category}
-      </p>
+      <p className="game-card-description">{entry.description}</p>
+      <GameMetadata tags={entry.tags} compact />
+      <p className="game-card-author">โดย {entry.author}</p>
     </Link>
     <LikeButton id={entry.id} title={entry.title} compact />
     </div>
@@ -286,11 +283,11 @@ function Detail({ entry }: { entry: Entry }) {
         </div>
       </div>
       <p className="detail-description">{entry.description}</p>
-      <div className="tags">
+      {entry.kind === "game" ? <GameMetadata tags={entry.tags} /> : <div className="tags">
         {entry.tags.map((t) => (
           <span key={t}>{t}</span>
         ))}
-      </div>
+      </div>}
       {entry.kind === "article" && entry.image && <div className="detail-cover"><Cover entry={entry} priority /></div>}
       <ArticleContent content={guideContent} body={entry.body}/>
       {entry.kind === "game" && (

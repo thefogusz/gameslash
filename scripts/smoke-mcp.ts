@@ -42,7 +42,7 @@ try {
   assert.equal(JSON.stringify(await snapshot()).includes(token), false);
   const initialized = await rpc(token, "initialize", { protocolVersion: "2025-11-25", capabilities: {}, clientInfo: { name: "gameslash-test", version: "1.0.0" } });
   assert.ok(initialized.serverInfo);
-  assert.equal((await rpc(token, "tools/list")).tools.length, 20);
+  assert.equal((await rpc(token, "tools/list")).tools.length, 21);
   assert.equal((await call(token, "get_site_state")).isError, true);
   const site = (await call(manager, "get_site_state")).structuredContent;
   const siteEntry = { kind: "tool", title: "MCP site verification", description: "Temporary tool for site management integration testing.", author: "Smoke test", category: "สไปรต์และภาพ 2D", url: "https://example.com/mcp-site-test", sourceUrl: "https://example.com/mcp-site-test" };
@@ -77,6 +77,21 @@ try {
   const downloaded=await fetch(`${origin}${media.url}`);
   assert.equal(downloaded.status,200); assert.equal(downloaded.headers.get("content-type"),"image/webp");
   assert.ok((await call(token,"get_article_format")).structuredContent.example);
+  const skills = (await call(reader, "get_editorial_skills")).structuredContent;
+  assert.equal(skills.permissions.canWriteDrafts, false);
+  assert.equal(skills.skills.length, 7);
+  assert.ok((await call(token, "get_editorial_skills", { skillId: "global-news" })).structuredContent.skill.instructions.length);
+  assert.equal((await call(token, "get_editorial_skills", { skillId: "missing" })).isError, true);
+  const resources = await rpc(reader, "resources/list");
+  assert.ok(resources.resources.some((r: { uri: string }) => r.uri === "gameslash://editorial/handbook"));
+  const handbook = await rpc(reader, "resources/read", { uri: "gameslash://editorial/handbook" });
+  assert.ok(handbook.contents[0].text.includes("thai-editorial"));
+  const releaseTags = (await call(reader, "get_game_tags", { query: "CBT" })).structuredContent.tags;
+  assert.ok(releaseTags.some((tag: { name: string }) => tag.name === "CBT"));
+  const gameDraft = await call(token, "create_draft", { requestId: crypto.randomUUID(), entry: { kind: "game", title: "Release tag verification", description: "Local fixture checking game release tags through MCP.", author: "Smoke test", category: "RPG", url: `https://example.com/game-${crypto.randomUUID()}`, tags: ["CBT", "RPG", "PC"] } });
+  assert.equal(gameDraft.isError, undefined);
+  entryIds.push(gameDraft.structuredContent.entry.id);
+  assert.deepEqual((await call(token, "get_entry", { id: gameDraft.structuredContent.entry.id })).structuredContent.entry.tags, ["CBT", "RPG", "PC"]);
   const content={type:"doc",content:[{type:"heading",attrs:{level:2},content:[{type:"text",text:"Illustrated MCP article"}]},{type:"paragraph",content:[{type:"text",text:"Article roundtrip test."}]},{type:"image",attrs:{src:media.url,alt:"MCP illustration",title:"Image credit"}}]};
   const entry = { kind:"article",title:"MCP illustrated verification",description:"Private temporary article for integration testing.",author:"Smoke test",category:"เทคนิค",url:"",sourceUrl:"https://example.com/source",image:media.url,imageAlt:"MCP cover",content };
 

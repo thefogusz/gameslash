@@ -9,6 +9,7 @@ import { agentEntries, authenticateAgent, createAgentDraft, editAgentDraft, mana
 import { candidateSchema } from "@/lib/collection-model";
 import { readDatabase, updateDatabase, ConflictError } from "@/lib/store";
 import { saveImage, maxImageBytes } from "@/lib/media";
+import { editorialSkills, editorialHandbook } from "@/lib/editorial-skills";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -37,6 +38,25 @@ export async function POST(request: Request) {
     });
     const body = await readBody(request, 3 * 1024 * 1024);
     const handler = createMcpHandler(server => {
+      server.registerTool("get_editorial_skills", {
+        description: "START HERE for game research or editorial work. Discover Gameslash editorial playbooks and your current permissions. Omit skillId for the index; pass an id for complete instructions. Covers global news, evidence, genres/status, player signals, images, natural Thai writing and draft workflow. Playbooks are guidance, not browsing tools or new permissions.",
+        inputSchema: z.object({ skillId: z.string().max(60).optional() }), annotations: readAnnotations,
+      }, input => result(async () => {
+        const current = requireAgent(await readDatabase(), agent.id);
+        const skill = input.skillId ? editorialSkills.find(s => s.id === input.skillId) : undefined;
+        if (input.skillId && !skill) throw new Error("ไม่พบทักษะ กรุณาอ่านรายการทักษะก่อน");
+        return {
+          permissions: { canWriteDrafts: current.canWriteDrafts || current.canManageSite, canManageTags: current.canManageTags || current.canManageSite, canManageSite: current.canManageSite },
+          execution: "MCP provides catalog access, existing collection posts, image upload and permission-gated editing. Web search, live browsing, translation, gameplay testing and image generation must come from your client tools. No global search or paid collection is started by this tool.",
+          ...(skill ? { skill } : { skills: editorialSkills.map(({ id, title, summary, tools }) => ({ id, title, summary, tools })), resource: "gameslash://editorial/handbook", workflow: "Read relevant skills → research with client tools → search_entries → prepare draft → get_entry → submit_for_review" }),
+        };
+      }));
+      server.registerResource("editorial-handbook", "gameslash://editorial/handbook", {
+        title: "Gameslash editorial skills", description: "Complete game research and Thai editorial playbooks. Client browsing tools are required for live research.", mimeType: "text/markdown",
+      }, async uri => {
+        requireAgent(await readDatabase(), agent.id);
+        return { contents: [{ uri: uri.href, mimeType: "text/markdown", text: editorialHandbook() }] };
+      });
       server.registerTool("upload_image", {
         description: "Upload an image you have permission to publish. Requires draft-writing permission. Send raw base64 PNG/JPEG/WebP, maximum 2 MiB decoded. Returns a public relative URL for entry.image or content image attrs.src. Reusing identical image bytes returns the same URL. Uploads are public by URL even before the draft is published; never upload private information. Does not publish an article.",
         inputSchema:z.object({ base64:z.string().min(4).max(Math.ceil(maxImageBytes / 3) * 4).regex(/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/) }),

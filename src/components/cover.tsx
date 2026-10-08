@@ -19,7 +19,8 @@ export function Cover({
         src={entry.image}
         alt={entry.imageAlt || `ภาพประชาสัมพันธ์ ${entry.title}`}
         sizes="(max-width: 700px) 90vw, 40vw"
-        priority={priority}
+        loading={priority ? "eager" : "lazy"}
+        fetchPriority={priority ? "high" : "auto"}
         onError={() => setFailed(true)}
         className={`cover-image ${entry.id === "ai-dungeon" ? "contain" : ""}`}
       />

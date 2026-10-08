@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import type { Database } from "@/lib/model";
+import { editorialSkills } from "@/lib/editorial-skills";
 
 type Agent = Omit<Database["agents"][number], "tokenHash">;
 export function AgentPanel({ agents, busy, mutate }: {
@@ -56,6 +57,12 @@ export function AgentPanel({ agents, busy, mutate }: {
         <p>ChatGPT / Dots: เพิ่ม URL นี้ใน Plugins → Add custom MCP server เลือก OAuth และลงทะเบียนไคลเอนต์ด้วย CIMD ไม่ต้องกรอก Client ID หรือ Client Secret จากนั้นยืนยันด้วยรหัสผ่านผู้ดูแล Gameslash</p>
       </div>
     </div>
+    <section className="editorial-skill-guide">
+      <h2>ชุดทักษะสำหรับเอเจนต์</h2>
+      <p>เริ่มด้วย <code>get_editorial_skills</code> แล้วส่ง <code>skillId</code> เพื่ออ่านวิธีทำงานแต่ละทักษะ หรืออ่าน resource <code>gameslash://editorial/handbook</code></p>
+      <p>MCP จัดการคลังและฉบับร่างได้ตามสิทธิ์ การค้นเว็บสด แปลภาษา ทดสอบเกม และสร้างภาพต้องใช้เครื่องมือของไคลเอนต์ที่เชื่อมต่อ</p>
+      <div className="editorial-skill-grid">{editorialSkills.map(skill => <details key={skill.id}><summary>{skill.title}</summary><p>{skill.summary}</p><code>{skill.id}</code><ol>{skill.instructions.map(step => <li key={step}>{step}</li>)}</ol><p>ผลลัพธ์: {skill.deliverable}</p></details>)}</div>
+    </section>
     <h2>คีย์ที่ใช้งานอยู่ ({activeAgents.length})</h2>
     <div className="agent-list">{activeAgents.length ? activeAgents.map(agent => {
       return <div className="agent-row" key={agent.id}>
