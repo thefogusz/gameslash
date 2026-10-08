@@ -43,8 +43,9 @@ test("Postgres migration, concurrent writes, rollback and draft isolation", {
     await Promise.all(Array.from({ length: 3 }, () => updatePostgres(sql, db => {
       const n = db.limits.test?.count ?? 0;
       db.limits.test = { count: n + 1, reset: Date.now() + 10000 };
-    })));
+    }, undefined, false)));
     assert.equal((await readPostgres(sql)).limits.test.count, 3);
+    assert.equal((await readPostgres(sql)).revision, saved.revision);
     const changed = await updatePostgres(sql, db => {
       db.entries.reverse();
       db.entries[0].title = "Changed title ' with SQL punctuation; --";

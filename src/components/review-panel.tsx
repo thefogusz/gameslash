@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { ArticleContent } from "./article-content";
 import { ArrowUpRight, Check, Inbox, Pencil, Search } from "lucide-react";
 import { kindLabels, type Database, type Entry } from "@/lib/model";
 
@@ -63,7 +64,7 @@ function ReviewDetail({ entry, context, submitter, review, busy, edit, decide }:
       {entry.url && <a href={entry.url} target="_blank" rel="noreferrer">เปิดเว็บไซต์{entry.kind === "game" ? "เกม" : "ต้นทาง"} <ArrowUpRight size={14} /><small>{entry.url}</small></a>}
       {context && <details className="review-context"><summary>ที่มาและหมายเหตุการรวบรวม</summary><strong>รวบรวมผ่าน {context.provider}</strong>{context.runId && <small>Run ID: {context.runId}</small>}<p>{context.reason}</p><small>ข้อมูลประกอบการคัดเลือก ยังต้องตรวจสอบกับต้นทาง</small></details>}
     </div>
-    {entry.body && <section className="review-body"><h3>รายละเอียดที่จะเผยแพร่</h3>{entry.body.split(/\n\s*\n/).map((paragraph, i) => <p key={i}>{paragraph}</p>)}</section>}
+    {(entry.body || entry.content) && <section className="review-body"><h3>รายละเอียดที่จะเผยแพร่</h3>{entry.image && <img className="review-cover" src={entry.image} alt={entry.imageAlt || entry.title}/>}<ArticleContent content={entry.content} body={entry.body}/></section>}
     {context?.signal && <section className="review-signal"><span className="eyebrow">COMMUNITY QUESTION → RESEARCH</span><h3>{context.signal.question}</h3><p>{context.signal.topic} · แนบหลักฐาน {context.signal.evidenceUrls.length} ลิงก์</p><p className="field-hint">จำนวนลิงก์ที่เอเจนต์แนบ ยังต้องตรวจว่าเป็นคนละโพสต์และถามปัญหาเดียวกันก่อนเรียกว่าคำถามพบบ่อย</p><div className="review-source">{context.signal.evidenceUrls.map((url, i) => <a key={url} href={url} target="_blank" rel="noreferrer">หลักฐาน {i + 1} <ArrowUpRight size={14} /><small>{url}</small></a>)}</div><h3>แนวทางแก้จากแหล่งสากล</h3>{context.signal.solutions.length ? context.signal.solutions.map(solution => <div className="review-feedback" key={solution.url}><a className="text-link" href={solution.url} target="_blank" rel="noreferrer">{solution.title} <ArrowUpRight size={14} /></a><p>{solution.appliesWhen}</p><small>{solution.verification === "tested" ? "เอเจนต์ระบุว่าทดลองแล้ว" : "ตรวจเอกสาร ยังไม่ได้ทดลอง"} · ตรวจเมื่อ {solution.checkedAt}</small></div>) : <p>รอค้นและตรวจแหล่งอ้างอิงเพิ่มเติม</p>}<p className="field-hint">ส่วนนี้เป็นหลักฐานสำหรับผู้ตรวจ หากจะเผยแพร่คำตอบ ให้ใส่คำอธิบายและลิงก์อ้างอิงในเนื้อหาบทความด้วย</p></section>}
     {entry.image && <a className="text-link" href={entry.image} target="_blank" rel="noreferrer">เปิดภาพปกเพื่อตรวจสอบ <ArrowUpRight size={14} /></a>}
     {review && <div className="review-feedback"><strong>ผลตรวจครั้งล่าสุด · { { publish: "เผยแพร่", return: "ส่งกลับแก้ไข", reject: "ไม่รับรายการ" }[review.decision]}</strong><p>{review.note || "ไม่มีหมายเหตุเพิ่มเติม"}</p></div>}

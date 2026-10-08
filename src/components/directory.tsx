@@ -1,4 +1,5 @@
 "use client";
+import { ArticleContent } from "./article-content";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -250,7 +251,7 @@ function Detail({ entry }: { entry: Entry }) {
       <Link href={`/${paths[entry.kind]}`} className="text-link">
         <ArrowLeft size={15} /> กลับไป{kindLabels[entry.kind]}
       </Link>
-      {entry.kind === "game" && (
+      {(entry.kind === "game" || (entry.kind === "article" && entry.image)) && (
         <div className="detail-cover">
           <Cover entry={entry} priority />
         </div>
@@ -279,14 +280,7 @@ function Detail({ entry }: { entry: Entry }) {
           <span key={t}>{t}</span>
         ))}
       </div>
-      <div className="prose">
-        {entry.body
-          .split("\n\n")
-          .filter(Boolean)
-          .map((p, i) => (
-            <p key={i}>{p}</p>
-          ))}
-      </div>
+      <ArticleContent content={entry.content} body={entry.body}/>
       {entry.kind === "game" && (
         <div className="source-note">
           <Globe size={18} />

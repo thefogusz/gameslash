@@ -17,7 +17,7 @@ export function Cover({
         fill
         unoptimized={!entry.image.startsWith("/")}
         src={entry.image}
-        alt={`ภาพประชาสัมพันธ์ ${entry.title}`}
+        alt={entry.imageAlt || `ภาพประชาสัมพันธ์ ${entry.title}`}
         sizes="(max-width: 700px) 90vw, 40vw"
         priority={priority}
         onError={() => setFailed(true)}

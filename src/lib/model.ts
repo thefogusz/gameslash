@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { sourceSchema, jobSchema } from "./collection-model";
+import { articleDocumentSchema, imageUrl, publicHttps } from "./article";
 
 export const kinds = ["game", "tool", "article", "post"] as const;
 export const kindLabels = {
@@ -9,22 +10,7 @@ export const kindLabels = {
   post: "คอมมูนิตี้",
 };
 export function publicUrl(value: string) {
-  try {
-    const u = new URL(value);
-    const host = u.hostname.toLowerCase();
-    return (
-      u.protocol === "https:" &&
-      !u.username &&
-      !u.password &&
-      host.includes(".") &&
-      !host.endsWith(".local") &&
-      !host.endsWith(".localhost") &&
-      !/^\d+\.\d+\.\d+\.\d+$/.test(host) &&
-      !host.includes(":")
-    );
-  } catch {
-    return false;
-  }
+  return publicHttps(value);
 }
 const url = z
   .string()
@@ -48,14 +34,9 @@ export const entryInput = z
     category: z.string().trim().min(1).max(60),
     url: url.default(""),
     sourceUrl: url.default(""),
-    image: z
-      .string()
-      .max(2000)
-      .refine(
-        (v) => !v || /^\/images\/[a-z0-9.-]+$/.test(v) || publicUrl(v),
-        "ลิงก์ภาพไม่ถูกต้อง",
-      )
-      .default(""),
+    image: z.union([z.literal(""), imageUrl]).default(""),
+    imageAlt: z.string().max(300).optional(),
+    content: articleDocumentSchema.optional(),
     body: z.string().trim().max(20000).default(""),
     tags: z.array(z.string().trim().min(1).max(40)).max(6).default([]),
   })

@@ -60,10 +60,11 @@ export async function readDatabase() {
 export async function updateDatabase(
   change: (db: Database) => void,
   revision?: number,
+  bumpRevision = true,
 ): Promise<Database> {
   if (!storageReady())
     throw new Error("ระบบบันทึกข้อมูลยังไม่พร้อมใช้งาน กรุณาลองใหม่ภายหลัง");
-  if (usesPostgres()) return updatePostgres(databaseClient(), change, revision);
+  if (usesPostgres()) return updatePostgres(databaseClient(), change, revision, bumpRevision);
   if (cloud()) {
     for (let attempt = 0; attempt < 4; attempt++) {
       const { db, etag } = await readSnapshot();
@@ -72,7 +73,7 @@ export async function updateDatabase(
           "ข้อมูลเปลี่ยนแล้ว กรุณาโหลดข้อมูลล่าสุดก่อนบันทึก",
         );
       change(db);
-      db.revision++;
+      if (bumpRevision) db.revision++;
       try {
         await put(blobPath, JSON.stringify(databaseSchema.parse(db)), {
           access: "private",
@@ -110,7 +111,7 @@ export async function updateDatabase(
         "ข้อมูลเปลี่ยนแล้ว กรุณาโหลดข้อมูลล่าสุดก่อนบันทึก",
       );
     change(db);
-    db.revision++;
+    if (bumpRevision) db.revision++;
     const temp = localPath + ".tmp";
     await writeFile(
       temp,

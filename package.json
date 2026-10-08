@@ -8,10 +8,14 @@
     "build": "next build",
     "start": "next start --hostname 127.0.0.1 --port 3020",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test tests/*.test.ts"
+    "test": "tsx --test tests/*.test.ts tests/*.test.tsx"
   },
   "dependencies": {
     "@modelcontextprotocol/server": "^2.3.1",
+    "@tiptap/extension-image": "^3.31.4",
+    "@tiptap/pm": "^3.31.4",
+    "@tiptap/react": "^3.31.4",
+    "@tiptap/starter-kit": "^3.31.4",
     "@vercel/blob": "2.8.1",
     "lucide-react": "^0.468.0",
     "mcp-handler": "^2.3.0",
@@ -19,6 +23,7 @@
     "postgres": "^3.4.9",
     "react": "19.3.0",
     "react-dom": "19.3.0",
+    "sharp": "^0.35.5",
     "zod": "^4.3.6"
   },
   "devDependencies": {

@@ -13,7 +13,8 @@ const brief = `รวบรวมเกม AI เทคนิค แนวทา
 6. อ่านฉบับร่างแล้วเรียก submit_for_review โดยใช้ updatedAt ล่าสุด ห้ามเผยแพร่เอง
 7. เมื่อพบคำถามหรือปัญหา ให้รวมตามปัญหาเดียวกัน ใช้ context.signal {question, topic, evidenceUrls, solutions:[{title,url,appliesWhen,checkedAt,verification}]} แนบลิงก์โพสต์ที่แตกต่างกันจริง อย่าเรียกว่าพบบ่อยจากโพสต์เดียว topic เลือก 3D และฉาก / ภาพและแอนิเมชัน / โค้ดและระบบเกม / AI และเอเจนต์ / เครื่องมือและ repo / เผยแพร่และประสิทธิภาพ / อื่น ๆ
 8. ค้นคำตอบจากเอกสารทางการ งานวิจัย หรือ repo ต้นทาง ตรวจเวอร์ชัน ใบอนุญาต และเงื่อนไขที่ใช้ได้ checkedAt เป็น YYYY-MM-DD, verification เป็น source-reviewed หรือ tested (ใช้ tested เฉพาะทดลองจริงและอธิบายผลใน reason) ไม่สร้างแหล่งอ้างอิงขึ้นเอง ใส่คำตอบพร้อมลิงก์ใน body ของบทความด้วย
-9. ใช้ search_entries {ownedOnly:true,status:"draft"} และ get_entry ตรวจหมายเหตุ review หากถูกส่งกลับ ให้แก้ด้วย update_draft แล้วส่งตรวจใหม่`;
+9. ใช้ search_entries {ownedOnly:true,status:"draft"} และ get_entry ตรวจหมายเหตุ review หากถูกส่งกลับ ให้แก้ด้วย update_draft แล้วส่งตรวจใหม่
+10. บทความพร้อมภาพ: อ่าน get_article_format ก่อน ใช้ upload_image ส่งไฟล์ JPG/PNG/WebP เป็น base64 ไม่เกิน 2 MB แล้วใส่ URL ที่ได้ใน image (ภาพปก) หรือ image node ใน content พร้อม alt และคำบรรยาย/เครดิต ใช้ภาพที่มีสิทธิ์เผยแพร่เท่านั้น ภาพเปิดดูผ่านลิงก์ได้แม้บทความยังเป็นร่าง เมื่อแก้บทความเดิมให้เก็บ content, image และ imageAlt ครบ`;
 export function ConnectionsPanel({ openAgents, openInbox, entries, categories, createDraft, refreshCatalog }: { openAgents: () => void; openInbox: () => void; entries: Entry[]; categories: string[]; refreshCatalog: () => Promise<void>; createDraft: (jobId: string, sourceUrl: string, entry: EntryInput) => Promise<void> }) {
   const [endpoint, setEndpoint] = useState("/api/mcp");
   const [copied, setCopied] = useState(false);

@@ -16,6 +16,9 @@ test("durable storage, draft isolation and stale-edit protection", async () => {
   );
   try {
     const initial = await readDatabase();
+    await updateDatabase(db => { db.limits.upload = { count:1, reset:Date.now()+60000 }; }, undefined, false);
+    assert.equal((await readDatabase()).revision, initial.revision);
+    assert.equal((await readDatabase()).limits.upload.count, 1);
     const updated = await updateDatabase((db) => {
       db.draftLayout.tagline = "A saved draft";
     }, initial.revision);

@@ -63,6 +63,7 @@ export async function updatePostgres(
   sql: Sql,
   change: (db: Database) => void,
   revision?: number,
+  bumpRevision = true,
 ): Promise<Database> {
   return sql.begin(async (tx) => {
     await tx`SET LOCAL statement_timeout = '15s'`;
@@ -76,7 +77,7 @@ export async function updatePostgres(
       entry.id, { position, json: JSON.stringify(entry) },
     ]));
     change(db);
-    db.revision++;
+    if (bumpRevision) db.revision++;
     const validated = databaseSchema.parse(db);
     if (new Set(validated.entries.map((entry) => entry.id)).size !== validated.entries.length)
       throw new Error("Duplicate entry IDs");

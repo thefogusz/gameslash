@@ -1,5 +1,9 @@
 "use client";
 import { useState } from "react";
+import dynamic from "next/dynamic";
+import { textDocument } from "@/lib/article";
+import { ImageField } from "./image-field";
+const ArticleEditor = dynamic(() => import("./article-editor"), { ssr:false });
 import { ArrowUpRight, Check, Loader2, Send } from "lucide-react";
 import {
   entryInput,
@@ -24,9 +28,13 @@ export function EntryForm({
   const [kind, setKind] = useState<Entry["kind"]>(initial?.kind || "game");
   const [busy, setBusy] = useState(false),
     [error, setError] = useState("");
+  const [image,setImage] = useState(initial?.image || ""), [coverBusy,setCoverBusy] = useState(false), [editorBusy,setEditorBusy] = useState(false);
+  const [body,setBody] = useState(initial?.body || "");
+  const [content,setContent] = useState(initial?.content || textDocument(initial?.body || ""));
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
+    if (coverBusy || editorBusy) { setError("รออัปโหลดภาพให้เสร็จก่อนบันทึก"); return; }
     const data = new FormData(event.currentTarget);
     const parsed = entryInput.safeParse({
       kind,
@@ -36,8 +44,10 @@ export function EntryForm({
       category: data.get("category"),
       url: data.get("url") || "",
       sourceUrl: data.get("sourceUrl") || "",
-      image: data.get("image") || "",
-      body: data.get("body") || "",
+      image,
+      imageAlt: data.get("imageAlt") || "",
+      body,
+      ...(kind === "article" ? { content } : {}),
       tags: String(data.get("tags") || "")
         .split(",")
         .map((s) => s.trim())
@@ -176,33 +186,10 @@ export function EntryForm({
             placeholder="โพสต์ต้นทางหรือเว็บไซต์ผู้สร้าง"
           />
         </label>
-        <label>
-          ลิงก์ภาพปก <span className="field-hint">ไม่บังคับ</span>
-          <input
-            name="image"
-            maxLength={2000}
-            defaultValue={initial?.image}
-            placeholder="https://…/cover.jpg"
-          />
-        </label>
       </div>
-      <label>
-        รายละเอียดเพิ่มเติม{" "}
-        <span className="field-hint">
-          ข้อความธรรมดา เว้นบรรทัดเพื่อแบ่งย่อหน้า
-        </span>
-        <textarea
-          name="body"
-          maxLength={20000}
-          rows={kind === "article" || kind === "post" ? 8 : 4}
-          defaultValue={initial?.body}
-          placeholder={
-            kind === "post"
-              ? "เล่าเรื่องของคุณได้ตรงนี้"
-              : "วิธีเล่น แพลตฟอร์ม หรือสิ่งที่ควรรู้"
-          }
-        />
-      </label>
+      {admin ? <ImageField label="ภาพปก" value={image} onChange={setImage} onBusy={setCoverBusy}/> : <label>ลิงก์ภาพปก<input value={image} onChange={e=>setImage(e.target.value)} maxLength={2000} placeholder="https://…/cover.jpg"/></label>}
+      <label>คำอธิบายภาพปก<input name="imageAlt" defaultValue={initial?.imageAlt || ""} maxLength={300} placeholder="อธิบายสิ่งที่เห็นในภาพ"/></label>
+      {kind === "article" ? <section><h3>เนื้อหาบทความ</h3><ArticleEditor initial={content} onChange={(doc,text)=>{setContent(doc);setBody(text.slice(0,20000));}} onBusy={setEditorBusy}/></section> : <label>รายละเอียดเพิ่มเติม<textarea name="body" maxLength={20000} rows={kind === "post" ? 8 : 4} value={body} onChange={e=>setBody(e.target.value)} placeholder="วิธีเล่น แพลตฟอร์ม หรือสิ่งที่ควรรู้"/></label>}
       {admin && !reviewOnly && (
         <label>
           สถานะ
@@ -232,7 +219,7 @@ export function EntryForm({
             ? "รายการสถานะเผยแพร่จะอัปเดตบนเว็บทันที"
             : "ทีมงานจะตรวจรายการก่อนเผยแพร่"}
         </p>
-        <button className="button primary" disabled={busy} type="submit">
+        <button className="button primary" disabled={busy || coverBusy || editorBusy} type="submit">
           {busy ? (
             <Loader2 className="spin" size={16} />
           ) : admin ? (
