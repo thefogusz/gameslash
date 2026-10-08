@@ -29,7 +29,7 @@ export function requestGameTags(db: Database, entry: Entry, suggestions: TagSugg
 }
 export function requireTagAgent(db: Database, agentId: string) {
   const agent = db.agents.find(a => a.id === agentId && !a.revokedAt && Date.parse(a.expiresAt) > Date.now());
-  if (!agent?.canManageTags) throw new Error("เอเจนต์ไม่มีสิทธิ์ตรวจและเพิ่มแท็ก กรุณาให้ผู้ดูแลเปิดสิทธิ์ใน Console");
+  if (!agent || (!agent.canManageTags && !agent.canManageSite)) throw new Error("เอเจนต์ไม่มีสิทธิ์ตรวจและเพิ่มแท็ก กรุณาให้ผู้ดูแลเปิดสิทธิ์ใน Console");
   return agent;
 }
 export const tagResolutionSchema = z.object({

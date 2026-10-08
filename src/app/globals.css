@@ -1675,6 +1675,8 @@ textarea {
 .agent-list { margin-top: 20px; }
 .agent-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; padding: 20px 0; border-bottom: 1px solid var(--line); }
 .agent-row p, .agent-row time { color: var(--muted); font-size: 13px; }
+.agent-panel details { margin-top: 24px; color: var(--muted); }
+.agent-panel details summary { cursor: pointer; font-weight: 600; }
 .import-panel {
   max-width: 1100px;
   margin: auto;

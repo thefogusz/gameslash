@@ -8,12 +8,13 @@ import { ConflictError } from "./postgres-store";
 export const managementMutation = z.discriminatedUnion("action", [
   z.object({ action: z.literal("resolve_tag"), revision: z.number().int(), resolution: tagResolutionSchema }),
   z.object({ action: z.literal("agent_tag_permission"), revision: z.number().int(), id: z.string().uuid(), enabled: z.boolean() }),
+  z.object({ action: z.literal("agent_site_permission"), revision: z.number().int(), id: z.string().uuid(), enabled: z.boolean() }),
   z.object({ action: z.literal("collection_draft"), revision: z.number().int(), jobId: z.string().uuid(), sourceUrl: z.string().url(), entry: entryInput, tagSuggestions: tagSuggestionsSchema.optional() }),
   z.object({ action: z.literal("review"), revision: z.number().int(), id: entrySchema.shape.id, expectedUpdatedAt: z.iso.datetime(), decision: z.enum(["publish", "return", "reject"]), note: z.string().trim().max(1000).default("") }),
   z.object({ action: z.literal("entry"), revision: z.number().int(), entry: entrySchema, tagSuggestions: tagSuggestionsSchema.optional() }),
   z.object({ action: z.literal("layout"), revision: z.number().int(), layout: layoutSchema, publish: z.boolean() }),
   z.object({ action: z.literal("import"), revision: z.number().int(), entries: z.array(entryInput).min(1).max(50) }),
-  z.object({ action: z.literal("create_agent"), revision: z.number().int(), name: z.string().trim().min(2).max(60), canWriteDrafts: z.boolean(), canManageTags: z.boolean().optional() }),
+  z.object({ action: z.literal("create_agent"), revision: z.number().int(), name: z.string().trim().min(2).max(60), canWriteDrafts: z.boolean(), canManageTags: z.boolean().optional(), canManageSite: z.boolean().optional() }),
   z.object({ action: z.literal("revoke_agent"), revision: z.number().int(), id: z.string().uuid() }),
 ]);
 const hash = (value: string) => createHash("sha256").update(value).digest("hex");
@@ -39,7 +40,7 @@ function saveEntry(db: Database, input: Entry) {
 function newDraft(input: EntryInput, id = crypto.randomUUID()): Entry {
   return { ...input, id, status: "draft", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
 }
-export function manageCatalog(db: Database, input: z.infer<typeof managementMutation>): string | undefined {
+export function manageCatalog(db: Database, input: z.infer<typeof managementMutation>, actor = "ผู้ดูแล"): string | undefined {
   if (input.action === "resolve_tag") {
     resolveGameTag(db, input.resolution, "ผู้ดูแล");
   } else if (input.action === "agent_tag_permission") {
@@ -47,6 +48,11 @@ export function manageCatalog(db: Database, input: z.infer<typeof managementMuta
     if (!agent) throw new Error("ไม่พบเอเจนต์ที่ใช้งานได้");
     agent.canManageTags = input.enabled;
     log(db, "ผู้ดูแล", "agent.tag_permission", agent.name);
+  } else if (input.action === "agent_site_permission") {
+    const agent = db.agents.find(a => a.id === input.id && !a.revokedAt);
+    if (!agent) throw new Error("ไม่พบเอเจนต์ที่ใช้งานได้");
+    agent.canManageSite = input.enabled;
+    log(db, "ผู้ดูแล", "agent.site_permission", agent.name);
   } else if (input.action === "collection_draft") {
     const job = db.collectionJobs.find(j => j.id === input.jobId);
     const candidate = job?.candidates.find(c => c.url === input.sourceUrl);
@@ -60,13 +66,13 @@ export function manageCatalog(db: Database, input: z.infer<typeof managementMuta
   } else if (input.action === "entry") {
     const item = saveEntry(db, input.entry);
     requestGameTags(db, item, input.tagSuggestions || []);
-    log(db, "ผู้ดูแล", `entry.${item.status}`, item.title, item.id);
+    log(db, actor, `entry.${item.status}`, item.title, item.id);
   } else if (input.action === "layout") {
     if ([...input.layout.featuredIds, ...input.layout.spotlights.flatMap(g => g.entryIds)].some(id => !db.entries.some(e => e.id === id && e.kind === "game" && e.status === "published")))
       throw new Error("เลือกเกมแนะนำจากรายการที่เผยแพร่แล้วเท่านั้น");
     db.draftLayout = input.layout;
     if (input.publish) db.layout = structuredClone(input.layout);
-    log(db, "ผู้ดูแล", input.publish ? "layout.published" : "layout.draft", "หน้าเว็บไซต์");
+    log(db, actor, input.publish ? "layout.published" : "layout.draft", "หน้าเว็บไซต์");
   } else if (input.action === "import") {
     for (const data of input.entries) {
       const item = saveEntry(db, newDraft(data));
@@ -75,7 +81,7 @@ export function manageCatalog(db: Database, input: z.infer<typeof managementMuta
   } else if (input.action === "create_agent") {
     if (db.agents.length >= 50) throw new Error("จำนวนคีย์ถึงขีดจำกัดแล้ว กรุณาติดต่อผู้ดูแลระบบ");
     const token = "gs_" + randomBytes(32).toString("base64url");
-    db.agents.push({ id: crypto.randomUUID(), name: input.name, canWriteDrafts: input.canWriteDrafts, canManageTags: input.canManageTags ?? false,
+    db.agents.push({ id: crypto.randomUUID(), name: input.name, canWriteDrafts: input.canWriteDrafts, canManageTags: input.canManageTags ?? false, canManageSite: input.canManageSite ?? false,
       tokenHash: hash(token), createdAt: new Date().toISOString(),
       expiresAt: new Date(Date.now() + 90 * 86400000).toISOString(), revokedAt: null });
     log(db, "ผู้ดูแล", "agent.created", input.name);
@@ -88,7 +94,7 @@ export function manageCatalog(db: Database, input: z.infer<typeof managementMuta
     const status = { publish: "published", return: "draft", reject: "archived" } as const;
     const item = saveEntry(db, { ...old, status: status[input.decision] });
     db.reviews[item.id] = { decision: input.decision, note: input.note, at: item.updatedAt };
-    log(db, "ผู้ดูแล", `review.${input.decision}`, item.title, item.id);
+    log(db, actor, `review.${input.decision}`, item.title, item.id);
   } else {
     const agent = db.agents.find(a => a.id === input.id);
     if (!agent) throw new Error("ไม่พบเอเจนต์");
@@ -98,8 +104,23 @@ export function manageCatalog(db: Database, input: z.infer<typeof managementMuta
 }
 export function requireAgent(db: Database, id: string, write = false) {
   const agent = db.agents.find(a => a.id === id && !a.revokedAt && Date.parse(a.expiresAt) > Date.now());
-  if (!agent || (write && !agent.canWriteDrafts)) throw new Error("เอเจนต์ไม่มีสิทธิ์ทำรายการนี้");
+  if (!agent || (write && !agent.canWriteDrafts && !agent.canManageSite)) throw new Error("เอเจนต์ไม่มีสิทธิ์ทำรายการนี้");
   return agent;
+}
+export function requireSiteAgent(db: Database, id: string) {
+  const agent = requireAgent(db, id);
+  if (!agent.canManageSite) throw new Error("เอเจนต์ไม่มีสิทธิ์จัดการเว็บ");
+  return agent;
+}
+export function saveSiteEntry(db: Database, agentId: string, id: Entry["id"], expectedUpdatedAt: string | undefined, data: EntryInput, status: Entry["status"]) {
+  const agent = requireSiteAgent(db, agentId);
+  const old = db.entries.find(e => e.id === id);
+  if (old && old.updatedAt !== expectedUpdatedAt) throw new ConflictError("รายการเปลี่ยนแล้ว กรุณาอ่านข้อมูลล่าสุดก่อนแก้ไข");
+  if (!old && expectedUpdatedAt) throw new ConflictError("ไม่พบรายการที่จะแก้ไข");
+  const now = new Date().toISOString();
+  const entry = entrySchema.parse({ ...entryInput.parse(data), id, status, createdAt: old?.createdAt ?? now, updatedAt: now });
+  manageCatalog(db, { action: "entry", revision: db.revision, entry }, agent.name);
+  return db.entries.find(e => e.id === id)!;
 }
 export function authenticateAgent(db: Database, token: string) {
   if (!/^gs_[A-Za-z0-9_-]{43}$/.test(token)) return null;
@@ -108,8 +129,8 @@ export function authenticateAgent(db: Database, token: string) {
     timingSafeEqual(Buffer.from(a.tokenHash), digest)) ?? null;
 }
 export function agentEntries(db: Database, agentId: string) {
-  requireAgent(db, agentId);
-  return db.entries.filter(e => e.status === "published" || db.ingestions[e.id]?.agentId === agentId);
+  const agent = requireAgent(db, agentId);
+  return agent.canManageSite ? db.entries : db.entries.filter(e => e.status === "published" || db.ingestions[e.id]?.agentId === agentId);
 }
 export function createAgentDraft(db: Database, agentId: string, requestId: string, data: EntryInput, context?: z.infer<typeof collectionContextSchema>) {
   const agent = requireAgent(db, agentId, true);

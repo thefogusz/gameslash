@@ -30,19 +30,30 @@ const entryIds: string[] = [];
 try {
   assert.equal((await fetch(`${origin}/api/mcp`, { method: "POST", headers: json, body: "{}" })).status, 401);
   assert.equal((await fetch(`${origin}/api/notifications`)).status,401);
-  async function issue(write: boolean) {
+  async function issue(write: boolean, site = false) {
     const name = `MCP smoke ${crypto.randomUUID()}`;
-    const issued = await manage({ action: "create_agent", name, canWriteDrafts: write });
+    const issued = await manage({ action: "create_agent", name, canWriteDrafts: write, canManageSite: site });
     agentIds.push(issued.agents.find((a: { name: string }) => a.name === name).id);
     assert.ok(issued.issuedToken);
     assert.equal(issued.agents.some((a: object) => "tokenHash" in a), false);
     return issued.issuedToken as string;
   }
-  const token = await issue(true), reader = await issue(false);
+  const token = await issue(true), reader = await issue(false), manager = await issue(true, true);
   assert.equal(JSON.stringify(await snapshot()).includes(token), false);
   const initialized = await rpc(token, "initialize", { protocolVersion: "2025-11-25", capabilities: {}, clientInfo: { name: "gameslash-test", version: "1.0.0" } });
   assert.ok(initialized.serverInfo);
-  assert.equal((await rpc(token, "tools/list")).tools.length, 14);
+  assert.equal((await rpc(token, "tools/list")).tools.length, 18);
+  assert.equal((await call(token, "get_site_state")).isError, true);
+  const site = (await call(manager, "get_site_state")).structuredContent;
+  const siteEntry = { kind: "tool", title: "MCP site verification", description: "Temporary tool for site management integration testing.", author: "Smoke test", category: "สไปรต์และภาพ 2D", url: "https://example.com/mcp-site-test", sourceUrl: "https://example.com/mcp-site-test" };
+  const siteId = `mcp-site-${crypto.randomUUID()}`;
+  const siteCreated = await call(manager, "save_site_entry", { revision: site.revision, id: siteId, entry: siteEntry, status: "published" });
+  assert.equal(siteCreated.isError, undefined, JSON.stringify(siteCreated.content));
+  entryIds.push(siteId);
+  assert.equal(siteCreated.structuredContent.entry.status, "published");
+  assert.equal((await call(manager, "save_site_entry", { revision: site.revision, id: siteId, entry: siteEntry, status: "archived" })).isError, true);
+  const siteCurrent = (await call(manager, "get_site_state")).structuredContent;
+  assert.equal((await call(manager, "save_site_layout", { revision: siteCurrent.revision, layout: siteCurrent.draftLayout, publish: false })).isError, undefined);
   assert.equal((await call(reader, "list_collections")).isError, true);
   assert.ok(Array.isArray((await call(token, "list_collections")).structuredContent.jobs));
   assert.ok((await call(token, "get_categories")).structuredContent.categories.length);
@@ -87,7 +98,8 @@ try {
   const review = await call(token, "submit_for_review", { id: draft.id, expectedUpdatedAt: updated.structuredContent.entry.updatedAt });
   assert.equal(review.structuredContent.entry.status, "pending");
   assert.equal((await snapshot()).submissions[draft.id].context.provider, "Apify");
-  await manage({ action: "review", id: draft.id, expectedUpdatedAt: review.structuredContent.entry.updatedAt, decision: "return", note: "Please verify the source" });
+  const reviewRevision = (await call(manager, "get_site_state")).structuredContent.revision;
+  assert.equal((await call(manager, "review_site_entry", { revision: reviewRevision, id: draft.id, expectedUpdatedAt: review.structuredContent.entry.updatedAt, decision: "return", note: "Please verify the source" })).isError, undefined);
   const feedback = (await call(token, "get_entry", { id: draft.id })).structuredContent;
   assert.equal(feedback.review.note, "Please verify the source");
   assert.equal(feedback.entry.status, "draft");
@@ -106,7 +118,7 @@ try {
   assert.equal(forbidden.status, 400);
   await manage({ action: "revoke_agent", id: agentIds[0] });
   assert.equal((await fetch(`${origin}/api/mcp`, { method: "POST", headers: { ...json, Authorization: `Bearer ${token}` }, body: "{}" })).status, 401);
-  console.log("PASS: MCP tools, draft ownership, source context, private review feedback, return/resubmit/publish, idempotency, permissions and revocation.");
+  console.log("PASS: MCP draft and site-manager tools, publication, layout, review, ownership, stale-write checks and revocation.");
 } finally {
   for (const id of entryIds) {
     const entry = (await snapshot()).entries.find((e: { id: string }) => e.id === id);

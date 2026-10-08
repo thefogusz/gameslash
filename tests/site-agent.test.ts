@@ -1,0 +1,29 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { seedDatabase } from "../src/lib/seed";
+import { databaseSchema, entryInput, publicData } from "../src/lib/model";
+import { agentEntries, authenticateAgent, manageCatalog, requireSiteAgent, saveSiteEntry } from "../src/lib/catalog-service";
+import { requireTagAgent } from "../src/lib/tag-service";
+
+test("site management is opt-in, revocable, and can publish and edit catalog entries", () => {
+  const db = seedDatabase();
+  const token = manageCatalog(db, { action: "create_agent", revision: db.revision, name: "Dots manager", canWriteDrafts: true })!;
+  const agent = authenticateAgent(db, token)!;
+  assert.equal(agent.canManageSite, false);
+  assert.throws(() => requireSiteAgent(db, agent.id), /ไม่มีสิทธิ์/);
+  assert.equal(agentEntries(db, agent.id).some(e => e.status !== "published"), false);
+  const input = entryInput.parse({ kind: "tool", title: "Example repo", description: "A useful game creation repository", author: "Example team", category: "สไปรต์และภาพ 2D", url: "https://example.com/repo", sourceUrl: "https://example.com/repo" });
+  assert.throws(() => saveSiteEntry(db, agent.id, "example-repo", undefined, input, "published"), /ไม่มีสิทธิ์/);
+  manageCatalog(db, { action: "agent_site_permission", revision: db.revision, id: agent.id, enabled: true });
+  assert.equal(requireTagAgent(db, agent.id).id, agent.id);
+  const published = saveSiteEntry(db, agent.id, "example-repo", undefined, input, "published");
+  assert.equal(publicData(db).entries.find(e => e.id === published.id)?.title, input.title);
+  assert.throws(() => saveSiteEntry(db, agent.id, published.id, undefined, input, "archived"), /ข้อมูลล่าสุด/);
+  const changed = saveSiteEntry(db, agent.id, published.id, published.updatedAt, { ...input, title: "Updated repo" }, "published");
+  assert.equal(changed.title, "Updated repo");
+  assert.throws(() => saveSiteEntry(db, agent.id, published.id, published.updatedAt, input, "archived"), /ข้อมูลล่าสุด/);
+  assert.equal(db.activity[0].actor, agent.name);
+  manageCatalog(db, { action: "agent_site_permission", revision: db.revision, id: agent.id, enabled: false });
+  assert.throws(() => saveSiteEntry(db, agent.id, published.id, changed.updatedAt, input, "archived"), /ไม่มีสิทธิ์/);
+  databaseSchema.parse(db);
+});

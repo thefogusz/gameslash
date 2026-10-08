@@ -11,6 +11,8 @@ export function AgentPanel({ agents, busy, mutate }: {
   const [endpoint, setEndpoint] = useState("/api/mcp");
   const [token, setToken] = useState("");
   const [copied, setCopied] = useState(false);
+  const activeAgents = agents.filter(agent => !agent.revokedAt && Date.parse(agent.expiresAt) > Date.now());
+  const inactiveAgents = agents.filter(agent => agent.revokedAt || Date.parse(agent.expiresAt) <= Date.now());
   useEffect(() => { setEndpoint(`${window.location.origin}/api/mcp`); }, []);
   return <div className="import-panel agent-panel">
     <div className="studio-heading"><div>
@@ -25,14 +27,15 @@ export function AgentPanel({ agents, busy, mutate }: {
         const values = new FormData(form);
         setToken(""); setCopied(false);
         try {
-          const result = await mutate({ action: "create_agent", name: values.get("name"), canWriteDrafts: values.get("write") === "on", canManageTags: values.get("tags") === "on" }, "สร้างคีย์แล้ว เก็บคีย์ก่อนออกจากหน้านี้");
+          const result = await mutate({ action: "create_agent", name: values.get("name"), canWriteDrafts: values.get("write") === "on", canManageTags: values.get("tags") === "on", canManageSite: values.get("site") === "on" }, "สร้างคีย์แล้ว เก็บคีย์ก่อนออกจากหน้านี้");
           setToken(result.issuedToken || ""); form.reset();
         } catch { /* Parent displays the request error. */ }
       }}>
         <label>ชื่อเอเจนต์<input name="name" placeholder="เช่น Dots รวบรวมเกม" minLength={2} maxLength={60} required /></label>
         <label className="checkbox"><input name="write" type="checkbox" defaultChecked />สร้างและแก้ไขฉบับร่างของตัวเองได้</label>
         <label className="checkbox"><input name="tags" type="checkbox" />ตรวจคำขอแท็กจากผู้ส่งเกมและเพิ่มแท็กเข้าคลังได้ (สำหรับ Dots)</label>
-        <p>เอเจนต์เห็นรายการสาธารณะและงานของตัวเอง เมื่อส่งเข้าคิวตรวจแล้ว คุณเป็นผู้แก้ไขและเผยแพร่ในคลังเนื้อหา</p>
+        <label className="checkbox"><input name="site" type="checkbox" />จัดการเว็บผ่าน MCP: แก้ไขและเผยแพร่เกม เครื่องมือ ข่าว และหน้าแรกได้</label>
+        <p>สิทธิ์จัดการเว็บเผยแพร่ได้ทันที เปิดให้เฉพาะเอเจนต์ที่คุณเชื่อถือ; คีย์ทั่วไปยังส่งฉบับร่างเข้าคิวตรวจ</p>
         <button className="button primary" disabled={busy}>สร้างคีย์เชื่อมต่อ</button>
         {token && <div className="agent-token" role="status">
           <label>คีย์นี้แสดงครั้งเดียว<input value={token} readOnly autoComplete="off" spellCheck={false} /></label>
@@ -49,23 +52,26 @@ export function AgentPanel({ agents, busy, mutate }: {
         <h2>ข้อมูลสำหรับเชื่อมต่อ</h2>
         <label>MCP URL<input value={endpoint} readOnly /></label>
         <p>Transport: Streamable HTTP<br />Header: <code>Authorization: Bearer YOUR_AGENT_TOKEN</code></p>
-        <p>ค้นรายการเดิม → สร้างฉบับร่าง → ส่งตรวจ งานจะเข้า “กล่องรอตรวจ” ให้คุณยืนยันเผยแพร่หรือส่งกลับให้แก้</p>
+        <p>คีย์ทั่วไป: ค้นรายการเดิม → สร้างฉบับร่าง → ส่งตรวจ · คีย์จัดการเว็บ: แก้ไข เผยแพร่ และจัดหน้าเว็บได้โดยตรง</p>
         <p>ใช้ได้กับไคลเอนต์ที่กำหนด Bearer token เองได้ การเชื่อมผ่าน OAuth ยังไม่รองรับ</p>
       </div>
     </div>
-    <h2>คีย์เชื่อมต่อ</h2>
-    <div className="agent-list">{agents.length ? agents.map(agent => {
-      const inactive = !!agent.revokedAt || Date.parse(agent.expiresAt) <= Date.now();
+    <h2>คีย์ที่ใช้งานอยู่ ({activeAgents.length})</h2>
+    <div className="agent-list">{activeAgents.length ? activeAgents.map(agent => {
       return <div className="agent-row" key={agent.id}>
-        <div><strong>{agent.name}</strong><p>{agent.canWriteDrafts ? "อ่านและเตรียมฉบับร่าง" : "อ่านอย่างเดียว"} · {agent.revokedAt ? "ยกเลิกแล้ว" : inactive ? "หมดอายุ" : `หมดอายุ ${new Date(agent.expiresAt).toLocaleDateString("th-TH")}`}</p></div>
-        <label className="checkbox"><input type="checkbox" checked={agent.canManageTags} disabled={busy || inactive} onChange={async e => {
+        <div><strong>{agent.name}</strong><p>{agent.canManageSite ? "จัดการเว็บ" : agent.canWriteDrafts ? "อ่านและเตรียมฉบับร่าง" : "อ่านอย่างเดียว"} · หมดอายุ {new Date(agent.expiresAt).toLocaleDateString("th-TH")}</p></div>
+        <label className="checkbox"><input type="checkbox" checked={agent.canManageTags || agent.canManageSite} disabled={busy || agent.canManageSite} onChange={async e => {
           try { await mutate({ action: "agent_tag_permission", id: agent.id, enabled: e.target.checked }, "อัปเดตสิทธิ์ตรวจแท็กแล้ว"); } catch { /* Parent displays errors. */ }
         }} />ตรวจและเพิ่มแท็ก</label>
-        <button className="button" disabled={busy || inactive} onClick={async () => {
+        <label className="checkbox"><input type="checkbox" checked={agent.canManageSite} disabled={busy} onChange={async e => {
+          try { await mutate({ action: "agent_site_permission", id: agent.id, enabled: e.target.checked }, "อัปเดตสิทธิ์จัดการเว็บแล้ว"); } catch { /* Parent displays errors. */ }
+        }} />จัดการและเผยแพร่เว็บ</label>
+        <button className="button" disabled={busy} onClick={async () => {
           try { await mutate({ action: "revoke_agent", id: agent.id }, "ยกเลิกคีย์แล้ว เอเจนต์ใช้คีย์นี้ไม่ได้อีก"); setToken(""); } catch { /* Parent displays the request error. */ }
         }}>ยกเลิกคีย์</button>
       </div>;
-    }) : <div className="empty-state">ยังไม่มีเอเจนต์เชื่อมต่อ</div>}</div>
+    }) : <div className="empty-state">ไม่มีคีย์ที่ใช้งานอยู่</div>}</div>
+    {inactiveAgents.length > 0 && <details><summary>คีย์ที่ยกเลิกหรือหมดอายุ ({inactiveAgents.length})</summary><div className="agent-list">{inactiveAgents.map(agent => <div className="agent-row" key={agent.id}><div><strong>{agent.name}</strong><p>{agent.revokedAt ? "ยกเลิกแล้ว" : "หมดอายุแล้ว"}</p></div></div>)}</div></details>}
   </div>;
 }
 const actions: Record<string, string> = {
@@ -74,6 +80,7 @@ const actions: Record<string, string> = {
   "entry.archived": "เก็บเข้าคลัง", "entry.import": "นำเข้ารายการ", "entry.agent_draft": "เตรียมฉบับร่าง",
   "layout.published": "เผยแพร่หน้าเว็บ", "layout.draft": "บันทึกหน้าฉบับร่าง",
   "tag.added": "เพิ่มแท็กที่ตรวจแล้ว", "tag.mapped": "จับคู่แท็กเดิม", "tag.rejected": "ไม่รับแท็ก", "agent.tag_permission": "เปลี่ยนสิทธิ์แท็ก",
+  "agent.site_permission": "เปลี่ยนสิทธิ์จัดการเว็บ",
   "agent.created": "สร้างคีย์", "agent.revoked": "ยกเลิกคีย์",
 };
 export function ActivityPanel({ activity }: { activity: Database["activity"] }) {

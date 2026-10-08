@@ -105,6 +105,7 @@ export const agentSchema = z.object({
   tokenHash: z.string().regex(/^[a-f0-9]{64}$/),
   canWriteDrafts: z.boolean(),
   canManageTags: z.boolean().default(false),
+  canManageSite: z.boolean().default(false),
   createdAt: z.iso.datetime(),
   expiresAt: z.iso.datetime(),
   revokedAt: z.iso.datetime().nullable(),
