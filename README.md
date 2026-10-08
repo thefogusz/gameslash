@@ -84,6 +84,8 @@ Blob reads request identity encoding: compressed responses can carry weak ETags 
 
 This is a small editorial CMS, capped at 3,000 entries. Reads still load the whole catalog, and writes share a revision lock; paginated database queries are a separate next step for sustained parallel agent editing. This version has a shared administrator login, moderated standalone posts, and scoped MCP access. Public accounts, replies, notifications, and an automated Facebook crawler are not implemented. Public submissions are limited to five per client address per hour. Login attempts are limited to ten per client address per fifteen minutes; all credentials and rate-limit identifiers stay server-side. Hosting platform usage charges depend on the user's Vercel/Neon plans and traffic.
 
+In Console → แหล่งข้อมูล, each collection run with results can be downloaded as a Markdown file containing its metadata and all retained candidate posts. The download is administrator-only and does not remove the server copy, which remains necessary for search, curation, and shared agent workflows. Collection jobs are capped at 100 and each run at 950 candidates; review storage growth before approaching those limits.
+
 If a local development process crashes during a write, an old `.data/write.lock` can remain. Stop local server processes and confirm none is writing before removing that single lock file. Do not delete the catalog to clear a lock.
 
 ## Checks

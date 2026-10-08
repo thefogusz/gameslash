@@ -5,7 +5,7 @@ import { collectionContextSchema, databaseSchema, entryInput, layoutSchema, publ
 import { seedDatabase } from "../src/lib/seed";
 import { manageCatalog } from "../src/lib/catalog-service";
 import { spotlightGroups } from "../src/lib/spotlights";
-import { reserveFreeBudget } from "../src/lib/collection-model";
+import { collectionMarkdown, reserveFreeBudget } from "../src/lib/collection-model";
 test("verified allowance expires and reserves full ceilings without overspending", () => {
   const budget = { remaining: 4.90, expiresAt: new Date(Date.now() + 86400000).toISOString() };
   reserveFreeBudget(budget, runCap(950));
@@ -13,6 +13,17 @@ test("verified allowance expires and reserves full ceilings without overspending
   assert.throws(() => reserveFreeBudget(budget, runCap(10)));
   assert.throws(() => reserveFreeBudget(null, runCap(10)));
   assert.throws(() => reserveFreeBudget({ remaining: 5, expiresAt: "2020-01-01T00:00:00.000Z" }, runCap(10)));
+});
+test("collection Markdown exports every post as literal text", () => {
+  const job = { id: crypto.randomUUID(), source: { id: crypto.randomUUID(), name: "Public group", url: "https://www.facebook.com/groups/123" }, createdAt: new Date().toISOString(), status: "SUCCEEDED" as const, limit: 10 as const, message: "", candidates: [
+    { url: "https://www.facebook.com/groups/123/posts/1", author: "Creator", time: "today", text: "First post\n~~~\n<script>alert(1)</script>" },
+    { url: "https://www.facebook.com/groups/123/posts/2", author: "Other", time: "", text: "Second post" },
+  ] };
+  const md = collectionMarkdown(job);
+  assert.match(md, /จำนวนโพสต์: 2/);
+  assert.match(md, /## โพสต์ 2/);
+  assert.match(md, /First post\n~~~\n<script>alert\(1\)<\/script>\n~~~~/);
+  assert.match(md, /Second post/);
 });
 test("free-credit guard rejects paid, incomplete, stale and overdrawn balances", () => {
   const user = { isPaying: false, plan: { id: "FREE", monthlyBasePriceUsd: 0, monthlyUsageCreditsUsd: 5 } };

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { checkOrigin, isAdmin, readBody } from "@/lib/auth";
 import { readDatabase, updateDatabase } from "@/lib/store";
-import { sourceSchema, activeJob, reserveFreeBudget } from "@/lib/collection-model";
+import { sourceSchema, activeJob, reserveFreeBudget, collectionMarkdown } from "@/lib/collection-model";
 import { apifyRequest, apifyRunSchema, APIFY_ACTOR, runCap, runInput, extractCandidates } from "@/lib/apify";
 import { errorResponse } from "@/lib/http";
 export const runtime = "nodejs";
@@ -27,7 +27,20 @@ async function snapshot(request: Request) {
 const json = (value: unknown) => Response.json(value, { headers: { "Cache-Control": "no-store" } });
 export async function GET(request: Request) {
   if (!(await isAdmin())) return Response.json({ error: "กรุณาเข้าสู่ระบบ" }, { status: 401 });
-  try { return json(await snapshot(request)); } catch (e) { return errorResponse(e); }
+  try {
+    const params = new URL(request.url).searchParams;
+    if (params.get("format") === "md") {
+      const job = (await readDatabase()).collectionJobs.find(item => item.id === params.get("jobId"));
+      if (!job) return Response.json({ error: "ไม่พบงานรวบรวม" }, { status: 404 });
+      return new Response(collectionMarkdown(job), { headers: {
+        "Content-Type": "text/markdown; charset=utf-8",
+        "Content-Disposition": `attachment; filename="gameslash-source-${job.createdAt.slice(0, 10)}-${job.id}.md"`,
+        "Cache-Control": "private, no-store",
+        "X-Content-Type-Options": "nosniff",
+      } });
+    }
+    return json(await snapshot(request));
+  } catch (e) { return errorResponse(e); }
 }
 export async function POST(request: Request) {
   if (!(await isAdmin())) return Response.json({ error: "กรุณาเข้าสู่ระบบ" }, { status: 401 });

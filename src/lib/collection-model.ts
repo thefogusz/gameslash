@@ -13,6 +13,19 @@ export const jobSchema = z.object({
 export type CollectionJob = z.infer<typeof jobSchema>;
 export type CollectionSource = z.infer<typeof sourceSchema>;
 export const activeJob = (job: CollectionJob) => ["starting", "unknown", "READY", "RUNNING", "ABORTING"].includes(job.status);
+export function collectionMarkdown(job: CollectionJob) {
+  const fenced = (value: string) => {
+    const longest = Math.max(2, ...(value.match(/^ {0,3}~+/gm) || []).map(line => line.trimStart().length));
+    const fence = "~".repeat(longest + 1);
+    return `${fence}text\n${value}\n${fence}`;
+  };
+  return [
+    "# ผลการรวบรวมจาก Gameslash",
+    fenced(`แหล่งข้อมูล: ${job.source.name}\nลิงก์: ${job.source.url}\nวันที่: ${job.createdAt}\nสถานะ: ${job.status}\nRun ID: ${job.runId || "-"}\nจำนวนโพสต์: ${job.candidates.length}`),
+    ...job.candidates.map((post, index) => `## โพสต์ ${index + 1}\n\n${fenced(`ลิงก์: ${post.url}\nผู้เขียน: ${post.author || "-"}\nเวลา: ${post.time || "-"}\n\n${post.text}`)}`),
+    "",
+  ].join("\n\n");
+}
 export function reserveFreeBudget(budget: { remaining: number; expiresAt: string } | null, cap: number) {
   if (!budget || Date.parse(budget.expiresAt) <= Date.now()) throw new Error("ต้องตรวจเครดิตฟรีใน Apify และยืนยันวงเงินฝั่งเซิร์ฟเวอร์ก่อนเริ่มงาน");
   if (budget.remaining < cap) throw new Error("วงเงินทดลองใช้ฟรีไม่พอ ระบบไม่เติมเงินหรือต่อวงเงินอัตโนมัติ");
