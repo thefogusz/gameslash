@@ -19,6 +19,7 @@ const chakra = Chakra_Petch({
   display: "swap",
 });
 export const metadata: Metadata = {
+  metadataBase: new URL("https://gameslash.vercel.app"),
   title: {
     default: "GameSlash รวมเกมเอไอ",
     template: "%s · gameslash",
@@ -26,6 +27,21 @@ export const metadata: Metadata = {
   description:
     "พื้นที่รวมเกม AI บทความ เครื่องมือ และคอมมูนิตี้สำหรับคนชอบสร้างเกม ค้นพบเกมแล้วไปต่อที่เว็บไซต์ผู้สร้าง",
   applicationName: "gameslash",
+  openGraph: {
+    type: "website",
+    siteName: "GameSlash",
+    locale: "th_TH",
+    images: [{
+      url: "/images/gameslash-social-v1.png",
+      width: 1730,
+      height: 909,
+      alt: "GameSlash รวมเกมเอไอ — โลกแฟนตาซี ไซไฟ และหมู่บ้านเกม",
+    }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    images: ["/images/gameslash-social-v1.png"],
+  },
 };
 export default function RootLayout({
   children,
