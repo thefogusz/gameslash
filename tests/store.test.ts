@@ -9,6 +9,8 @@ test("durable storage, draft isolation and stale-edit protection", async () => {
   delete process.env.BLOB_READ_WRITE_TOKEN;
   delete process.env.BLOB_STORE_ID;
   delete process.env.VERCEL;
+  delete process.env.GAMESLASH_STORAGE;
+  delete process.env.GAMESLASH_READ_ONLY;
   const { readDatabase, updateDatabase, ConflictError } = await import(
     "../src/lib/store"
   );

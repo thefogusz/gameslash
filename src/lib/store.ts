@@ -10,6 +10,8 @@ import {
 import path from "node:path";
 import { databaseSchema, type Database } from "./model";
 import { seedDatabase } from "./seed";
+import { databaseClient, readPostgres, updatePostgres, ConflictError } from "./postgres-store";
+export { ConflictError } from "./postgres-store";
 
 const blobPath = "gameslash/catalog-v1.json";
 const directory = path.resolve(
@@ -18,9 +20,10 @@ const directory = path.resolve(
 const localPath = path.join(directory, "catalog.json");
 const cloud = () =>
   !!(process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_STORE_ID);
-export class ConflictError extends Error {}
+const usesPostgres = () => process.env.GAMESLASH_STORAGE === "postgres";
 export function storageReady() {
-  return cloud() || !process.env.VERCEL;
+  if (process.env.GAMESLASH_READ_ONLY === "true") return false;
+  return usesPostgres() ? !!process.env.DATABASE_URL : cloud() || !process.env.VERCEL;
 }
 async function readSnapshot(): Promise<{ db: Database; etag?: string }> {
   if (cloud()) {
@@ -49,6 +52,7 @@ async function readSnapshot(): Promise<{ db: Database; etag?: string }> {
   }
 }
 export async function readDatabase() {
+  if (usesPostgres()) return readPostgres(databaseClient());
   return (await readSnapshot()).db;
 }
 
@@ -58,7 +62,8 @@ export async function updateDatabase(
   revision?: number,
 ): Promise<Database> {
   if (!storageReady())
-    throw new Error("กรุณาเชื่อม Private Vercel Blob ก่อนบันทึกข้อมูล");
+    throw new Error("ระบบบันทึกข้อมูลยังไม่พร้อมใช้งาน กรุณาลองใหม่ภายหลัง");
+  if (usesPostgres()) return updatePostgres(databaseClient(), change, revision);
   if (cloud()) {
     for (let attempt = 0; attempt < 4; attempt++) {
       const { db, etag } = await readSnapshot();

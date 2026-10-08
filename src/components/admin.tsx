@@ -273,7 +273,7 @@ export function Admin() {
           <>
             {!data.storageReady && (
               <div className="form-error">
-                กรุณาเชื่อม Private Vercel Blob ก่อนบันทึกและเปิดรับรายการ
+                ระบบบันทึกข้อมูลยังไม่พร้อมใช้งาน กรุณาลองใหม่ภายหลัง
               </div>
             )}
             {tab === "entries" && (
