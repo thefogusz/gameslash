@@ -68,7 +68,7 @@ export function LikeButton({ id, title, compact = false }: { id: string; title: 
   return <button type="button" className={`game-like${compact ? " compact" : ""}`} disabled={!ready}
     aria-pressed={liked} aria-label={`${liked ? "เลิกถูกใจ" : "ถูกใจ"} ${title}`}
     title={liked ? "นำออกจากถูกใจ" : "เก็บเกมไว้ในถูกใจ"} onClick={() => toggle(id, title)}>
-    <Heart size={19} fill={liked ? "currentColor" : "none"} />
+    <Heart size={20} strokeWidth={1.5} fill={liked ? "currentColor" : "none"} aria-hidden="true" />
     {!compact && <span>{liked ? "ถูกใจแล้ว" : "ถูกใจ"}</span>}
   </button>;
 }
