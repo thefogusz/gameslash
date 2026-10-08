@@ -342,12 +342,13 @@ export function Directory({
   const query = params.get("q") || "";
   const category = view === "tools" && params.get("category") === "เผยแพร่" ? "" : params.get("category") || "";
   const tag = view === "tools" ? "" : params.get("tag") || "";
-  const requestedSort = params.get("sort") || "curated";
+  const requestedSort = view === "tools" ? "curated" : params.get("sort") || "curated";
   const sort = Object.hasOwn(directorySorts, requestedSort) ? requestedSort : "curated";
   function updateFilters(values: Record<string, string>, replace = false) {
     const url = new URL(window.location.href);
     if (view === "tools") {
       url.searchParams.delete("tag");
+      url.searchParams.delete("sort");
       if (url.searchParams.get("category") === "เผยแพร่") url.searchParams.delete("category");
     }
     for (const [key, value] of Object.entries(values)) {
@@ -528,26 +529,26 @@ export function Directory({
                   ))}
                 </div>
               )}
-              <div className={`directory-filters${kind === "tool" ? " tool-filters" : ""}`} role="group" aria-label="ตัวกรองรายการ">
-                {kind !== "tool" && <label>หมวดหมู่
+              {kind !== "tool" && <div className="directory-filters" role="group" aria-label="ตัวกรองรายการ">
+                <label>หมวดหมู่
                   <select value={category} onChange={e => updateFilters({ category: e.target.value })}>
                     <option value="">ทุกหมวดหมู่ ({entries.length})</option>
                     {categories.map(c => <option key={c} value={c}>{c} ({entries.filter(e => e.category === c).length})</option>)}
                   </select>
-                </label>}
-                {kind !== "tool" && <label>{kind === "game" ? "แท็ก / แพลตฟอร์ม" : "แท็ก"}
+                </label>
+                <label>{kind === "game" ? "แท็ก / แพลตฟอร์ม" : "แท็ก"}
                   <select value={tag} onChange={e => updateFilters({ tag: e.target.value })}>
                     <option value="">ทุกแท็ก</option>
                     {tags.map(t => <option key={t} value={t}>{t} ({entries.filter(e => e.tags.includes(t)).length})</option>)}
                   </select>
-                </label>}
+                </label>
                 <label>เรียงลำดับ
                   <select value={sort} onChange={e => updateFilters({ sort: e.target.value === "curated" ? "" : e.target.value })}>
                     {Object.entries(directorySorts).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                   </select>
                 </label>
                 <button className="button secondary filter-reset" onClick={reset} disabled={!filtered}><X size={16} />ล้างตัวกรอง</button>
-              </div>
+              </div>}
               <p className="result-count" role="status" aria-live="polite">
                 พบ {results.length} จาก {entries.length} {kindLabels[kind]}
               </p>
