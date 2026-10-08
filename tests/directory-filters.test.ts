@@ -1,10 +1,22 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { filterDirectory } from "../src/lib/directory-filters";
+import { filterDirectory, gameMakingTools, toolWorkflowCategories } from "../src/lib/directory-filters";
 import { seedDatabase } from "../src/lib/seed";
 
 const entries = seedDatabase().entries;
 const defaults = { kind: "game" as const, query: "", category: "", tag: "", sort: "curated" };
+
+test("tool workflow excludes publishing and ignores retired tag filters in old links", () => {
+  const before = JSON.stringify(entries);
+  assert.deepEqual(gameMakingTools(entries).map(e => e.id), ["claude", "godot", "blender"]);
+  const tools = { ...defaults, kind: "tool" as const, tag: "missing-tag" };
+  assert.equal(filterDirectory(entries, { ...tools, category: "เผยแพร่" }).length, 3);
+  assert.deepEqual(filterDirectory(entries, { ...tools, category: "เอนจินเกม" }).map(e => e.id), ["godot"]);
+  assert.equal(filterDirectory(entries, { ...tools, category: "ทดสอบเกม" }).length, 0);
+  assert.equal(toolWorkflowCategories[0], "ไอเดียและออกแบบ");
+  assert.equal(toolWorkflowCategories.at(-1), "ทดสอบเกม");
+  assert.equal(JSON.stringify(entries), before);
+});
 
 test("directory combines category, tag and trimmed search without mutating its source", () => {
   const original = JSON.stringify(entries);

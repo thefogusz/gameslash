@@ -1,5 +1,11 @@
 import type { Entry } from "./model";
 
+export const toolWorkflowCategories = ["ไอเดียและออกแบบ", "เอนจินเกม", "เขียนโค้ด", "ภาพและเสียง", "ทดสอบเกม"];
+
+export function gameMakingTools(entries: Entry[]) {
+  return entries.filter(e => e.kind === "tool" && e.category !== "เผยแพร่");
+}
+
 export const directorySorts = {
   curated: "แนะนำก่อน",
   new: "เพิ่มล่าสุด",
@@ -12,9 +18,11 @@ export function filterDirectory(entries: Entry[], filters: {
   kind: Entry["kind"]; query: string; category: string; tag: string; sort: string;
 }, featuredIds: string[] = []) {
   const query = filters.query.trim().toLocaleLowerCase();
-  return entries.filter(e => e.kind === filters.kind
-    && (!filters.category || e.category === filters.category)
-    && (!filters.tag || e.tags.includes(filters.tag))
+  const tools = filters.kind === "tool";
+  const category = tools && filters.category === "เผยแพร่" ? "" : filters.category;
+  return (tools ? gameMakingTools(entries) : entries).filter(e => e.kind === filters.kind
+    && (!category || e.category === category)
+    && (tools || !filters.tag || e.tags.includes(filters.tag))
     && (!query || `${e.title} ${e.description} ${e.author} ${e.tags.join(" ")} ${e.category}`.toLocaleLowerCase().includes(query)))
     .sort((a, b) => {
       if (filters.sort === "az") return a.title.localeCompare(b.title, "th");

@@ -3,7 +3,7 @@ import { ArticleContent } from "./article-content";
 import Link from "next/link";
 import { useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { directorySorts, filterDirectory } from "@/lib/directory-filters";
+import { directorySorts, filterDirectory, gameMakingTools, toolWorkflowCategories } from "@/lib/directory-filters";
 import {
   ArrowUpRight,
   ArrowRight,
@@ -340,12 +340,16 @@ export function Directory({
   const { likedIds, ready } = useGamePreferences();
   const likedOnly = params.get("liked") === "1" && view === "games";
   const query = params.get("q") || "";
-  const category = params.get("category") || "";
-  const tag = params.get("tag") || "";
+  const category = view === "tools" && params.get("category") === "เผยแพร่" ? "" : params.get("category") || "";
+  const tag = view === "tools" ? "" : params.get("tag") || "";
   const requestedSort = params.get("sort") || "curated";
   const sort = Object.hasOwn(directorySorts, requestedSort) ? requestedSort : "curated";
   function updateFilters(values: Record<string, string>, replace = false) {
     const url = new URL(window.location.href);
+    if (view === "tools") {
+      url.searchParams.delete("tag");
+      if (url.searchParams.get("category") === "เผยแพร่") url.searchParams.delete("category");
+    }
     for (const [key, value] of Object.entries(values)) {
       if (value) url.searchParams.set(key, value);
       else url.searchParams.delete(key);
@@ -362,14 +366,14 @@ export function Directory({
         : view === "community"
           ? "post"
           : "game";
-  const entries = catalog.entries.filter(e => e.kind === kind);
-  const categories = [...new Set([...(kind === "game" ? catalog.layout.categories : []), ...entries.map(e => e.category), ...(category ? [category] : [])])];
+  const entries = kind === "tool" ? gameMakingTools(catalog.entries) : catalog.entries.filter(e => e.kind === kind);
+  const categories = [...new Set([...(kind === "tool" ? toolWorkflowCategories : kind === "game" ? catalog.layout.categories : []), ...entries.map(e => e.category), ...(category ? [category] : [])])];
   const tags = [...new Set([...entries.flatMap(e => e.tags), ...(tag ? [tag] : [])])].sort((a,b) => a.localeCompare(b,"th"));
   const results = filterDirectory(likedOnly ? entries.filter(e => likedIds.includes(e.id)) : entries, { kind, query, category, tag, sort }, kind === "game" ? catalog.layout.featuredIds : []);
   const filtered = !!(query || category || tag || likedOnly || sort !== "curated");
   const titles = {
     game: ["ค้นพบเกม", "ค้นหาเกมตามชื่อ ผู้สร้าง หรือหมวดหมู่"],
-    tool: ["เครื่องมือทำเกม", "รวมเครื่องมือสำหรับสร้างและเผยแพร่เกม"],
+    tool: ["เครื่องมือทำเกม", "เลือกเครื่องมือตามขั้นตอน ตั้งแต่วางไอเดีย สร้างเกม ทำภาพและเสียง ไปจนถึงทดสอบ"],
     article: ["บทความ", "คู่มือและประสบการณ์สำหรับคนทำเกม"],
     post: ["คอมมูนิตี้", "แชร์ผลงาน ถามคำถาม และขอฟีดแบ็ก"],
   };
@@ -531,12 +535,12 @@ export function Directory({
                     {categories.map(c => <option key={c} value={c}>{c} ({entries.filter(e => e.category === c).length})</option>)}
                   </select>
                 </label>}
-                <label>{kind === "game" ? "แท็ก / แพลตฟอร์ม" : "แท็ก"}
+                {kind !== "tool" && <label>{kind === "game" ? "แท็ก / แพลตฟอร์ม" : "แท็ก"}
                   <select value={tag} onChange={e => updateFilters({ tag: e.target.value })}>
                     <option value="">ทุกแท็ก</option>
                     {tags.map(t => <option key={t} value={t}>{t} ({entries.filter(e => e.tags.includes(t)).length})</option>)}
                   </select>
-                </label>
+                </label>}
                 <label>เรียงลำดับ
                   <select value={sort} onChange={e => updateFilters({ sort: e.target.value === "curated" ? "" : e.target.value })}>
                     {Object.entries(directorySorts).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
