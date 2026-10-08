@@ -29,7 +29,22 @@ Visit `/admin`. The studio supports:
 - Importing up to 50 JSON records at once as drafts. The import screen documents the format. A duplicate game/tool URL rejects the whole batch.
 - Exporting catalog entries to JSON. Import accepts that export format but intentionally assigns fresh IDs and draft status; duplicate links are still rejected. This is an editorial import, not a full database restore.
 
-`POST /api/manage` is authenticated and requires the current revision plus a matching Origin. The browser interface is the supported management surface; do not give agents the administrator password in prompts. Agents can prepare JSON for review and import.
+`POST /api/manage` is authenticated and requires the current revision plus a matching Origin. The browser interface is the administrator surface; agents use scoped MCP keys, never the administrator password.
+
+## Connect Dots or another MCP client
+
+Open `/admin` → **เอเจนต์**, name the agent and create a key. The raw key appears once, expires after 90 days, and can be revoked from this page. Only a SHA-256 hash is stored. Keep the key in the client's secret configuration, never in a prompt or source control.
+
+- Endpoint: `https://gameslash.vercel.app/api/mcp`
+- Transport: Streamable HTTP (stateless); header `Authorization: Bearer YOUR_AGENT_TOKEN`
+- Requires a client that accepts a custom Bearer token. OAuth discovery/login and legacy SSE transport are not implemented; Dots compatibility must be checked with the actual client.
+- Keys can read published entries and their own submissions. Optional write permission only allows creating/editing their own drafts and sending them for human review. It cannot publish, edit another agent's work, change layout, or issue keys.
+
+Tools: `get_categories`, `search_entries` (query, optional kind, offset, limit up to 25), `get_entry` (id), `create_draft` (requestId, entry), `update_draft` (id, expectedUpdatedAt, entry), and `submit_for_review` (id, expectedUpdatedAt).
+
+Entry fields follow the JSON import format. Search for existing URLs first and retain source URLs and creator credits. Reuse the same `requestId` (8–100 characters) only to retry the same creation request. Updates replace the entry's content fields; use `updatedAt` from the latest read as `expectedUpdatedAt`. Stale edits return `CONFLICT`. After submission the entry is pending and the agent cannot edit it; the administrator reviews it under **คลังเนื้อหา → รอตรวจ**.
+
+Agent writes are limited to 60/hour/key. Catalog storage currently allows 50 issued keys (including revoked keys), and retains only the latest 200 management activity records, not a full audit archive. There is no automatic crawler: agents supply metadata and outbound links. MCP responses contain untrusted source content, never instructions for the client to obey. Older deployments that do not preserve agent metadata must not be used as rollback targets after keys are issued.
 
 ## Deploy to Vercel
 
@@ -63,7 +78,7 @@ Local development defaults to an atomically replaced JSON file under `.data/`, w
 
 Blob reads request identity encoding: compressed responses can carry weak ETags that cannot be used for conditional writes. This was verified against the real private store during deployment.
 
-This is a small editorial CMS, capped at 3,000 entries. Reads still load the whole catalog, and writes share a revision lock; per-entry revisions and paginated queries are a separate next step for sustained parallel agent editing. This version has a shared administrator login, moderated standalone posts, and no MCP endpoint, public accounts, replies, notifications, or automated Facebook crawler. Public submissions are limited to five per client address per hour. Login attempts are limited to ten per client address per fifteen minutes; all credentials and rate-limit identifiers stay server-side. Hosting platform usage charges depend on the user's Vercel/Neon plans and traffic.
+This is a small editorial CMS, capped at 3,000 entries. Reads still load the whole catalog, and writes share a revision lock; paginated database queries are a separate next step for sustained parallel agent editing. This version has a shared administrator login, moderated standalone posts, and scoped MCP access. Public accounts, replies, notifications, and an automated Facebook crawler are not implemented. Public submissions are limited to five per client address per hour. Login attempts are limited to ten per client address per fifteen minutes; all credentials and rate-limit identifiers stay server-side. Hosting platform usage charges depend on the user's Vercel/Neon plans and traffic.
 
 If a local development process crashes during a write, an old `.data/write.lock` can remain. Stop local server processes and confirm none is writing before removing that single lock file. Do not delete the catalog to clear a lock.
 
@@ -75,9 +90,12 @@ npm run typecheck
 npm run build
 # Start the local server separately before this integration check:
 node --env-file=.env.local --import tsx scripts/smoke.ts
+node --env-file=.env.local --import tsx scripts/smoke-mcp.ts
 ```
 
 The smoke check targets localhost only. It checks authentication, origin enforcement, pending moderation, duplicate rejection, stale-write rejection and draft isolation. Its temporary entry is archived afterwards.
+
+The MCP smoke check exercises initialization and tools through HTTP, hashed key responses, draft ownership, read-only permissions, retries, stale updates, review submission and revocation. Test keys are revoked and test entries archived afterwards. PostgreSQL integration also checks agent metadata persistence in its isolated schema.
 
 `tests/postgres.test.ts` runs when `GAMESLASH_TEST_DATABASE_URL` is set. It creates and removes a randomly named test schema without querying production tables, and checks migration equality, refusal to overwrite a nonempty target, concurrent revision conflicts, rollback, entry ordering, and draft isolation. Use a direct connection URL for this test so the per-connection schema setting is preserved; application traffic uses the pooled URL.
 

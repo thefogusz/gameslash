@@ -237,5 +237,8 @@ export function seedDatabase(): Database {
     layout,
     draftLayout: structuredClone(layout),
     limits: {},
+    agents: [],
+    activity: [],
+    ingestions: {},
   });
 }

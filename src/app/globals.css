@@ -113,8 +113,9 @@ a:focus-visible {
   min-width: 0;
 }
 .brand-tagline {
-  color: var(--muted);
-  font-size: 13px;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 700;
   white-space: nowrap;
   border-left: 1px solid var(--line);
   padding-left: 18px;
@@ -1191,6 +1192,7 @@ textarea {
   margin-left: 16px;
 }
 .studio-nav {
+  overflow-x: auto;
   height: 60px;
   display: flex;
   align-items: center;
@@ -1200,6 +1202,8 @@ textarea {
   background: #151722;
 }
 .studio-nav > button {
+  flex-shrink: 0;
+  white-space: nowrap;
   display: flex;
   align-items: center;
   gap: 9px;
@@ -1599,6 +1603,14 @@ textarea {
   text-align: left;
   padding: 0;
 }
+.agent-token { margin-top: 24px; padding: 20px; border: 1px solid var(--accent); border-radius: 12px; }
+.agent-panel > h2 { margin-top: 40px; }
+.agent-panel .import-guide label { display: grid; gap: 8px; }
+.agent-panel .import-guide input { width: 100%; min-width: 0; padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.agent-panel .import-guide code { overflow-wrap: anywhere; }
+.agent-list { margin-top: 20px; }
+.agent-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; padding: 20px 0; border-bottom: 1px solid var(--line); }
+.agent-row p, .agent-row time { color: var(--muted); font-size: 13px; }
 .import-panel {
   max-width: 1100px;
   margin: auto;

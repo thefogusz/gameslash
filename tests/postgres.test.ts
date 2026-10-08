@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import postgres from "postgres";
 import { seedDatabase } from "../src/lib/seed";
 import { publicData } from "../src/lib/model";
+import { manageCatalog, createAgentDraft } from "../src/lib/catalog-service";
 import { createTables, initializePostgres, readPostgres, updatePostgres, ConflictError } from "../src/lib/postgres-store";
 
 test("Postgres migration, concurrent writes, rollback and draft isolation", {
@@ -51,6 +52,13 @@ test("Postgres migration, concurrent writes, rollback and draft isolation", {
       db.entries.unshift({ ...db.entries[0], id: "new-draft", status: "draft" });
     });
     assert.deepEqual(await readPostgres(sql), changed);
+    const withAgent = await updatePostgres(sql, db => {
+      manageCatalog(db, { action: "create_agent", revision: db.revision, name: "Isolated test", canWriteDrafts: true });
+      createAgentDraft(db, db.agents[0].id, "db-request", { ...seed.entries[0], url: "https://example.com/db-agent-test" });
+    });
+    assert.deepEqual(await readPostgres(sql), withAgent);
+    assert.equal(withAgent.activity.length, 2);
+    assert.equal(Object.keys(withAgent.ingestions).length, 1);
   } finally {
     await sql.end();
     await admin`DROP SCHEMA ${admin(schema)} CASCADE`;

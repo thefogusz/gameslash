@@ -101,6 +101,23 @@ export const layoutSchema = z.object({
     ),
 });
 export type Layout = z.infer<typeof layoutSchema>;
+export const agentSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string().trim().min(2).max(60),
+  tokenHash: z.string().regex(/^[a-f0-9]{64}$/),
+  canWriteDrafts: z.boolean(),
+  createdAt: z.iso.datetime(),
+  expiresAt: z.iso.datetime(),
+  revokedAt: z.iso.datetime().nullable(),
+});
+export const activitySchema = z.object({
+  id: z.string().uuid(),
+  at: z.iso.datetime(),
+  actor: z.string().max(100),
+  action: z.string().max(60),
+  title: z.string().max(120),
+  entryId: z.string().optional(),
+});
 export const databaseSchema = z.object({
   version: z.literal(1),
   revision: z.number().int().nonnegative(),
@@ -111,6 +128,12 @@ export const databaseSchema = z.object({
     z.string(),
     z.object({ count: z.number(), reset: z.number() }),
   ),
+  agents: z.array(agentSchema).max(50).default([]),
+  activity: z.array(activitySchema).max(200).default([]),
+  ingestions: z.record(z.string(), z.object({
+    agentId: z.string().uuid(),
+    inputHash: z.string().regex(/^[a-f0-9]{64}$/),
+  })).default({}),
 });
 export type Database = z.infer<typeof databaseSchema>;
 export function normalizedUrl(value: string) {

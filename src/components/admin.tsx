@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { HomeContent } from "./directory";
 import { EntryForm } from "./entry-form";
+import { AgentPanel, ActivityPanel } from "./agent-panel";
 import {
   kindLabels,
   type Database,
@@ -34,8 +35,8 @@ import {
 } from "@/lib/model";
 type Snapshot = Pick<
   Database,
-  "entries" | "layout" | "draftLayout" | "revision"
-> & { storageReady: boolean };
+  "entries" | "layout" | "draftLayout" | "revision" | "activity"
+> & { storageReady: boolean; agents: Omit<Database["agents"][number], "tokenHash">[]; issuedToken?: string };
 async function request(
   url: string,
   body?: unknown,
@@ -125,7 +126,7 @@ export function Login({ configured }: { configured: boolean }) {
 export function Admin() {
   const router = useRouter();
   const [data, setData] = useState<Snapshot | null>(null),
-    [tab, setTab] = useState<"entries" | "layout" | "import">("entries");
+    [tab, setTab] = useState<"entries" | "layout" | "import" | "agents" | "activity">("entries");
   const [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
     [busy, setBusy] = useState(false),
@@ -152,7 +153,8 @@ export function Admin() {
         ...body,
         revision: data?.revision,
       });
-      setData(next);
+      const { issuedToken: _token, ...snapshot } = next;
+      setData(snapshot);
       setNotice(message);
       return next as Snapshot;
     } catch (e) {
@@ -240,6 +242,12 @@ export function Admin() {
         >
           <Upload size={16} />
           นำเข้าจากเอเจนต์
+        </button>
+        <button className={tab === "agents" ? "active" : ""} onClick={() => setTab("agents")}>
+          <LockKeyhole size={16} />เอเจนต์
+        </button>
+        <button className={tab === "activity" ? "active" : ""} onClick={() => setTab("activity")}>
+          ประวัติล่าสุด
         </button>
         <button className="studio-refresh" onClick={reload}>
           <RefreshCw size={15} />
@@ -415,6 +423,8 @@ export function Admin() {
                 }}
               />
             )}
+            {tab === "agents" && <AgentPanel agents={data.agents} busy={busy} mutate={mutate} />}
+            {tab === "activity" && <ActivityPanel activity={data.activity} />}
           </>
         )}
       </div>
