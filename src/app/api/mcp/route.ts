@@ -172,13 +172,28 @@ export async function POST(request: Request) {
         return { revision: db.revision, layout: db.layout, draftLayout: db.draftLayout, entryCount: db.entries.length };
       }));
       server.registerTool("save_site_entry", {
-        description: "Create or edit any catalog entry and set draft/pending/published/archived status directly. Requires site-management permission. Read get_site_state for revision and get_entry for expectedUpdatedAt. For a new entry choose a unique lowercase slug id and omit expectedUpdatedAt; for edits supply exact current expectedUpdatedAt. Publication is immediate. Verify creator, source, links and article images before calling.",
+        description: "Create or edit any catalog entry and set draft/pending/published/archived status directly. Archived entries are in the recoverable trash; prefer trash_site_entry and restore_site_entry for this workflow. Requires site-management permission. Read get_site_state for revision and get_entry for expectedUpdatedAt. For a new entry choose a unique lowercase slug id and omit expectedUpdatedAt; for edits supply exact current expectedUpdatedAt. Publication is immediate. Verify creator, source, links and article images before calling.",
         inputSchema: z.object({ revision: z.number().int().nonnegative(), id: reference.id, expectedUpdatedAt: z.iso.datetime().optional(), entry: entryInput, status: entrySchema.shape.status }), outputSchema: entryResult,
         annotations: { ...annotations, destructiveHint: true },
       }, input => result(async () => {
         let entry!: Entry;
         await updateDatabase(db => {
           entry = saveSiteEntry(db, agent.id, input.id, input.expectedUpdatedAt, input.entry, input.status);
+        }, input.revision);
+        return { entry };
+      }));
+      for (const [name, action, description] of [
+        ["trash_site_entry", "trash_entry", "Move an existing entry into recoverable trash. Requires site-management permission, current revision and expectedUpdatedAt. Hides it from the public site immediately."],
+        ["restore_site_entry", "restore_entry", "Restore an entry from trash to its previous status, or draft for older archived entries. Requires site-management permission, current revision and expectedUpdatedAt. Restoring a previously published entry makes it public again."],
+      ] as const) server.registerTool(name, {
+        description, inputSchema: z.object({ revision: z.number().int().nonnegative(), ...reference }), outputSchema: entryResult,
+        annotations: { ...annotations, destructiveHint: true },
+      }, input => result(async () => {
+        let entry!: Entry;
+        await updateDatabase(db => {
+          const manager = requireSiteAgent(db, agent.id);
+          manageCatalog(db, { action, ...input }, manager.name);
+          entry = db.entries.find(e => e.id === input.id)!;
         }, input.revision);
         return { entry };
       }));

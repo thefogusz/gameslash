@@ -312,9 +312,9 @@ export function Admin() {
                 ระบบบันทึกข้อมูลยังไม่พร้อมใช้งาน กรุณาลองใหม่ภายหลัง
               </div>
             )}
-            {tab === "entries" && <ContentLibrary entries={data.entries} edit={setEditing} create={newEntry} review={entry=>{setReviewTarget(entry);setReviewVersion(v=>v+1);setTab("inbox");}} />}
+            {tab === "entries" && <ContentLibrary entries={data.entries} busy={busy} edit={setEditing} create={newEntry} review={entry=>{setReviewTarget(entry);setReviewVersion(v=>v+1);setTab("inbox");}} trash={entry=>{void mutate({action:"trash_entry",id:entry.id,expectedUpdatedAt:entry.updatedAt},"ย้ายเข้าถังขยะแล้ว กู้คืนได้ในคลังเนื้อหา").catch(()=>{});}} restore={entry=>{void mutate({action:"restore_entry",id:entry.id,expectedUpdatedAt:entry.updatedAt},"กู้คืนรายการแล้ว").catch(()=>{});}} />}
             {tab === "inbox" && <ReviewPanel key={reviewVersion} initialTarget={reviewTarget} entries={data.entries} submissions={data.submissions} agents={data.agents} reviews={data.reviews} busy={busy} edit={setEditing} connect={() => setTab("connections")} decide={async (entry, decision, note) => {
-              await mutate({ action: "review", id: entry.id, expectedUpdatedAt: entry.updatedAt, decision, note }, { publish: "เผยแพร่แล้ว รายการแสดงบนเว็บทันที", return: "ส่งกลับเป็นฉบับร่างแล้ว เอเจนต์อ่านหมายเหตุและแก้ไขต่อได้", reject: "เก็บรายการเข้าคลังแล้ว สามารถเปิดกลับมาแก้ได้" }[decision]);
+              await mutate({ action: "review", id: entry.id, expectedUpdatedAt: entry.updatedAt, decision, note }, { publish: "เผยแพร่แล้ว รายการแสดงบนเว็บทันที", return: "ส่งกลับเป็นฉบับร่างแล้ว เอเจนต์อ่านหมายเหตุและแก้ไขต่อได้", reject: "ย้ายเข้าถังขยะแล้ว สามารถกู้คืนได้" }[decision]);
             }} />}
             {tab === "connections" && <ConnectionsPanel refreshCatalog={async()=>{await reload();}} openAgents={() => setTab("agents")} openInbox={() => setTab("inbox")} entries={data.entries} categories={data.layout.categories} createDraft={async (jobId, sourceUrl, entry, tagSuggestions) => { await mutate({ action: "collection_draft", jobId, sourceUrl, entry, tagSuggestions }, "ส่งเข้ากล่องรอตรวจแล้ว"); }} />}
             {tab === "layout" && (

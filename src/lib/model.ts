@@ -60,6 +60,7 @@ export const entrySchema = entryInput.safeExtend({
     .regex(/^[a-z0-9-]+$/)
     .max(100),
   status: z.enum(["draft", "pending", "published", "archived"]),
+  restoreStatus: z.enum(["draft", "pending", "published"]).optional(),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
 });

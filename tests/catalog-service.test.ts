@@ -96,3 +96,39 @@ test("agent write limits and recent activity cap are enforced", () => {
   for (let i = 0; i < 205; i++) manageCatalog(db, { action: "layout", revision: db.revision, layout: db.layout, publish: false });
   assert.equal(db.activity.length, 200);
 });
+
+test("only inactive MCP keys can be deleted without losing content history", () => {
+  const db = seedDatabase(), { token, agent } = key(db);
+  assert.throws(() => manageCatalog(db, { action: "delete_agent", revision: db.revision, id: agent.id }), /ยกเลิกคีย์ก่อน/);
+  db.ingestions["historical-entry"] = { agentId: agent.id, inputHash: "a".repeat(64) };
+  manageCatalog(db, { action: "revoke_agent", revision: db.revision, id: agent.id });
+  manageCatalog(db, { action: "delete_agent", revision: db.revision, id: agent.id });
+  assert.equal(db.agents.some(a => a.id === agent.id), false);
+  assert.equal(authenticateAgent(db, token), null);
+  assert.equal(db.ingestions["historical-entry"].agentId, agent.id);
+  assert.ok(db.activity.some(a => a.action === "agent.deleted" && a.title === agent.name));
+  databaseSchema.parse(db);
+});
+
+test("trash hides published content and restores its previous status", () => {
+  const db = seedDatabase();
+  const original = db.entries.find(e => e.status === "published")!;
+  assert.ok(publicData(db).entries.some(e => e.id === original.id));
+  manageCatalog(db, { action: "trash_entry", revision: db.revision, id: original.id, expectedUpdatedAt: original.updatedAt });
+  const trashed = db.entries.find(e => e.id === original.id)!;
+  assert.equal(trashed.status, "archived");
+  assert.equal(trashed.restoreStatus, "published");
+  assert.equal(publicData(db).entries.some(e => e.id === original.id), false);
+  assert.throws(() => manageCatalog(db, { action: "restore_entry", revision: db.revision, id: original.id, expectedUpdatedAt: original.updatedAt }), /ข้อมูลล่าสุด/);
+  manageCatalog(db, { action: "restore_entry", revision: db.revision, id: original.id, expectedUpdatedAt: trashed.updatedAt });
+  const restored = db.entries.find(e => e.id === original.id)!;
+  assert.equal(restored.status, "published");
+  assert.equal(restored.restoreStatus, undefined);
+  assert.ok(publicData(db).entries.some(e => e.id === original.id));
+  const older = { ...restored, status: "archived" as const };
+  delete (older as Partial<typeof older>).restoreStatus;
+  db.entries = db.entries.map(e => e.id === older.id ? older : e);
+  manageCatalog(db, { action: "restore_entry", revision: db.revision, id: older.id, expectedUpdatedAt: older.updatedAt });
+  assert.equal(db.entries.find(e => e.id === older.id)?.status, "draft");
+  databaseSchema.parse(db);
+});

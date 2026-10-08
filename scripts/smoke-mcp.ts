@@ -42,7 +42,7 @@ try {
   assert.equal(JSON.stringify(await snapshot()).includes(token), false);
   const initialized = await rpc(token, "initialize", { protocolVersion: "2025-11-25", capabilities: {}, clientInfo: { name: "gameslash-test", version: "1.0.0" } });
   assert.ok(initialized.serverInfo);
-  assert.equal((await rpc(token, "tools/list")).tools.length, 18);
+  assert.equal((await rpc(token, "tools/list")).tools.length, 20);
   assert.equal((await call(token, "get_site_state")).isError, true);
   const site = (await call(manager, "get_site_state")).structuredContent;
   const siteEntry = { kind: "tool", title: "MCP site verification", description: "Temporary tool for site management integration testing.", author: "Smoke test", category: "สไปรต์และภาพ 2D", url: "https://example.com/mcp-site-test", sourceUrl: "https://example.com/mcp-site-test" };
@@ -52,6 +52,13 @@ try {
   entryIds.push(siteId);
   assert.equal(siteCreated.structuredContent.entry.status, "published");
   assert.equal((await call(manager, "save_site_entry", { revision: site.revision, id: siteId, entry: siteEntry, status: "archived" })).isError, true);
+  const trashRevision = (await call(manager, "get_site_state")).structuredContent.revision;
+  const trashed = await call(manager, "trash_site_entry", { revision: trashRevision, id: siteId, expectedUpdatedAt: siteCreated.structuredContent.entry.updatedAt });
+  assert.equal(trashed.structuredContent.entry.status, "archived");
+  assert.equal((await call(manager, "restore_site_entry", { revision: trashRevision, id: siteId, expectedUpdatedAt: trashed.structuredContent.entry.updatedAt })).isError, true);
+  const restoreRevision = (await call(manager, "get_site_state")).structuredContent.revision;
+  const restored = await call(manager, "restore_site_entry", { revision: restoreRevision, id: siteId, expectedUpdatedAt: trashed.structuredContent.entry.updatedAt });
+  assert.equal(restored.structuredContent.entry.status, "published");
   const siteCurrent = (await call(manager, "get_site_state")).structuredContent;
   assert.equal((await call(manager, "save_site_layout", { revision: siteCurrent.revision, layout: siteCurrent.draftLayout, publish: false })).isError, undefined);
   assert.equal((await call(reader, "list_collections")).isError, true);

@@ -221,7 +221,7 @@ export function EntryForm({
             <option value="draft">ฉบับร่าง</option>
             <option value="pending">รอตรวจสอบ</option>
             <option value="published">เผยแพร่บนเว็บไซต์</option>
-            <option value="archived">เก็บเข้าคลัง (ซ่อนจากเว็บ)</option>
+            <option value="archived">ย้ายเข้าถังขยะ (ซ่อนจากเว็บ)</option>
           </ConsoleSelect>
         </div>
       )}

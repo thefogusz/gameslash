@@ -11,11 +11,14 @@ export const managementMutation = z.discriminatedUnion("action", [
   z.object({ action: z.literal("agent_site_permission"), revision: z.number().int(), id: z.string().uuid(), enabled: z.boolean() }),
   z.object({ action: z.literal("collection_draft"), revision: z.number().int(), jobId: z.string().uuid(), sourceUrl: z.string().url(), entry: entryInput, tagSuggestions: tagSuggestionsSchema.optional() }),
   z.object({ action: z.literal("review"), revision: z.number().int(), id: entrySchema.shape.id, expectedUpdatedAt: z.iso.datetime(), decision: z.enum(["publish", "return", "reject"]), note: z.string().trim().max(1000).default("") }),
+  z.object({ action: z.literal("trash_entry"), revision: z.number().int(), id: entrySchema.shape.id, expectedUpdatedAt: z.iso.datetime() }),
+  z.object({ action: z.literal("restore_entry"), revision: z.number().int(), id: entrySchema.shape.id, expectedUpdatedAt: z.iso.datetime() }),
   z.object({ action: z.literal("entry"), revision: z.number().int(), entry: entrySchema, tagSuggestions: tagSuggestionsSchema.optional() }),
   z.object({ action: z.literal("layout"), revision: z.number().int(), layout: layoutSchema, publish: z.boolean() }),
   z.object({ action: z.literal("import"), revision: z.number().int(), entries: z.array(entryInput).min(1).max(50) }),
   z.object({ action: z.literal("create_agent"), revision: z.number().int(), name: z.string().trim().min(2).max(60), canWriteDrafts: z.boolean(), canManageTags: z.boolean().optional(), canManageSite: z.boolean().optional() }),
   z.object({ action: z.literal("revoke_agent"), revision: z.number().int(), id: z.string().uuid() }),
+  z.object({ action: z.literal("delete_agent"), revision: z.number().int(), id: z.string().uuid() }),
 ]);
 const hash = (value: string) => createHash("sha256").update(value).digest("hex");
 function log(db: Database, actor: string, action: string, title: string, entryId?: string) {
@@ -29,6 +32,8 @@ function saveEntry(db: Database, input: Entry) {
     createdAt: old?.createdAt || new Date().toISOString(),
     updatedAt: new Date(Math.max(Date.now(), old ? Date.parse(old.updatedAt) + 1 : 0)).toISOString(),
   };
+  if (item.status === "archived") item.restoreStatus = old?.status === "archived" ? old.restoreStatus ?? "draft" : old?.status ?? "draft";
+  else delete item.restoreStatus;
   // Older clients omit popularity; null explicitly clears an assessment.
   if (item.kind === "tool" && item.popularity === undefined && old?.popularity) item.popularity = old.popularity;
   if (item.kind !== "tool") delete item.popularity;
@@ -67,6 +72,14 @@ export function manageCatalog(db: Database, input: z.infer<typeof managementMuta
     const item = saveEntry(db, input.entry);
     requestGameTags(db, item, input.tagSuggestions || []);
     log(db, actor, `entry.${item.status}`, item.title, item.id);
+  } else if (input.action === "trash_entry" || input.action === "restore_entry") {
+    const old = db.entries.find(e => e.id === input.id);
+    if (!old) throw new Error("ไม่พบรายการ");
+    if (old.updatedAt !== input.expectedUpdatedAt) throw new ConflictError("รายการเปลี่ยนแล้ว กรุณาโหลดข้อมูลล่าสุด");
+    if (input.action === "trash_entry" && old.status === "archived") throw new Error("รายการอยู่ในถังขยะแล้ว");
+    if (input.action === "restore_entry" && old.status !== "archived") throw new Error("กู้คืนได้เฉพาะรายการในถังขยะ");
+    const item = saveEntry(db, { ...old, status: input.action === "trash_entry" ? "archived" : old.restoreStatus ?? "draft" });
+    log(db, actor, input.action === "trash_entry" ? "entry.trashed" : "entry.restored", item.title, item.id);
   } else if (input.action === "layout") {
     if ([...input.layout.featuredIds, ...input.layout.spotlights.flatMap(g => g.entryIds)].some(id => !db.entries.some(e => e.id === id && e.kind === "game" && e.status === "published")))
       throw new Error("เลือกเกมแนะนำจากรายการที่เผยแพร่แล้วเท่านั้น");
@@ -95,6 +108,13 @@ export function manageCatalog(db: Database, input: z.infer<typeof managementMuta
     const item = saveEntry(db, { ...old, status: status[input.decision] });
     db.reviews[item.id] = { decision: input.decision, note: input.note, at: item.updatedAt };
     log(db, actor, `review.${input.decision}`, item.title, item.id);
+  } else if (input.action === "delete_agent") {
+    const agent = db.agents.find(a => a.id === input.id);
+    if (!agent) throw new Error("ไม่พบเอเจนต์");
+    if (!agent.revokedAt && Date.parse(agent.expiresAt) > Date.now()) throw new Error("ต้องยกเลิกคีย์ก่อนลบถาวร");
+    db.agents = db.agents.filter(a => a.id !== input.id);
+    delete db.limits[`agent:${input.id}`];
+    log(db, "ผู้ดูแล", "agent.deleted", agent.name);
   } else {
     const agent = db.agents.find(a => a.id === input.id);
     if (!agent) throw new Error("ไม่พบเอเจนต์");

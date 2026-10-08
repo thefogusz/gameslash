@@ -75,7 +75,7 @@ function ReviewDetail({ entry, context, submitter, review, busy, edit, decide }:
       <label className="checkbox"><input type="checkbox" checked={checked} onChange={e => setChecked(e.target.checked)} />ฉันตรวจข้อมูล ลิงก์ และสิทธิ์ใช้ภาพแล้ว พร้อมเผยแพร่</label>
       {error && <p className="form-error" role="alert">{error}</p>}
       <div className="review-actions"><button className="button primary" disabled={busy || !checked} onClick={() => act("publish")}><Check size={16} />ยืนยันเผยแพร่</button><button className="button" disabled={busy} onClick={() => act("return")}>ส่งกลับให้แก้</button><button className="button" disabled={busy} onClick={() => act("reject")}>ไม่รับรายการ</button></div>
-      <p className="field-hint">ยืนยันแล้วจะแสดงบนเว็บทันที · ไม่รับรายการจะเก็บเข้าคลัง และเปิดกลับมาแก้ได้</p>
+      <p className="field-hint">ยืนยันแล้วจะแสดงบนเว็บทันที · ไม่รับรายการจะย้ายเข้าถังขยะ และกู้คืนได้ภายหลัง</p>
     </div> : <p className="review-feedback">รอเอเจนต์เตรียมงานและส่งตรวจ หรือกด “แก้ไขข้อมูล” เพื่อจัดการด้วยตัวเอง</p>}
   </article>;
 }

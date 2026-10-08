@@ -60,7 +60,7 @@
 .library-table th:first-child { width:auto; }
 .library-table th:nth-child(2) { width:100px; }
 .library-table th:nth-child(3) { width:124px; }
-.library-table th:last-child { width:134px; }
+.library-table th:last-child { width:180px; }
 .library-table td { padding:14px 16px; border-top:1px solid var(--line); vertical-align:middle; }
 .library-table tr:hover td { background:#ffffff03; }
 .library-item { display:flex; gap:14px; align-items:center; min-width:0; }
@@ -72,6 +72,7 @@
 .library-item p>span { padding:0 3px; }
 .library-type { font-size:14px; color:var(--muted); }
 .admin-app .library-action .button { white-space:nowrap; padding:8px 12px; font-size:14px; background:transparent; }
+.library-actions { display:flex; align-items:center; justify-content:flex-end; gap:6px; }
 .library-pagination,.library-pagination>div { display:flex; align-items:center; gap:12px; font-size:14px; color:var(--muted); }
 .library-pagination { justify-content:space-between; padding-top:14px; }
 .admin-app .empty-state { display:flex; flex-direction:column; align-items:center; gap:12px; padding:48px 24px; font-size:16px; }

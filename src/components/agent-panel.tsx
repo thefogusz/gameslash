@@ -71,17 +71,19 @@ export function AgentPanel({ agents, busy, mutate }: {
         }}>ยกเลิกคีย์</button>
       </div>;
     }) : <div className="empty-state">ไม่มีคีย์ที่ใช้งานอยู่</div>}</div>
-    {inactiveAgents.length > 0 && <details><summary>คีย์ที่ยกเลิกหรือหมดอายุ ({inactiveAgents.length})</summary><div className="agent-list">{inactiveAgents.map(agent => <div className="agent-row" key={agent.id}><div><strong>{agent.name}</strong><p>{agent.revokedAt ? "ยกเลิกแล้ว" : "หมดอายุแล้ว"}</p></div></div>)}</div></details>}
+    {inactiveAgents.length > 0 && <details><summary>คีย์ที่ยกเลิกหรือหมดอายุ ({inactiveAgents.length})</summary><div className="agent-list">{inactiveAgents.map(agent => <div className="agent-row" key={agent.id}><div><strong>{agent.name}</strong><p>{agent.revokedAt ? "ยกเลิกแล้ว" : "หมดอายุแล้ว"}</p></div><button className="button" disabled={busy} aria-label={`ลบคีย์ ${agent.name} ถาวร`} onClick={async () => {
+      try { await mutate({ action: "delete_agent", id: agent.id }, "ลบคีย์เก่าออกจากรายการแล้ว"); } catch { /* Parent displays errors. */ }
+    }}>ลบถาวร</button></div>)}</div></details>}
   </div>;
 }
 const actions: Record<string, string> = {
   "review.publish": "ยืนยันเผยแพร่", "review.return": "ส่งกลับให้แก้", "review.reject": "ไม่รับรายการ",
   "entry.draft": "บันทึกฉบับร่าง", "entry.pending": "ส่งเข้าคิวตรวจ", "entry.published": "เผยแพร่รายการ",
-  "entry.archived": "เก็บเข้าคลัง", "entry.import": "นำเข้ารายการ", "entry.agent_draft": "เตรียมฉบับร่าง",
+  "entry.archived": "ย้ายเข้าถังขยะ", "entry.trashed": "ย้ายเข้าถังขยะ", "entry.restored": "กู้คืนรายการ", "entry.import": "นำเข้ารายการ", "entry.agent_draft": "เตรียมฉบับร่าง",
   "layout.published": "เผยแพร่หน้าเว็บ", "layout.draft": "บันทึกหน้าฉบับร่าง",
   "tag.added": "เพิ่มแท็กที่ตรวจแล้ว", "tag.mapped": "จับคู่แท็กเดิม", "tag.rejected": "ไม่รับแท็ก", "agent.tag_permission": "เปลี่ยนสิทธิ์แท็ก",
   "agent.site_permission": "เปลี่ยนสิทธิ์จัดการเว็บ",
-  "agent.created": "สร้างคีย์", "agent.revoked": "ยกเลิกคีย์",
+  "agent.created": "สร้างคีย์", "agent.revoked": "ยกเลิกคีย์", "agent.deleted": "ลบคีย์เก่า",
 };
 export function ActivityPanel({ activity }: { activity: Database["activity"] }) {
   return <div className="import-panel">
