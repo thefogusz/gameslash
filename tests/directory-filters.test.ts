@@ -17,6 +17,12 @@ test("tool workflow excludes publishing and ignores retired tag filters in old l
   assert.equal(toolWorkflowCategories.at(-1), "ทดสอบเกม");
   assert.equal(JSON.stringify(entries), before);
 });
+test("GitHub tools appear in their new 2D workflow category", () => {
+  const sprite = { ...entries.find(e => e.id === "godot")!, id: "agent-sprite-forge", title: "Agent Sprite Forge", category: "สไปรต์และภาพ 2D", url: "https://github.com/0x0funky/agent-sprite-forge" };
+  assert.ok(toolWorkflowCategories.includes("สไปรต์และภาพ 2D"));
+  assert.ok(toolWorkflowCategories.includes("บทสนทนาและเนื้อเรื่อง"));
+  assert.deepEqual(filterDirectory([...entries, sprite], { ...defaults, kind: "tool", category: sprite.category, query: "sprite" }).map(e => e.id), [sprite.id]);
+});
 
 test("directory combines category, tag and trimmed search without mutating its source", () => {
   const original = JSON.stringify(entries);
