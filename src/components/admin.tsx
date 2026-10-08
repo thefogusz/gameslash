@@ -23,10 +23,14 @@ import {
   Search,
   GripVertical,
   Loader2,
+  Inbox,
+  Plug,
 } from "lucide-react";
 import { HomeContent } from "./directory";
 import { EntryForm } from "./entry-form";
 import { AgentPanel, ActivityPanel } from "./agent-panel";
+import { ReviewPanel, type SubmissionInfo } from "./review-panel";
+import { ConnectionsPanel } from "./connections-panel";
 import {
   kindLabels,
   type Database,
@@ -35,8 +39,8 @@ import {
 } from "@/lib/model";
 type Snapshot = Pick<
   Database,
-  "entries" | "layout" | "draftLayout" | "revision" | "activity"
-> & { storageReady: boolean; agents: Omit<Database["agents"][number], "tokenHash">[]; issuedToken?: string };
+  "entries" | "layout" | "draftLayout" | "revision" | "activity" | "reviews"
+> & { storageReady: boolean; agents: Omit<Database["agents"][number], "tokenHash">[]; issuedToken?: string; submissions: SubmissionInfo };
 async function request(
   url: string,
   body?: unknown,
@@ -126,7 +130,7 @@ export function Login({ configured }: { configured: boolean }) {
 export function Admin() {
   const router = useRouter();
   const [data, setData] = useState<Snapshot | null>(null),
-    [tab, setTab] = useState<"entries" | "layout" | "import" | "agents" | "activity">("entries");
+    [tab, setTab] = useState<"inbox" | "entries" | "layout" | "import" | "agents" | "activity" | "connections">("inbox");
   const [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
     [busy, setBusy] = useState(false),
@@ -217,17 +221,15 @@ export function Admin() {
         </div>
       </header>
       <div className="studio-nav">
+        <button className={tab === "inbox" ? "active" : ""} onClick={() => setTab("inbox")}>
+          <Inbox size={16} />กล่องรอตรวจ <span>{data?.entries.filter(e => e.status === "pending").length || 0}</span>
+        </button>
         <button
           className={tab === "entries" ? "active" : ""}
           onClick={() => setTab("entries")}
         >
           <ListFilter size={16} />
-          คลังเนื้อหา{" "}
-          {data && (
-            <span>
-              {data.entries.filter((e) => e.status === "pending").length} รอตรวจ
-            </span>
-          )}
+          คลังเนื้อหา
         </button>
         <button
           className={tab === "layout" ? "active" : ""}
@@ -241,7 +243,10 @@ export function Admin() {
           onClick={() => setTab("import")}
         >
           <Upload size={16} />
-          นำเข้าจากเอเจนต์
+          นำเข้า JSON
+        </button>
+        <button className={tab === "connections" ? "active" : ""} onClick={() => setTab("connections")}>
+          <Plug size={16} />แหล่งข้อมูล
         </button>
         <button className={tab === "agents" ? "active" : ""} onClick={() => setTab("agents")}>
           <LockKeyhole size={16} />เอเจนต์
@@ -396,6 +401,10 @@ export function Admin() {
                 </div>
               </>
             )}
+            {tab === "inbox" && <ReviewPanel entries={data.entries} submissions={data.submissions} agents={data.agents} reviews={data.reviews} busy={busy} edit={setEditing} connect={() => setTab("connections")} decide={async (entry, decision, note) => {
+              await mutate({ action: "review", id: entry.id, expectedUpdatedAt: entry.updatedAt, decision, note }, { publish: "เผยแพร่แล้ว รายการแสดงบนเว็บทันที", return: "ส่งกลับเป็นฉบับร่างแล้ว เอเจนต์อ่านหมายเหตุและแก้ไขต่อได้", reject: "เก็บรายการเข้าคลังแล้ว สามารถเปิดกลับมาแก้ได้" }[decision]);
+            }} />}
+            {tab === "connections" && <ConnectionsPanel openAgents={() => setTab("agents")} />}
             {tab === "layout" && (
               <LayoutEditor
                 key={data.revision}

@@ -48,7 +48,7 @@ export function AgentPanel({ agents, busy, mutate }: {
         <h2>ข้อมูลสำหรับเชื่อมต่อ</h2>
         <label>MCP URL<input value={endpoint} readOnly /></label>
         <p>Transport: Streamable HTTP<br />Header: <code>Authorization: Bearer YOUR_AGENT_TOKEN</code></p>
-        <p>เริ่มจากค้นรายการเดิม → สร้างฉบับร่าง → ส่งตรวจ แล้วเปิด “คลังเนื้อหา” และเลือก “รอตรวจ”</p>
+        <p>ค้นรายการเดิม → สร้างฉบับร่าง → ส่งตรวจ งานจะเข้า “กล่องรอตรวจ” ให้คุณยืนยันเผยแพร่หรือส่งกลับให้แก้</p>
         <p>ใช้ได้กับไคลเอนต์ที่กำหนด Bearer token เองได้ การเชื่อมผ่าน OAuth ยังไม่รองรับ</p>
       </div>
     </div>
@@ -65,6 +65,7 @@ export function AgentPanel({ agents, busy, mutate }: {
   </div>;
 }
 const actions: Record<string, string> = {
+  "review.publish": "ยืนยันเผยแพร่", "review.return": "ส่งกลับให้แก้", "review.reject": "ไม่รับรายการ",
   "entry.draft": "บันทึกฉบับร่าง", "entry.pending": "ส่งเข้าคิวตรวจ", "entry.published": "เผยแพร่รายการ",
   "entry.archived": "เก็บเข้าคลัง", "entry.import": "นำเข้ารายการ", "entry.agent_draft": "เตรียมฉบับร่าง",
   "layout.published": "เผยแพร่หน้าเว็บ", "layout.draft": "บันทึกหน้าฉบับร่าง",

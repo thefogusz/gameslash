@@ -240,5 +240,6 @@ export function seedDatabase(): Database {
     agents: [],
     activity: [],
     ingestions: {},
+    reviews: {},
   });
 }

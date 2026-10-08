@@ -9,9 +9,10 @@ function key(db: Database, write = true) {
   return { token, agent: authenticateAgent(db, token)! };
 }
 test("old catalogs default agent metadata; keys are hashed, expire and revoke", () => {
-  const { agents: _a, activity: _b, ingestions: _c, ...legacy } = seedDatabase();
+  const { agents: _a, activity: _b, ingestions: _c, reviews: _d, ...legacy } = seedDatabase();
   const db = databaseSchema.parse(legacy);
   assert.deepEqual(db.agents, []);
+  assert.deepEqual(db.reviews, {});
   const { token, agent } = key(db);
   assert.ok(agent);
   assert.equal(JSON.stringify(db).includes(token), false);
@@ -23,7 +24,41 @@ test("old catalogs default agent metadata; keys are hashed, expire and revoke", 
   manageCatalog(db, { action: "revoke_agent", revision: db.revision, id: agent.id });
   assert.equal(authenticateAgent(db, token), null);
   assert.throws(() => createAgentDraft(db, agent.id, "request-1", input()), /ไม่มีสิทธิ์/);
-  for (const privateField of ["agents", "activity", "ingestions", "limits"]) assert.equal(privateField in publicData(db), false);
+  for (const privateField of ["agents", "activity", "ingestions", "limits", "reviews"]) assert.equal(privateField in publicData(db), false);
+});
+test("review returns feedback, allows resubmission, and only publishes pending entries", () => {
+  const db = seedDatabase(), { agent } = key(db);
+  const context = { provider: "Apify", runId: "example-run", reason: "Public creator post with an original game link." };
+  const draft = createAgentDraft(db, agent.id, "context-request", input(), context);
+  assert.deepEqual(db.ingestions[draft.id].context, context);
+  assert.equal(createAgentDraft(db, agent.id, "context-request", input(), context).id, draft.id);
+  assert.throws(() => createAgentDraft(db, agent.id, "context-request", input(), { ...context, reason: "Different collection explanation" }), /requestId/);
+  const review = (decision: "publish" | "return" | "reject", note: string, updatedAt: string) => manageCatalog(db, { action: "review", revision: db.revision, id: draft.id, expectedUpdatedAt: updatedAt, decision, note });
+  assert.throws(() => review("publish", "", draft.updatedAt), /รอตรวจ/);
+  const pending = editAgentDraft(db, agent.id, draft.id, draft.updatedAt);
+  assert.throws(() => review("return", "", pending.updatedAt), /เหตุผล/);
+  assert.throws(() => review("reject", "", pending.updatedAt), /เหตุผล/);
+  assert.throws(() => review("publish", "", draft.updatedAt), /ข้อมูลล่าสุด/);
+  review("return", "Please verify creator credit", pending.updatedAt);
+  assert.equal(db.entries[0].status, "draft");
+  assert.equal(db.reviews[draft.id].note, "Please verify creator credit");
+  const fixed = editAgentDraft(db, agent.id, draft.id, db.entries[0].updatedAt, { ...input(), author: "Verified creator" });
+  const again = editAgentDraft(db, agent.id, draft.id, fixed.updatedAt);
+  review("publish", "Checked against source", again.updatedAt);
+  assert.equal(db.entries[0].status, "published");
+  assert.equal(db.reviews[draft.id].decision, "publish");
+  assert.equal(JSON.stringify(publicData(db)).includes("Checked against source"), false);
+  assert.throws(() => review("return", "Already published", db.entries[0].updatedAt), /รอตรวจ/);
+  databaseSchema.parse(db);
+});
+test("rejecting archives instead of deleting the submission", () => {
+  const db = seedDatabase(), { agent } = key(db);
+  const draft = createAgentDraft(db, agent.id, "reject-request", input());
+  const pending = editAgentDraft(db, agent.id, draft.id, draft.updatedAt);
+  manageCatalog(db, { action: "review", revision: db.revision, id: draft.id, expectedUpdatedAt: pending.updatedAt, decision: "reject", note: "Off topic" });
+  assert.equal(db.entries[0].id, draft.id);
+  assert.equal(db.entries[0].status, "archived");
+  assert.equal(db.reviews[draft.id].note, "Off topic");
 });
 test("draft retries are idempotent, duplicate URLs and changed request payloads rejected", () => {
   const db = seedDatabase(), { agent } = key(db);

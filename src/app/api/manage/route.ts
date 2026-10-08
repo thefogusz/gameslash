@@ -10,6 +10,8 @@ const adminData = (db: Awaited<ReturnType<typeof readDatabase>>) => ({
   storageReady: storageReady(),
   agents: db.agents.map(({ tokenHash: _hash, ...agent }) => agent),
   activity: db.activity,
+  submissions: Object.fromEntries(Object.entries(db.ingestions).map(([id, { agentId, context }]) => [id, { agentId, context }])),
+  reviews: db.reviews,
 });
 export async function GET() {
   if (!(await isAdmin())) return Response.json({ error: "กรุณาเข้าสู่ระบบ" }, { status: 401 });

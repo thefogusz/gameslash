@@ -1,9 +1,10 @@
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
-import { checkDuplicate, consumeLimit, entryInput, entrySchema, layoutSchema, type Database, type Entry, type EntryInput } from "./model";
+import { checkDuplicate, collectionContextSchema, consumeLimit, entryInput, entrySchema, layoutSchema, type Database, type Entry, type EntryInput } from "./model";
 import { ConflictError } from "./postgres-store";
 
 export const managementMutation = z.discriminatedUnion("action", [
+  z.object({ action: z.literal("review"), revision: z.number().int(), id: entrySchema.shape.id, expectedUpdatedAt: z.iso.datetime(), decision: z.enum(["publish", "return", "reject"]), note: z.string().trim().max(1000).default("") }),
   z.object({ action: z.literal("entry"), revision: z.number().int(), entry: entrySchema }),
   z.object({ action: z.literal("layout"), revision: z.number().int(), layout: layoutSchema, publish: z.boolean() }),
   z.object({ action: z.literal("import"), revision: z.number().int(), entries: z.array(entryInput).min(1).max(50) }),
@@ -52,6 +53,15 @@ export function manageCatalog(db: Database, input: z.infer<typeof managementMuta
       expiresAt: new Date(Date.now() + 90 * 86400000).toISOString(), revokedAt: null });
     log(db, "ผู้ดูแล", "agent.created", input.name);
     return token;
+  } else if (input.action === "review") {
+    const old = db.entries.find(e => e.id === input.id);
+    if (!old || old.status !== "pending") throw new Error("ตรวจได้เฉพาะรายการที่ส่งเข้าคิวรอตรวจแล้ว");
+    if (old.updatedAt !== input.expectedUpdatedAt) throw new ConflictError("รายการเปลี่ยนแล้ว กรุณาโหลดข้อมูลล่าสุดก่อนตรวจ");
+    if (input.decision !== "publish" && !input.note.trim()) throw new Error("กรุณาใส่เหตุผลเพื่อให้ผู้ส่งทราบ");
+    const status = { publish: "published", return: "draft", reject: "archived" } as const;
+    const item = saveEntry(db, { ...old, status: status[input.decision] });
+    db.reviews[item.id] = { decision: input.decision, note: input.note, at: item.updatedAt };
+    log(db, "ผู้ดูแล", `review.${input.decision}`, item.title, item.id);
   } else {
     const agent = db.agents.find(a => a.id === input.id);
     if (!agent) throw new Error("ไม่พบเอเจนต์");
@@ -74,11 +84,12 @@ export function agentEntries(db: Database, agentId: string) {
   requireAgent(db, agentId);
   return db.entries.filter(e => e.status === "published" || db.ingestions[e.id]?.agentId === agentId);
 }
-export function createAgentDraft(db: Database, agentId: string, requestId: string, data: EntryInput) {
+export function createAgentDraft(db: Database, agentId: string, requestId: string, data: EntryInput, context?: z.infer<typeof collectionContextSchema>) {
   const agent = requireAgent(db, agentId, true);
   const parsed = entryInput.parse(data);
   const id = "agent-" + hash(`${agentId}:${requestId}`).slice(0, 40);
-  const inputHash = hash(JSON.stringify(parsed));
+  const collected = context ? collectionContextSchema.parse(context) : undefined;
+  const inputHash = hash(JSON.stringify(collected ? { entry: parsed, context: collected } : parsed));
   const receipt = db.ingestions[id];
   if (receipt) {
     if (receipt.inputHash !== inputHash) throw new ConflictError("requestId นี้ถูกใช้กับข้อมูลอื่นแล้ว");
@@ -88,7 +99,7 @@ export function createAgentDraft(db: Database, agentId: string, requestId: strin
   }
   consumeLimit(db, `agent:${agentId}`, 60, 3600000);
   const item = saveEntry(db, newDraft(parsed, id));
-  db.ingestions[id] = { agentId, inputHash };
+  db.ingestions[id] = { agentId, inputHash, ...(collected ? { context: collected } : {}) };
   log(db, agent.name, "entry.agent_draft", item.title, item.id);
   return item;
 }

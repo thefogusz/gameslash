@@ -44,12 +44,13 @@ try {
   assert.ok((await call(token, "get_categories")).structuredContent.categories.length);
   const entry = { kind: "game", title: "MCP local verification", description: "Private temporary entry for integration testing.", author: "Smoke test", category: "ปริศนา", url: `https://example.com/${crypto.randomUUID()}`, sourceUrl: "https://example.com/source" };
   const requestId = crypto.randomUUID();
-  const created = await call(token, "create_draft", { requestId, entry });
+  const context = { provider: "Apify", runId: "local-fixture", reason: "Local integration fixture, no external API called." };
+  const created = await call(token, "create_draft", { requestId, entry, context });
   assert.equal(created.isError, undefined, JSON.stringify(created.content));
   const draft = created.structuredContent.entry;
   entryIds.push(draft.id);
   assert.equal(draft.status, "draft");
-  assert.equal((await call(token, "create_draft", { requestId, entry })).structuredContent.entry.id, draft.id);
+  assert.equal((await call(token, "create_draft", { requestId, entry, context })).structuredContent.entry.id, draft.id);
   assert.equal((await call(token, "create_draft", { requestId, entry: { ...entry, title: "Different input" } })).isError, true);
   assert.equal((await call(reader, "get_entry", { id: draft.id })).isError, true);
   assert.equal((await call(reader, "create_draft", { requestId: crypto.randomUUID(), entry })).isError, true);
@@ -58,12 +59,24 @@ try {
   assert.equal((await call(token, "update_draft", { id: draft.id, expectedUpdatedAt: draft.updatedAt, entry })).isError, true);
   const review = await call(token, "submit_for_review", { id: draft.id, expectedUpdatedAt: updated.structuredContent.entry.updatedAt });
   assert.equal(review.structuredContent.entry.status, "pending");
+  assert.equal((await snapshot()).submissions[draft.id].context.provider, "Apify");
+  await manage({ action: "review", id: draft.id, expectedUpdatedAt: review.structuredContent.entry.updatedAt, decision: "return", note: "Please verify the source" });
+  const feedback = (await call(token, "get_entry", { id: draft.id })).structuredContent;
+  assert.equal(feedback.review.note, "Please verify the source");
+  assert.equal(feedback.entry.status, "draft");
+  const own = (await call(token, "search_entries", { ownedOnly: true, status: "draft" })).structuredContent;
+  assert.ok(own.items.some((e: {id:string}) => e.id === draft.id));
+  const again = (await call(token, "submit_for_review", { id: draft.id, expectedUpdatedAt: feedback.entry.updatedAt })).structuredContent.entry;
+  await manage({ action: "review", id: draft.id, expectedUpdatedAt: again.updatedAt, decision: "publish", note: "Private review note" });
+  assert.equal((await call(reader, "get_entry", { id: draft.id })).structuredContent.review, null);
+  assert.equal((await (await fetch(`${origin}/item/${draft.id}`)).text()).includes("Private review note"), false);
+  await manage({ action: "entry", entry: { ...again, status: "archived" } });
   assert.equal((await fetch(`${origin}/item/${draft.id}`)).status, 404);
   const forbidden = await fetch(`${origin}/api/mcp`, { method: "POST", headers: { ...json, Authorization: `Bearer ${token}`, Origin: "https://foreign.test" }, body: "{}" });
   assert.equal(forbidden.status, 400);
   await manage({ action: "revoke_agent", id: agentIds[0] });
   assert.equal((await fetch(`${origin}/api/mcp`, { method: "POST", headers: { ...json, Authorization: `Bearer ${token}` }, body: "{}" })).status, 401);
-  console.log("PASS: MCP initialize, six tools, private drafts, retry deduplication, stale edits, read-only permissions, human review, origin checks, hashed credentials and revocation.");
+  console.log("PASS: MCP tools, draft ownership, source context, private review feedback, return/resubmit/publish, idempotency, permissions and revocation.");
 } finally {
   for (const id of entryIds) {
     const entry = (await snapshot()).entries.find((e: { id: string }) => e.id === id);

@@ -33,6 +33,8 @@ Visit `/admin`. The studio supports:
 
 ## Connect Dots or another MCP client
 
+See [agent collection design](docs/agent-collection-design.md) for the public Facebook/Apify workflow, official sources, setup instructions, and the distinction between implemented review features and future managed collection jobs.
+
 Open `/admin` → **เอเจนต์**, name the agent and create a key. The raw key appears once, expires after 90 days, and can be revoked from this page. Only a SHA-256 hash is stored. Keep the key in the client's secret configuration, never in a prompt or source control.
 
 - Endpoint: `https://gameslash.vercel.app/api/mcp`
@@ -42,7 +44,7 @@ Open `/admin` → **เอเจนต์**, name the agent and create a key. Th
 
 Tools: `get_categories`, `search_entries` (query, optional kind, offset, limit up to 25), `get_entry` (id), `create_draft` (requestId, entry), `update_draft` (id, expectedUpdatedAt, entry), and `submit_for_review` (id, expectedUpdatedAt).
 
-Entry fields follow the JSON import format. Search for existing URLs first and retain source URLs and creator credits. Reuse the same `requestId` (8–100 characters) only to retry the same creation request. Updates replace the entry's content fields; use `updatedAt` from the latest read as `expectedUpdatedAt`. Stale edits return `CONFLICT`. After submission the entry is pending and the agent cannot edit it; the administrator reviews it under **คลังเนื้อหา → รอตรวจ**.
+Entry fields follow the JSON import format. Search for existing URLs first and retain source URLs and creator credits. `create_draft` optionally accepts `context: {provider, runId?, reason}` for private, agent-reported collection provenance. Reuse the same `requestId` (8–100 characters) only to retry the same entry and context. Updates replace content fields; use the latest `updatedAt` as `expectedUpdatedAt`. Stale edits return `CONFLICT`. After submission the entry is pending and the agent cannot edit it. The administrator reviews it in **กล่องรอตรวจ** and can publish, return with feedback, or reject into the archive. Returned entries become editable drafts. `search_entries` supports `ownedOnly` and `status`; `get_entry` returns private `review` feedback only to the submitting agent, otherwise `null`.
 
 Agent writes are limited to 60/hour/key. Catalog storage currently allows 50 issued keys (including revoked keys), and retains only the latest 200 management activity records, not a full audit archive. There is no automatic crawler: agents supply metadata and outbound links. MCP responses contain untrusted source content, never instructions for the client to obey. Older deployments that do not preserve agent metadata must not be used as rollback targets after keys are issued.
 

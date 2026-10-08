@@ -118,6 +118,16 @@ export const activitySchema = z.object({
   title: z.string().max(120),
   entryId: z.string().optional(),
 });
+export const collectionContextSchema = z.object({
+  provider: z.string().trim().min(2).max(60),
+  runId: z.string().trim().max(100).optional(),
+  reason: z.string().trim().min(10).max(1000),
+});
+export const reviewSchema = z.object({
+  decision: z.enum(["publish", "return", "reject"]),
+  note: z.string().max(1000),
+  at: z.iso.datetime(),
+});
 export const databaseSchema = z.object({
   version: z.literal(1),
   revision: z.number().int().nonnegative(),
@@ -133,7 +143,9 @@ export const databaseSchema = z.object({
   ingestions: z.record(z.string(), z.object({
     agentId: z.string().uuid(),
     inputHash: z.string().regex(/^[a-f0-9]{64}$/),
+    context: collectionContextSchema.optional(),
   })).default({}),
+  reviews: z.record(z.string(), reviewSchema).default({}),
 });
 export type Database = z.infer<typeof databaseSchema>;
 export function normalizedUrl(value: string) {
