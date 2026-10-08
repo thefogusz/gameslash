@@ -30,3 +30,19 @@ test("AI-assisted development qualifies without requiring AI gameplay or named t
   const route = readFileSync(new URL("../src/app/api/mcp/route.ts", import.meta.url), "utf8");
   assert.match(route, /return \{\s+editorialScope,/);
 });
+
+
+test("Console and MCP expose one canonical handbook without duplicate skill copies", () => {
+  const route = readFileSync(new URL("../src/app/api/mcp/route.ts", import.meta.url), "utf8");
+  const panel = readFileSync(new URL("../src/components/agent-panel.tsx", import.meta.url), "utf8");
+  for (const source of [route, panel]) assert.match(source, /from ["']@\/lib\/editorial-skills["']/);
+  assert.match(route, /text: editorialHandbook\(\)/);
+  assert.deepEqual(editorialSkills.map(s => s.id), [
+    "global-news", "source-verification", "game-analysis", "audience-signals",
+    "image-research", "thai-editorial", "draft-workflow",
+  ]);
+  for (const skill of editorialSkills) {
+    assert.equal(new Set(skill.instructions).size, skill.instructions.length);
+    for (const instruction of skill.instructions) assert.ok(instruction.trim());
+  }
+});
