@@ -516,6 +516,7 @@ a:focus-visible {
   grid-template-columns: 1fr;
 }
 .game-card {
+  position: relative;
   min-width: 0;
   scroll-snap-align: start;
   display: block;
@@ -655,6 +656,26 @@ a:focus-visible {
   border: 1px solid var(--line);
   border-radius: 12px;
 }
+.game-card-link { display: block; }
+.game-like { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 10px 16px; border: 1px solid var(--line); border-radius: 10px; color: var(--ink); background: var(--surface); font-size: 15px; font-weight: 600; }
+.game-like.compact { width: 44px; height: 44px; padding: 0; border-radius: 50%; background: #0b0c14e8; border-color: #ffffff35; }
+.game-card > .game-like, .spotlight-main-wrap > .game-like { position: absolute; top: 10px; right: 10px; z-index: 2; }
+.game-like[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); }
+.game-like:hover { border-color: var(--accent); }
+.game-like:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.game-like:disabled { opacity: .5; cursor: wait; }
+.detail-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+.likes-notice { position: fixed; bottom: max(20px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); z-index: 90; max-width: min(520px, calc(100% - 32px)); padding: 12px 18px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink); box-shadow: 0 8px 30px #0005; font-size: 14px; }
+.likes-notice:empty { display: none; }
+.spotlight-main-wrap { position: relative; min-width: 0; height: 100%; }
+.spotlight-main-wrap .spotlight-main { display: block; height: 100%; }
+.spotlight-note { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin: 0 0 14px; flex-wrap: wrap; font-size: 14px; line-height: 1.7; color: var(--muted); }
+.spotlight-note a { color: var(--accent); }
+.spotlight-empty { min-height: 260px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 24px; text-align: center; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+.spotlight-empty h2 { font-size: 22px; }
+.spotlight-empty p { font-size: 15px; color: var(--muted); }
+.empty-heart { font-size: 36px; color: var(--accent); }
+@media(max-width:700px) { .spotlight-main-wrap { height: 290px; } }
 .directory-filters label { display: grid; gap: 8px; min-width: 0; color: var(--ink); font-size: 14px; font-weight: 600; }
 .directory-filters select { width: 100%; min-width: 0; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink); font: inherit; font-size: 16px; }
 .directory-filters select:focus-visible, .directory-filters button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }

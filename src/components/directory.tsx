@@ -30,6 +30,7 @@ import { SubmitPanel } from "./entry-form";
 import { Cover } from "./cover";
 export { Cover } from "./cover";
 import { Spotlight } from "./spotlight";
+import { LikeButton, useGamePreferences } from "./game-preferences";
 export type View =
   | "home"
   | "games"
@@ -46,12 +47,10 @@ const paths = {
 };
 export function GameCard({ entry }: { entry: Entry }) {
   return (
-    <Link href={`/item/${entry.id}`} className="game-card">
+    <div className="game-card">
+    <Link href={`/item/${entry.id}`} className="game-card-link">
       <div className="game-cover">
         <Cover entry={entry} />
-        <span className="cover-link">
-          <ArrowUpRight size={18} />
-        </span>
         <span className="cover-tag">{entry.category}</span>
       </div>
       <div className="game-card-title">
@@ -66,6 +65,8 @@ export function GameCard({ entry }: { entry: Entry }) {
           entry.category}
       </p>
     </Link>
+    <LikeButton id={entry.id} title={entry.title} compact />
+    </div>
   );
 }
 function ArticleCard({ entry }: { entry: Entry }) {
@@ -264,6 +265,8 @@ function Detail({ entry }: { entry: Entry }) {
           <h1>{entry.title}</h1>
           <p>โดย {entry.author}</p>
         </div>
+        <div className="detail-actions">
+        {entry.kind === "game" && <LikeButton id={entry.id} title={entry.title} />}
         {entry.url && (
           <a
             className="button primary"
@@ -275,6 +278,7 @@ function Detail({ entry }: { entry: Entry }) {
             <ArrowUpRight size={16} />
           </a>
         )}
+        </div>
       </div>
       <p className="detail-description">{entry.description}</p>
       <div className="tags">
@@ -333,6 +337,8 @@ export function Directory({
 }) {
   const [menu, setMenu] = useState(false);
   const params = useSearchParams();
+  const { likedIds, ready } = useGamePreferences();
+  const likedOnly = params.get("liked") === "1" && view === "games";
   const query = params.get("q") || "";
   const category = params.get("category") || "";
   const tag = params.get("tag") || "";
@@ -359,8 +365,8 @@ export function Directory({
   const entries = catalog.entries.filter(e => e.kind === kind);
   const categories = [...new Set([...(kind === "game" ? catalog.layout.categories : []), ...entries.map(e => e.category), ...(category ? [category] : [])])];
   const tags = [...new Set([...entries.flatMap(e => e.tags), ...(tag ? [tag] : [])])].sort((a,b) => a.localeCompare(b,"th"));
-  const results = filterDirectory(entries, { kind, query, category, tag, sort }, kind === "game" ? catalog.layout.featuredIds : []);
-  const filtered = !!(query || category || tag || sort !== "curated");
+  const results = filterDirectory(likedOnly ? entries.filter(e => likedIds.includes(e.id)) : entries, { kind, query, category, tag, sort }, kind === "game" ? catalog.layout.featuredIds : []);
+  const filtered = !!(query || category || tag || likedOnly || sort !== "curated");
   const titles = {
     game: ["ค้นพบเกม", "ค้นหาเกมตามชื่อ ผู้สร้าง หรือหมวดหมู่"],
     tool: ["เครื่องมือทำเกม", "รวมเครื่องมือสำหรับสร้างและเผยแพร่เกม"],
@@ -368,7 +374,7 @@ export function Directory({
     post: ["คอมมูนิตี้", "แชร์ผลงาน ถามคำถาม และขอฟีดแบ็ก"],
   };
   function reset() {
-    updateFilters({ q: "", category: "", tag: "", sort: "" });
+    updateFilters({ q: "", category: "", tag: "", liked: "", sort: "" });
   }
   return (
     <>
@@ -498,9 +504,9 @@ export function Directory({
                 <div className="heading-with-action">
                   <div>
                     <h1>
-                      {searching ? `ผลการค้นหา “${query}”` : titles[kind][0]}
+                      {searching ? `ผลการค้นหา “${query}”` : likedOnly ? "เกมที่ถูกใจ" : titles[kind][0]}
                     </h1>
-                    <p>{titles[kind][1]}</p>
+                    <p>{likedOnly ? "เก็บไว้ในเบราว์เซอร์นี้ ไม่ต้องสมัครสมาชิก" : titles[kind][1]}</p>
                   </div>
                   {kind === "post" && (
                     <Link href="/submit?type=post" className="button primary">
@@ -533,7 +539,7 @@ export function Directory({
               <p className="result-count" role="status" aria-live="polite">
                 พบ {results.length} จาก {entries.length} {kindLabels[kind]}
               </p>
-              {!results.length ? (
+              {likedOnly && !ready ? <p role="status">กำลังอ่านรายการที่ถูกใจ…</p> : !results.length ? (
                 <Empty onReset={reset} />
               ) : (
                 <div

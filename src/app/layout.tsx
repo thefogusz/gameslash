@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Anuphan, Chakra_Petch } from "next/font/google";
 import "./globals.css";
+import { GamePreferencesProvider } from "@/components/game-preferences";
 const geist = Geist({
   subsets: ["latin"],
   variable: "--font-geist",
@@ -36,7 +37,7 @@ export default function RootLayout({
       lang="th"
       className={`${geist.variable} ${anuphan.variable} ${chakra.variable}`}
     >
-      <body>{children}</body>
+      <body><GamePreferencesProvider>{children}</GamePreferencesProvider></body>
     </html>
   );
 }
