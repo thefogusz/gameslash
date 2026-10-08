@@ -660,7 +660,9 @@ a:focus-visible {
 }
 .game-card-link { display: block; }
 .game-like { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 10px 16px; border: 1px solid var(--line); border-radius: 10px; color: var(--ink); background: var(--surface); font-size: 15px; font-weight: 600; }
-.game-like.compact { width: 44px; height: 44px; padding: 0; border-radius: 50%; background: #0b0c14e8; border-color: #ffffff35; }
+.game-like.compact { width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: #0b0c1433; color: #fff; transition: background .15s ease, color .15s ease; }
+.game-like.compact svg { filter: drop-shadow(0 1px 2px #0006); }
+.game-like.compact:hover { background: #0b0c1466; }
 .game-card > .game-like, .spotlight-main-wrap > .game-like { position: absolute; top: 10px; right: 10px; z-index: 2; }
 .game-like[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); }
 .game-like:hover { border-color: var(--accent); }
