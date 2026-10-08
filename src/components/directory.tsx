@@ -450,7 +450,7 @@ export function Directory({
                 view === "home" ? "sidebar-link active" : "sidebar-link"
               }
             >
-              หน้าแรก
+              ค้นพบเกม
             </Link>
           </div>
           <div className="sidebar-group">
