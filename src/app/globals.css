@@ -135,12 +135,11 @@ a:focus-visible {
   font-size: 30px;
 }
 .brand-mark {
-  display: inline-block;
-  width: 18px;
-  height: 18px;
-  background: var(--accent);
-  transform: rotate(45deg);
-  margin-right: 2px;
+  display: block;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 7px;
 }
 .topbar-end {
   display: flex;
@@ -1776,8 +1775,8 @@ textarea {
     font-size: 18px;
   }
   .brand-mark {
-    width: 14px;
-    height: 14px;
+    width: 30px;
+    height: 30px;
   }
   .topbar-end {
     gap: 10px;
@@ -1855,8 +1854,8 @@ textarea {
     gap: 9px;
   }
   .brand-mark {
-    width: 13px;
-    height: 13px;
+    width: 28px;
+    height: 28px;
   }
   .topbar .search-box {
     width: 32px;

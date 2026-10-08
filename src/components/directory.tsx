@@ -405,7 +405,7 @@ export function Directory({
           </button>
           <div className="brand-identity">
             <Link href="/" className="wordmark">
-              <i className="brand-mark" aria-hidden="true" />
+              <img className="brand-mark" src="/gameslash-symbol.svg" alt="" width={34} height={34} />
               GAMESLASH
             </Link>
             <span className="brand-tagline">แพลตฟอร์มรวมเกม AI</span>
