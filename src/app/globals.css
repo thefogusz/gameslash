@@ -2466,7 +2466,6 @@ textarea {
 .collection-job>span { color:var(--muted); }
 .collection-posts { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:18px 0; }
 .collection-posts article { padding:18px; border:1px solid var(--line); border-radius:12px; min-width:0; }
-.collection-posts article>p { white-space:pre-wrap; overflow-wrap:anywhere; max-height:220px; overflow-y:auto; font-size:14px; line-height:1.75; margin:12px 0; }
 .collection-posts article>small { color:var(--muted); }
 .collection-posts article>div { display:flex; gap:12px; flex-wrap:wrap; align-items:center; justify-content:space-between; }
 .collection-empty { padding:28px; color:var(--muted); text-align:center; border:1px dashed var(--line); border-radius:10px; margin:16px 0; }
@@ -2477,3 +2476,68 @@ textarea {
 .collection-panel input:not([type=checkbox]), .collection-panel select { width:100%; min-width:0; border:1px solid var(--line); background:var(--bg); border-radius:8px; padding:10px 12px; font-size:14px; }
 .review-signal { border-top:1px solid var(--line); margin-top:24px; padding-top:24px; }
 .review-signal h3 { margin:12px 0; }
+
+/* A quieter reading surface for the private console. */
+.admin-app { --muted:#b6bbcb; --line:#303545; font-size:16px; line-height:1.75; }
+.admin-app .studio-body { max-width:1440px; }
+.admin-app .studio-nav { gap:24px; }
+.admin-app .studio-nav > button { font-size:15px; font-weight:650; color:var(--muted); }
+.admin-app .studio-nav > button.active { color:var(--accent); }
+.admin-app .studio-nav > button > span { font-size:12px; color:var(--ink); }
+.admin-app .studio-heading h1 { font-size:32px; font-weight:800; line-height:1.4; letter-spacing:0; }
+.admin-app .studio-heading p { font-size:16px; }
+.admin-app .button, .admin-app .filter-chips button { min-height:44px; font-size:14px; }
+.admin-app .field-hint, .admin-app .checkbox { font-size:14px; line-height:1.8; }
+.admin-app .search-box { min-height:48px; }
+.admin-app .search-box input { font-size:16px; }
+.admin-app :is(button,a,input,select,textarea,summary):focus-visible { outline:2px solid var(--accent); outline-offset:4px; }
+.admin-app .review-workspace { grid-template-columns:minmax(240px,300px) minmax(0,1fr); }
+.admin-app .review-list { background:var(--surface); }
+.admin-app .review-list > button { padding:24px 20px; gap:12px; }
+.admin-app .review-list > button[aria-pressed=true] { background:var(--accent-light); }
+.admin-app .review-list strong { font-size:17px; line-height:1.65; }
+.admin-app :is(.review-kind,.review-list small,.review-excerpt) { font-size:14px; }
+.admin-app .review-detail { padding:32px 40px; }
+.admin-app .review-detail h2 { font-size:28px; line-height:1.55; font-weight:800; }
+.admin-app .review-description { font-size:17px; line-height:1.9; }
+.admin-app .review-facts { gap:20px 32px; }
+.admin-app .review-facts dt, .admin-app .review-source small { font-size:14px; }
+.admin-app .review-body { padding:28px 0; border-block:1px solid var(--line); }
+.admin-app .review-body h3, .admin-app .review-source h3 { font-size:18px; }
+.admin-app .review-body p { font-size:17px; line-height:2; max-width:72ch; }
+.admin-app .review-body p + p { margin-top:24px; }
+.admin-app .review-context summary { color:var(--muted); cursor:pointer; font-weight:650; }
+.admin-app .review-context[open] summary { margin-bottom:16px; }
+.admin-app .review-context p { margin:12px 0; }
+.admin-app .review-feedback p { margin:12px 0; }
+.admin-app .review-signal { margin-top:32px; }
+.admin-app .review-decision { padding:24px; background:var(--surface); border:1px solid var(--line); border-radius:12px; }
+.admin-app .collection-panel { padding:28px; }
+.admin-app .collection-job { font-size:15px; }
+.admin-app .collection-posts { gap:20px; align-items:start; }
+.admin-app .collection-posts article { padding:24px; background:var(--bg); }
+.admin-app .collection-posts article > small { font-size:14px; }
+.collection-post-text { margin:16px 0 24px; }
+.collection-post-text summary { cursor:pointer; list-style:none; }
+.collection-post-text summary::-webkit-details-marker { display:none; }
+.collection-post-text summary span { display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical; overflow:hidden; font-size:16px; line-height:1.9; overflow-wrap:anywhere; }
+.collection-post-text summary b { display:block; margin-top:12px; color:var(--accent); font-size:14px; }
+.collection-post-text[open] summary span { display:none; }
+.collection-post-text summary .post-collapse, .collection-post-text[open] summary .post-expand { display:none; }
+.collection-post-text[open] summary .post-collapse { display:block; }
+.collection-post-text p { font-size:16px; line-height:1.9; white-space:pre-wrap; overflow-wrap:anywhere; margin-top:16px; }
+.admin-app .collection-panel label:not(.checkbox):not(.search-box) { font-size:15px; }
+.admin-app .collection-panel :is(input:not([type=checkbox]),select) { font-size:16px; min-height:48px; }
+@media(max-width:1000px) {
+  .admin-app .review-workspace { grid-template-columns:1fr; }
+  .admin-app .review-list { max-height:280px; border-right:0; border-bottom:1px solid var(--line); }
+  .admin-app .review-detail { padding:28px; }
+}
+@media(max-width:600px) {
+  .admin-app .studio-heading h1 { font-size:26px; }
+  .admin-app .review-detail, .admin-app .collection-panel { padding:20px 16px; }
+  .admin-app .review-detail h2 { font-size:23px; }
+  .admin-app .collection-posts article, .admin-app .review-decision { padding:20px 16px; }
+  .admin-app .collection-title select { max-width:100%; }
+  .admin-app .collection-title > label { min-width:0; width:100%; }
+}
