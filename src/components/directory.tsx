@@ -40,10 +40,6 @@ const paths = {
   article: "journal",
   post: "community",
 };
-const navigation = [
-  { href: "/", name: "ค้นพบเกม", view: "home" },
-  { href: "/tools", name: "สำหรับคนทำเกม", view: "tools" },
-];
 export function Cover({
   entry,
   priority = false,
@@ -488,46 +484,36 @@ export function Directory({
         ข้ามไปยังเนื้อหา
       </a>
       <header className="topbar">
-        <button
-          className="icon-button mobile-menu"
-          aria-label={menu ? "ปิดเมนู" : "เปิดเมนู"}
-          aria-expanded={menu}
-          onClick={() => setMenu(!menu)}
-        >
-          {menu ? <X size={20} /> : <Menu size={20} />}
-        </button>
-        <Link href="/" className="wordmark">
-          <i className="brand-mark" aria-hidden="true" />
-          GAMESLASH
-        </Link>
-        <nav className="topnav" aria-label="เมนูหลัก">
-          {navigation.map((n) => (
-            <Link
-              key={n.href}
-              href={n.href}
-              className={
-                view === n.view || (view === "games" && n.view === "home")
-                  ? "active"
-                  : ""
-              }
-            >
-              {n.name}
+        <div className="topbar-start">
+          <button
+            className="icon-button mobile-menu"
+            aria-label={menu ? "ปิดเมนู" : "เปิดเมนู"}
+            aria-expanded={menu}
+            onClick={() => setMenu(!menu)}
+          >
+            {menu ? <X size={20} /> : <Menu size={20} />}
+          </button>
+          <div className="brand-identity">
+            <Link href="/" className="wordmark">
+              <i className="brand-mark" aria-hidden="true" />
+              GAMESLASH
             </Link>
-          ))}
-        </nav>
+            <span className="brand-tagline">แพลตฟอร์มรวมเกม AI</span>
+          </div>
+        </div>
+        <label className="search-box">
+          <Search size={16} />
+          <input
+            aria-label="ค้นหาเกม"
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setCategory("");
+            }}
+            placeholder="ค้นหาเกม"
+          />
+        </label>
         <div className="topbar-end">
-          <label className="search-box">
-            <Search size={16} />
-            <input
-              aria-label="ค้นหาเกม"
-              value={query}
-              onChange={(e) => {
-                setQuery(e.target.value);
-                setCategory("");
-              }}
-              placeholder="ค้นหาเกม"
-            />
-          </label>
           {admin && (
             <Link
               className="icon-button admin-link"

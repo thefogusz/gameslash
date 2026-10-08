@@ -97,12 +97,27 @@ a:focus-visible {
   position: sticky;
   top: 0;
   z-index: 30;
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) clamp(200px, 26vw, 410px) minmax(0, 1fr);
   align-items: center;
   gap: 22px;
   padding: 0 var(--gut);
   background: #0b0c14ed;
   backdrop-filter: blur(12px);
+}
+.topbar-start,
+.brand-identity {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  min-width: 0;
+}
+.brand-tagline {
+  color: var(--muted);
+  font-size: 13px;
+  white-space: nowrap;
+  border-left: 1px solid var(--line);
+  padding-left: 18px;
 }
 .wordmark {
   font-family: var(--font-display), var(--font-body);
@@ -126,31 +141,11 @@ a:focus-visible {
   transform: rotate(45deg);
   margin-right: 2px;
 }
-.topnav {
-  display: flex;
-  gap: 4px;
-  align-items: center;
-}
-.topnav a {
-  padding: 8px 12px;
-  border-radius: 8px;
-  font-size: 14.5px;
-  color: var(--muted);
-  white-space: nowrap;
-}
-.topnav a:hover {
-  color: var(--ink);
-}
-.topnav a.active {
-  background: var(--surface);
-  color: var(--ink);
-  font-weight: 600;
-}
 .topbar-end {
   display: flex;
   align-items: center;
   gap: 16px;
-  flex: 1;
+  justify-content: flex-end;
   min-width: 0;
 }
 .search-box {
@@ -181,7 +176,7 @@ a:focus-visible {
   border-color: #79dfc47a;
 }
 .submit-nav {
-  margin-left: auto;
+  flex-shrink: 0;
 }
 .button {
   display: inline-flex;
@@ -1647,15 +1642,21 @@ textarea {
 }
 
 @media (max-width: 1100px) {
+  .brand-identity {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
+  }
+  .brand-tagline {
+    border: 0;
+    padding-left: 30px;
+    font-size: 11px;
+  }
   .topbar {
     gap: 16px;
   }
   .wordmark {
     font-size: 20px;
-  }
-  .topnav a {
-    font-size: 13px;
-    padding: 8px;
   }
   .search-box {
     max-width: 340px;
@@ -1727,7 +1728,16 @@ textarea {
     font-size: 12px;
   }
 }
+@media (max-width: 380px) {
+  .topbar .wordmark {
+    font-size: 16px;
+    gap: 7px;
+  }
+}
 @media (max-width: 900px) {
+  .topbar {
+    grid-template-columns: minmax(0, 1fr) clamp(140px, 24vw, 200px) auto;
+  }
   .featured-wall {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     grid-template-rows: 320px 170px 170px;
@@ -1749,9 +1759,6 @@ textarea {
   }
   .topbar .search-box {
     max-width: none;
-  }
-  .topnav a {
-    font-size: 12px;
   }
   .wordmark {
     font-size: 18px;
@@ -1817,11 +1824,16 @@ textarea {
 }
 @media (max-width: 600px) {
   .topbar {
+    grid-template-columns: minmax(0, 1fr) 32px auto;
     height: 68px;
-    gap: 12px;
+    gap: 8px;
   }
-  .topnav {
-    display: none;
+  .topbar-start {
+    gap: 10px;
+  }
+  .brand-tagline {
+    padding-left: 0;
+    font-size: 10px;
   }
   .topbar-end {
     gap: 8px;
