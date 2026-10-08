@@ -131,7 +131,7 @@ const entries: Entry[] = [
     title: "Blender",
     description: "สร้างโมเดล ฉาก และแอนิเมชั่น 3D เพื่อนำไปใช้ในเกม",
     author: "Blender Foundation",
-    category: "ภาพและเสียง",
+    category: "โมเดล 3D",
     url: "https://www.blender.org/",
     tags: ["โอเพนซอร์ส", "3D"],
   }),
