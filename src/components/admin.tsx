@@ -279,7 +279,7 @@ export function Admin() {
           <RefreshCw size={17} className={refreshing?"spin":""}/>
           {refreshing?"กำลังอัปเดต…":"โหลดข้อมูลล่าสุด"}
         </button>
-        <div className="nav-foot"><span className="live-dot"/><span>คุณเป็นผู้ยืนยันเผยแพร่<br/><small>งานจากเอเจนต์เข้าร่างก่อนเสมอ</small></span></div>
+        <div className="nav-foot"><span className="live-dot"/><span>กำหนดสิทธิ์เป็นรายคีย์<br/><small>คีย์จัดการเว็บเผยแพร่ได้โดยตรง</small></span></div>
       </nav>
       <main className="studio-body" id="studio-main" tabIndex={-1}>
         {error && (
