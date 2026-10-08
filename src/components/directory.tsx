@@ -26,12 +26,13 @@ import {
   Pencil,
   Globe,
 } from "lucide-react";
-import { kindLabels, type Catalog, type Entry, type Layout } from "@/lib/model";
+import { kindLabels as contentKindLabels, type Catalog, type Entry, type Layout } from "@/lib/model";
 import { SubmitPanel } from "./entry-form";
 import { Cover } from "./cover";
 export { Cover } from "./cover";
 import { Spotlight } from "./spotlight";
 import { LikeButton, useGamePreferences } from "./game-preferences";
+const kindLabels = { ...contentKindLabels, article: "ข่าว AI game" };
 export type View =
   | "home"
   | "games"
@@ -81,7 +82,7 @@ function ArticleCard({ entry }: { entry: Entry }) {
         <h3>{entry.title}</h3>
         <p>{entry.description}</p>
         <span className="text-link">
-          อ่านบทความ <ArrowUpRight size={14} />
+          อ่านต่อ <ArrowUpRight size={14} />
         </span>
       </div>
     </Link>
@@ -376,7 +377,7 @@ export function Directory({
   const titles = {
     game: ["ค้นพบเกม", "ค้นหาเกมตามชื่อ ผู้สร้าง หรือหมวดหมู่"],
     tool: ["สร้างเกมด้วย AI", "ไกด์ตั้งแต่ยังไม่มีไอเดียจนเกมพร้อมให้คนเล่น พร้อมรวมเครื่องมือที่ใช้ในแต่ละขั้น"],
-    article: ["บทความ", "คู่มือและประสบการณ์สำหรับคนทำเกม"],
+    article: ["ข่าว AI game", "ข่าวสาร อัปเดต และเรื่องน่ารู้ในวงการเกม AI"],
     post: ["คอมมูนิตี้", "แชร์ผลงาน ถามคำถาม และขอฟีดแบ็ก"],
   };
   function reset() {
@@ -486,13 +487,9 @@ export function Directory({
               เครื่องมือทำเกม
               <ArrowUpRight className="side-count" size={13} />
             </Link>
-            <Link className="sidebar-link" href="/community">
-              <MessageCircle size={16} />
-              คอมมูนิตี้
-            </Link>
             <Link className="sidebar-link" href="/journal">
               <BookOpen size={16} />
-              บทความ
+              ข่าว AI game
             </Link>
           </div>
         </aside>

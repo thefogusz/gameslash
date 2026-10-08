@@ -17,7 +17,7 @@ export async function generateMetadata({
         {
           games: "ค้นพบเกม",
           tools: "เครื่องมือ",
-          journal: "บทความ",
+          journal: "ข่าว AI game",
           community: "คอมมูนิตี้",
           submit: "ส่งเกมของคุณ",
         } as Record<string, string>
