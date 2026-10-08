@@ -32,7 +32,7 @@ export const metadata: Metadata = {
     siteName: "GameSlash",
     locale: "th_TH",
     images: [{
-      url: "/images/gameslash-social-v2.png",
+      url: "/images/gameslash-social-v3.png",
       width: 1730,
       height: 909,
       alt: "GameSlash แพลตฟอร์มรวมเกมเอไอ — RPG ผจญภัย ปริศนา และจำลอง",
@@ -40,7 +40,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    images: ["/images/gameslash-social-v2.png"],
+    images: ["/images/gameslash-social-v3.png"],
   },
 };
 export default function RootLayout({
