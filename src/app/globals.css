@@ -6,8 +6,8 @@
   --ink: #f1effa;
   --muted: #9a97af;
   --line: #ffffff12;
-  --accent: #d6aa32;
-  --accent-hover: #e6bd50;
+  --accent: #e6b940;
+  --accent-hover: #f0cc69;
   --accent-ink: #241c08;
   --accent-light: #332a16;
   --ease: cubic-bezier(0.22, 0.68, 0, 1.1);
@@ -68,7 +68,7 @@ a:focus-visible {
   outline-offset: 4px;
 }
 ::selection {
-  background: #d6aa3240;
+  background: #e6b94040;
 }
 .sr-only {
   position: absolute;
@@ -181,7 +181,7 @@ a:focus-visible {
   color: var(--muted);
 }
 .search-box:focus-within {
-  border-color: #d6aa327a;
+  border-color: #e6b9407a;
 }
 .submit-nav {
   flex-shrink: 0;
@@ -403,7 +403,7 @@ a:focus-visible {
   border-radius: 999px;
   background: #0b0c14b8;
   color: var(--accent);
-  border: 1px solid #d6aa3288;
+  border: 1px solid #e6b94088;
   backdrop-filter: blur(6px);
 }
 .feature-arrow {
@@ -1019,8 +1019,8 @@ form select:focus,
 .inspector-fields textarea:focus,
 .inspector-fields select:focus {
   outline: none;
-  border-color: #d6aa328c;
-  box-shadow: 0 0 0 3px #d6aa320a;
+  border-color: #e6b9408c;
+  box-shadow: 0 0 0 3px #e6b9400a;
 }
 form input::placeholder,
 form textarea::placeholder {
@@ -1909,7 +1909,7 @@ textarea {
     width: auto;
     z-index: 40;
     background: var(--surface);
-    border: 1px solid #d6aa3288;
+    border: 1px solid #e6b94088;
     padding: 8px 12px;
   }
   .topbar .search-box:focus-within input {
@@ -2603,7 +2603,7 @@ textarea {
 .tag-chips button { display:flex; align-items:center; gap:12px; border:1px solid #665327; border-radius:20px; background:var(--accent-light); color:var(--accent); padding:7px 12px; font-size:14px; }
 .tag-picker-results { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; max-height:260px; overflow:auto; margin-top:12px; }
 .tag-picker-results button { display:flex; flex-direction:column; text-align:left; gap:3px; padding:10px 12px; border:1px solid #303540; border-radius:8px; background:#1a1d27; color:#f0f2f8; min-width:0; overflow-wrap:anywhere; }
-.tag-picker-results button:hover:not(:disabled) { border-color:#d6aa32; background:var(--accent-light); }
+.tag-picker-results button:hover:not(:disabled) { border-color:#e6b940; background:var(--accent-light); }
 .tag-picker-results small { color:#abb2c2; font-size:12px; }
 .tag-picker-results button:disabled { opacity:.45; }
 .tag-suggestion { padding:16px 18px; border:1px solid #303540; border-radius:12px; }
