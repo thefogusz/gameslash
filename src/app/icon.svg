@@ -1,8 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1254 1254" fill="none" role="img" aria-labelledby="title">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-22 -22 144 144" fill="none" role="img" aria-labelledby="title">
   <title id="title">Gameslash — sword silhouette piercing a diamond</title>
-  <path fill="#ffffff" d="M0 0H1254V1254H0Z"/>
+  <path fill="#ffffff" d="M-22-22H122V122H-22Z"/>
   <g fill="#000000">
-    <path d="M628 191 191 623 381 815 359 871 434 794 404 768 399 732 444 742 799 364Z"/>
-    <path d="M901 348 760 517 524 810 543 854 507 857 476 832 447 866 627 1059 1062 625 870 432Z"/>
+    <path d="M50 0 0 50 22 72 20 78 28 70 25 67 25 64 29 64 70 20Z"/>
+    <path d="M82 18 78 28 100 50 50 100 30 80 34 76 37 79 41 79 41 75 38 72Z"/>
   </g>
 </svg>
