@@ -3,7 +3,8 @@ import type { Entry } from "@/lib/model";
 import { ToolPopularity } from "./tool-popularity";
 
 export function ToolDirectoryCard({ entry }: { entry: Entry }) {
-  const repository = new URL(entry.url).hostname === "github.com";
+  const url = new URL(entry.url);
+  const repository = url.hostname === "github.com" && !url.pathname.startsWith("/features/");
   return <article className="tool-directory-card" id={`tool-${entry.id}`}>
     <div className="tool-directory-card-heading"><h3>{entry.title}</h3><span>{entry.category}</span></div>
     <ToolPopularity popularity={entry.popularity} />
