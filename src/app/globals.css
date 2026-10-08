@@ -689,7 +689,9 @@ a:focus-visible {
 .detail-game .detail-heading { align-items:flex-start; flex-wrap:wrap; margin-bottom:28px; }
 .detail-game .detail-heading h1 { font-size:clamp(30px,4vw,42px); line-height:1.35; letter-spacing:-.025em; overflow-wrap:anywhere; }
 .detail-game .detail-description { max-width:680px; font-size:19px; line-height:1.85; color:var(--ink); margin:0 0 28px; }
-.detail-game > .game-metadata { padding:22px 24px; border:1px solid var(--line); border-radius:12px; background:var(--surface); margin-bottom:36px; }
+.detail-game > .game-metadata { gap:8px; margin-bottom:24px; }
+.detail-game .game-meta-label { width:auto; }
+.detail-game .game-meta-row .tags { flex:0 1 auto; }
 .detail-game .tags span { background:var(--raise); border-color:transparent; color:#c6c4d3; padding:6px 10px; }
 .detail-game .article-prose { max-width:680px; font-size:17px; line-height:1.95; color:#d1cfdd; }
 .detail-game .article-prose > * + * { margin-top:28px; }
@@ -704,8 +706,6 @@ a:focus-visible {
 .editorial-skill-grid li + li { margin-top:12px; }
 @media(max-width:700px) {
   .spotlight-main .feature-cta { display:none; }
-  .detail-game > .game-metadata { padding:18px; }
-  .detail-game .game-meta-label { width:100%; }
   .detail-game .detail-description { font-size:18px; }
   .detail-game .detail-actions { width:100%; }
 }
