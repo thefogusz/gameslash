@@ -25,12 +25,13 @@ export function AgentPanel({ agents, busy, mutate }: {
         const values = new FormData(form);
         setToken(""); setCopied(false);
         try {
-          const result = await mutate({ action: "create_agent", name: values.get("name"), canWriteDrafts: values.get("write") === "on" }, "สร้างคีย์แล้ว เก็บคีย์ก่อนออกจากหน้านี้");
+          const result = await mutate({ action: "create_agent", name: values.get("name"), canWriteDrafts: values.get("write") === "on", canManageTags: values.get("tags") === "on" }, "สร้างคีย์แล้ว เก็บคีย์ก่อนออกจากหน้านี้");
           setToken(result.issuedToken || ""); form.reset();
         } catch { /* Parent displays the request error. */ }
       }}>
         <label>ชื่อเอเจนต์<input name="name" placeholder="เช่น Dots รวบรวมเกม" minLength={2} maxLength={60} required /></label>
         <label className="checkbox"><input name="write" type="checkbox" defaultChecked />สร้างและแก้ไขฉบับร่างของตัวเองได้</label>
+        <label className="checkbox"><input name="tags" type="checkbox" />ตรวจคำขอแท็กจากผู้ส่งเกมและเพิ่มแท็กเข้าคลังได้ (สำหรับ Dots)</label>
         <p>เอเจนต์เห็นรายการสาธารณะและงานของตัวเอง เมื่อส่งเข้าคิวตรวจแล้ว คุณเป็นผู้แก้ไขและเผยแพร่ในคลังเนื้อหา</p>
         <button className="button primary" disabled={busy}>สร้างคีย์เชื่อมต่อ</button>
         {token && <div className="agent-token" role="status">
@@ -57,6 +58,9 @@ export function AgentPanel({ agents, busy, mutate }: {
       const inactive = !!agent.revokedAt || Date.parse(agent.expiresAt) <= Date.now();
       return <div className="agent-row" key={agent.id}>
         <div><strong>{agent.name}</strong><p>{agent.canWriteDrafts ? "อ่านและเตรียมฉบับร่าง" : "อ่านอย่างเดียว"} · {agent.revokedAt ? "ยกเลิกแล้ว" : inactive ? "หมดอายุ" : `หมดอายุ ${new Date(agent.expiresAt).toLocaleDateString("th-TH")}`}</p></div>
+        <label className="checkbox"><input type="checkbox" checked={agent.canManageTags} disabled={busy || inactive} onChange={async e => {
+          try { await mutate({ action: "agent_tag_permission", id: agent.id, enabled: e.target.checked }, "อัปเดตสิทธิ์ตรวจแท็กแล้ว"); } catch { /* Parent displays errors. */ }
+        }} />ตรวจและเพิ่มแท็ก</label>
         <button className="button" disabled={busy || inactive} onClick={async () => {
           try { await mutate({ action: "revoke_agent", id: agent.id }, "ยกเลิกคีย์แล้ว เอเจนต์ใช้คีย์นี้ไม่ได้อีก"); setToken(""); } catch { /* Parent displays the request error. */ }
         }}>ยกเลิกคีย์</button>
@@ -69,6 +73,7 @@ const actions: Record<string, string> = {
   "entry.draft": "บันทึกฉบับร่าง", "entry.pending": "ส่งเข้าคิวตรวจ", "entry.published": "เผยแพร่รายการ",
   "entry.archived": "เก็บเข้าคลัง", "entry.import": "นำเข้ารายการ", "entry.agent_draft": "เตรียมฉบับร่าง",
   "layout.published": "เผยแพร่หน้าเว็บ", "layout.draft": "บันทึกหน้าฉบับร่าง",
+  "tag.added": "เพิ่มแท็กที่ตรวจแล้ว", "tag.mapped": "จับคู่แท็กเดิม", "tag.rejected": "ไม่รับแท็ก", "agent.tag_permission": "เปลี่ยนสิทธิ์แท็ก",
   "agent.created": "สร้างคีย์", "agent.revoked": "ยกเลิกคีย์",
 };
 export function ActivityPanel({ activity }: { activity: Database["activity"] }) {

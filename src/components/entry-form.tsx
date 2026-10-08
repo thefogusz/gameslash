@@ -1,5 +1,7 @@
 "use client";
 import { useState } from "react";
+import { GameTagPicker } from "./game-tag-picker";
+import { tagSuggestionsSchema, type TagSuggestion } from "@/lib/game-tags";
 import dynamic from "next/dynamic";
 import { textDocument } from "@/lib/article";
 import { ImageField } from "./image-field";
@@ -22,12 +24,13 @@ export function EntryForm({
 }: {
   initial?: Partial<Entry>;
   categories: string[];
-  onSave: (entry: EntryInput, status: Entry["status"]) => Promise<void>;
+  onSave: (entry: EntryInput, status: Entry["status"], tagSuggestions: TagSuggestion[]) => Promise<void>;
   admin?: boolean;
   reviewOnly?: boolean;
   onDirty?:()=>void;
 }) {
   const [kind, setKind] = useState<Entry["kind"]>(initial?.kind || "game");
+  const [gameTags, setGameTags] = useState(initial?.tags || []);
   const [busy, setBusy] = useState(false),
     [error, setError] = useState("");
   const [image,setImage] = useState(initial?.image || ""), [coverBusy,setCoverBusy] = useState(false), [editorBusy,setEditorBusy] = useState(false);
@@ -50,7 +53,7 @@ export function EntryForm({
       imageAlt: data.get("imageAlt") || "",
       body,
       ...(kind === "article" ? { content } : {}),
-      tags: String(data.get("tags") || "")
+      tags: kind === "game" ? gameTags : String(data.get("tags") || "")
         .split(",")
         .map((s) => s.trim())
         .filter(Boolean),
@@ -59,11 +62,14 @@ export function EntryForm({
       setError(parsed.error.issues.map((i) => i.message).join(" · "));
       return;
     }
+    const suggestions = tagSuggestionsSchema.safeParse(kind === "game" && (data.get("tagName") || data.get("tagReason")) ? [{ name: data.get("tagName"), reason: data.get("tagReason") }] : []);
+    if (!suggestions.success) { setError("กรุณาใส่ชื่อแท็กและเหตุผลอย่างน้อย 10 ตัวอักษร"); return; }
     setBusy(true);
     try {
       await onSave(
         parsed.data,
         admin && !reviewOnly ? (data.get("status") as Entry["status"]) : "pending",
+        suggestions.data,
       );
     } catch (e) {
       setError(e instanceof Error ? e.message : "ส่งรายการไม่สำเร็จ");
@@ -153,16 +159,16 @@ export function EntryForm({
             ))}
           </datalist>
         </label>
-        <label>
-          แท็ก <span className="field-hint">คั่นด้วยจุลภาค สูงสุด 6 แท็ก</span>
-          <input
-            name="tags"
-            maxLength={240}
-            defaultValue={initial?.tags?.join(", ")}
-            placeholder="AI ในเกม, เว็บ, 2D"
-          />
-        </label>
+        {kind !== "game" && <label>แท็ก <span className="field-hint">คั่นด้วยจุลภาค สูงสุด 20 แท็ก</span><input name="tags" maxLength={1200} defaultValue={initial?.tags?.join(", ")} placeholder="เครื่องมือ, เทคนิค" /></label>}
       </div>
+      {kind === "game" && <>
+        <GameTagPicker value={gameTags} onChange={tags => { setGameTags(tags); onDirty?.(); }} />
+        <details className="tag-suggestion"><summary>หาแท็กที่ใช่ไม่เจอ? เสนอให้ Dots ตรวจ</summary>
+          <p>Dots จะตรวจจากลิงก์เกมที่คุณส่ง พร้อมวิเคราะห์ว่าใช้แท็กเดิมได้หรือควรเพิ่มแท็กใหม่ คำขอนี้ยังไม่เพิ่มแท็กเข้าคลังทันที</p>
+          <label>ชื่อแท็กที่เสนอ<input name="tagName" maxLength={60} placeholder="เสนอหนึ่งแท็กต่อครั้ง" /></label>
+          <label>เกมมีลักษณะนี้อย่างไร?<textarea name="tagReason" maxLength={600} rows={3} placeholder="อธิบายวิธีเล่นหรือจุดที่ตรวจสอบได้จากเว็บไซต์เกม" /></label>
+        </details>
+      </>}
       <label>
         {kind === "game" ? "ลิงก์เว็บไซต์เกม" : "ลิงก์เว็บไซต์"}{" "}
         {["post", "article"].includes(kind) && (
@@ -282,11 +288,11 @@ export function SubmitPanel({
         key={kind}
         initial={{ kind }}
         categories={categories}
-        onSave={async (entry) => {
+        onSave={async (entry, _status, tagSuggestions) => {
           const response = await fetch("/api/submit", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ entry, website: "" }),
+            body: JSON.stringify({ entry, tagSuggestions, website: "" }),
           });
           const data = await response.json();
           if (!response.ok) throw new Error(data.error);

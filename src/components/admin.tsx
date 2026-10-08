@@ -27,6 +27,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import "./console.css";
+import { TagPanel } from "./tag-panel";
 import { ContentLibrary } from "./content-library";
 import { NotificationCenter } from "./notification-center";
 import type { DraftNotification } from "@/lib/notifications";
@@ -44,7 +45,7 @@ import {
 } from "@/lib/model";
 type Snapshot = Pick<
   Database,
-  "entries" | "layout" | "draftLayout" | "revision" | "activity" | "reviews"
+  "entries" | "layout" | "draftLayout" | "revision" | "activity" | "reviews" | "customTags" | "tagRequests"
 > & { storageReady: boolean; agents: Omit<Database["agents"][number], "tokenHash">[]; issuedToken?: string; submissions: SubmissionInfo };
 async function request(
   url: string,
@@ -135,7 +136,7 @@ export function Login({ configured }: { configured: boolean }) {
 export function Admin() {
   const router = useRouter();
   const [data, setData] = useState<Snapshot | null>(null),
-    [tab, setTab] = useState<"inbox" | "entries" | "layout" | "import" | "agents" | "activity" | "connections">("inbox");
+    [tab, setTab] = useState<"inbox" | "entries" | "layout" | "import" | "agents" | "activity" | "connections" | "tags">("inbox");
   const [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
     [busy, setBusy] = useState(false);
@@ -209,7 +210,7 @@ export function Admin() {
       updatedAt: new Date().toISOString(),
     });
   }
-  const tabNames={inbox:"กล่องรอตรวจ",entries:"คลังเนื้อหา",layout:"จัดหน้าเว็บไซต์",import:"นำเข้า / ส่งออก",connections:"แหล่งข้อมูล",agents:"เอเจนต์และการเชื่อมต่อ",activity:"ประวัติล่าสุด"};
+  const tabNames={tags:"คลังแท็กเกม",inbox:"กล่องรอตรวจ",entries:"คลังเนื้อหา",layout:"จัดหน้าเว็บไซต์",import:"นำเข้า / ส่งออก",connections:"แหล่งข้อมูล",agents:"เอเจนต์และการเชื่อมต่อ",activity:"ประวัติล่าสุด"};
   return (
     <div className="admin-app">
       <a href="#studio-main" className="console-skip">ข้ามไปเนื้อหา</a>
@@ -261,6 +262,7 @@ export function Admin() {
           <LayoutTemplate size={16} />
           จัดหน้าเว็บไซต์
         </button>
+        <button aria-current={tab === "tags" ? "page" : undefined} className={tab === "tags" ? "active" : ""} onClick={() => navigate("tags")}><ListFilter size={16} />คลังแท็กเกม <span>{data?.tagRequests.filter(r => r.status === "pending").length || 0}</span></button>
         <p className="nav-section-label">เครื่องมือและระบบ</p>
         <button aria-current={tab==="connections"?"page":undefined} className={tab === "connections" ? "active" : ""} onClick={() => navigate("connections")}>
           <Plug size={16} />แหล่งข้อมูล
@@ -313,7 +315,7 @@ export function Admin() {
             {tab === "inbox" && <ReviewPanel key={reviewVersion} initialTarget={reviewTarget} entries={data.entries} submissions={data.submissions} agents={data.agents} reviews={data.reviews} busy={busy} edit={setEditing} connect={() => setTab("connections")} decide={async (entry, decision, note) => {
               await mutate({ action: "review", id: entry.id, expectedUpdatedAt: entry.updatedAt, decision, note }, { publish: "เผยแพร่แล้ว รายการแสดงบนเว็บทันที", return: "ส่งกลับเป็นฉบับร่างแล้ว เอเจนต์อ่านหมายเหตุและแก้ไขต่อได้", reject: "เก็บรายการเข้าคลังแล้ว สามารถเปิดกลับมาแก้ได้" }[decision]);
             }} />}
-            {tab === "connections" && <ConnectionsPanel refreshCatalog={async()=>{await reload();}} openAgents={() => setTab("agents")} openInbox={() => setTab("inbox")} entries={data.entries} categories={data.layout.categories} createDraft={async (jobId, sourceUrl, entry) => { await mutate({ action: "collection_draft", jobId, sourceUrl, entry }, "ส่งเข้ากล่องรอตรวจแล้ว"); }} />}
+            {tab === "connections" && <ConnectionsPanel refreshCatalog={async()=>{await reload();}} openAgents={() => setTab("agents")} openInbox={() => setTab("inbox")} entries={data.entries} categories={data.layout.categories} createDraft={async (jobId, sourceUrl, entry, tagSuggestions) => { await mutate({ action: "collection_draft", jobId, sourceUrl, entry, tagSuggestions }, "ส่งเข้ากล่องรอตรวจแล้ว"); }} />}
             {tab === "layout" && (
               <LayoutEditor
                 key={data.revision}
@@ -343,6 +345,7 @@ export function Admin() {
               />
             )}
             {tab === "agents" && <AgentPanel agents={data.agents} busy={busy} mutate={mutate} />}
+            {tab === "tags" && <TagPanel data={data} busy={busy} onDirty={() => { unsaved.current = true; }} openAgents={() => navigate("agents")} resolve={async resolution => { await mutate({ action: "resolve_tag", resolution }, "บันทึกผลตรวจแล้ว เกมยังรอยืนยันเผยแพร่"); unsaved.current = false; }} />}
             {tab === "activity" && <ActivityPanel activity={data.activity} />}
           </>
         )}
@@ -367,9 +370,9 @@ export function Admin() {
             onDirty={()=>{unsaved.current=true;}}
             initial={editing}
             categories={data.layout.categories}
-            onSave={async (entry, status) => {
+            onSave={async (entry, status, tagSuggestions) => {
               await mutate(
-                { action: "entry", entry: { ...editing, ...entry, status } },
+                { action: "entry", entry: { ...editing, ...entry, status }, tagSuggestions },
                 status === "published"
                   ? "บันทึกและเผยแพร่รายการแล้ว"
                   : "บันทึกรายการแล้ว",

@@ -1,15 +1,19 @@
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
+import { tagSuggestionsSchema } from "./game-tags";
+import { requestGameTags, validateGameTags, resolveGameTag, tagResolutionSchema } from "./tag-service";
 import { checkDuplicate, collectionContextSchema, consumeLimit, entryInput, entrySchema, layoutSchema, type Database, type Entry, type EntryInput } from "./model";
 import { ConflictError } from "./postgres-store";
 
 export const managementMutation = z.discriminatedUnion("action", [
-  z.object({ action: z.literal("collection_draft"), revision: z.number().int(), jobId: z.string().uuid(), sourceUrl: z.string().url(), entry: entryInput }),
+  z.object({ action: z.literal("resolve_tag"), revision: z.number().int(), resolution: tagResolutionSchema }),
+  z.object({ action: z.literal("agent_tag_permission"), revision: z.number().int(), id: z.string().uuid(), enabled: z.boolean() }),
+  z.object({ action: z.literal("collection_draft"), revision: z.number().int(), jobId: z.string().uuid(), sourceUrl: z.string().url(), entry: entryInput, tagSuggestions: tagSuggestionsSchema.optional() }),
   z.object({ action: z.literal("review"), revision: z.number().int(), id: entrySchema.shape.id, expectedUpdatedAt: z.iso.datetime(), decision: z.enum(["publish", "return", "reject"]), note: z.string().trim().max(1000).default("") }),
-  z.object({ action: z.literal("entry"), revision: z.number().int(), entry: entrySchema }),
+  z.object({ action: z.literal("entry"), revision: z.number().int(), entry: entrySchema, tagSuggestions: tagSuggestionsSchema.optional() }),
   z.object({ action: z.literal("layout"), revision: z.number().int(), layout: layoutSchema, publish: z.boolean() }),
   z.object({ action: z.literal("import"), revision: z.number().int(), entries: z.array(entryInput).min(1).max(50) }),
-  z.object({ action: z.literal("create_agent"), revision: z.number().int(), name: z.string().trim().min(2).max(60), canWriteDrafts: z.boolean() }),
+  z.object({ action: z.literal("create_agent"), revision: z.number().int(), name: z.string().trim().min(2).max(60), canWriteDrafts: z.boolean(), canManageTags: z.boolean().optional() }),
   z.object({ action: z.literal("revoke_agent"), revision: z.number().int(), id: z.string().uuid() }),
 ]);
 const hash = (value: string) => createHash("sha256").update(value).digest("hex");
@@ -24,6 +28,7 @@ function saveEntry(db: Database, input: Entry) {
     createdAt: old?.createdAt || new Date().toISOString(),
     updatedAt: new Date(Math.max(Date.now(), old ? Date.parse(old.updatedAt) + 1 : 0)).toISOString(),
   };
+  validateGameTags(db, item, old);
   checkDuplicate(db.entries, item);
   db.entries = old ? db.entries.map(e => e.id === item.id ? item : e) : [item, ...db.entries];
   return item;
@@ -32,17 +37,26 @@ function newDraft(input: EntryInput, id = crypto.randomUUID()): Entry {
   return { ...input, id, status: "draft", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
 }
 export function manageCatalog(db: Database, input: z.infer<typeof managementMutation>): string | undefined {
-  if (input.action === "collection_draft") {
+  if (input.action === "resolve_tag") {
+    resolveGameTag(db, input.resolution, "ผู้ดูแล");
+  } else if (input.action === "agent_tag_permission") {
+    const agent = db.agents.find(a => a.id === input.id && !a.revokedAt);
+    if (!agent) throw new Error("ไม่พบเอเจนต์ที่ใช้งานได้");
+    agent.canManageTags = input.enabled;
+    log(db, "ผู้ดูแล", "agent.tag_permission", agent.name);
+  } else if (input.action === "collection_draft") {
     const job = db.collectionJobs.find(j => j.id === input.jobId);
     const candidate = job?.candidates.find(c => c.url === input.sourceUrl);
     if (!job || !candidate) throw new Error("ไม่พบโพสต์ต้นทางในงานนี้");
     const id = "collected-" + hash(candidate.url).slice(0, 40);
     if (db.entries.some(e => e.id === id || (e.sourceUrl === candidate.url && e.status !== "archived"))) throw new Error("โพสต์นี้มีฉบับร่างในคลังแล้ว กรุณาแก้รายการเดิม");
     const item = saveEntry(db, { ...newDraft(input.entry, id), sourceUrl: candidate.url, status: "pending" });
+    requestGameTags(db, item, input.tagSuggestions || []);
     db.provenance[id] = { provider: "Apify", runId: job.runId, reason: `ผู้ดูแลคัดจาก ${job.source.name} และเขียนสรุปเพื่อส่งตรวจ` };
     log(db, "ผู้ดูแล", "entry.collection_draft", item.title, item.id);
   } else if (input.action === "entry") {
     const item = saveEntry(db, input.entry);
+    requestGameTags(db, item, input.tagSuggestions || []);
     log(db, "ผู้ดูแล", `entry.${item.status}`, item.title, item.id);
   } else if (input.action === "layout") {
     if ([...input.layout.featuredIds, ...input.layout.spotlights.flatMap(g => g.entryIds)].some(id => !db.entries.some(e => e.id === id && e.kind === "game" && e.status === "published")))
@@ -58,7 +72,7 @@ export function manageCatalog(db: Database, input: z.infer<typeof managementMuta
   } else if (input.action === "create_agent") {
     if (db.agents.length >= 50) throw new Error("จำนวนคีย์ถึงขีดจำกัดแล้ว กรุณาติดต่อผู้ดูแลระบบ");
     const token = "gs_" + randomBytes(32).toString("base64url");
-    db.agents.push({ id: crypto.randomUUID(), name: input.name, canWriteDrafts: input.canWriteDrafts,
+    db.agents.push({ id: crypto.randomUUID(), name: input.name, canWriteDrafts: input.canWriteDrafts, canManageTags: input.canManageTags ?? false,
       tokenHash: hash(token), createdAt: new Date().toISOString(),
       expiresAt: new Date(Date.now() + 90 * 86400000).toISOString(), revokedAt: null });
     log(db, "ผู้ดูแล", "agent.created", input.name);

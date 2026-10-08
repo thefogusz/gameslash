@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { gameTagSchema, tagRequestSchema } from "./game-tags";
 import { sourceSchema, jobSchema } from "./collection-model";
 import { articleDocumentSchema, imageUrl, publicHttps } from "./article";
 
@@ -38,7 +39,7 @@ export const entryInput = z
     imageAlt: z.string().max(300).optional(),
     content: articleDocumentSchema.optional(),
     body: z.string().trim().max(20000).default(""),
-    tags: z.array(z.string().trim().min(1).max(40)).max(6).default([]),
+    tags: z.array(z.string().trim().min(1).max(60)).max(20).default([]),
   })
   .refine((v) => !["game", "tool"].includes(v.kind) || !!v.url, {
     message: "กรุณาใส่ลิงก์เว็บไซต์ต้นทาง",
@@ -94,6 +95,7 @@ export const agentSchema = z.object({
   name: z.string().trim().min(2).max(60),
   tokenHash: z.string().regex(/^[a-f0-9]{64}$/),
   canWriteDrafts: z.boolean(),
+  canManageTags: z.boolean().default(false),
   createdAt: z.iso.datetime(),
   expiresAt: z.iso.datetime(),
   revokedAt: z.iso.datetime().nullable(),
@@ -129,6 +131,8 @@ export const reviewSchema = z.object({
   at: z.iso.datetime(),
 });
 export const databaseSchema = z.object({
+  customTags: z.array(gameTagSchema).max(1000).default([]),
+  tagRequests: z.array(tagRequestSchema).max(9000).default([]),
   sources: z.array(sourceSchema).max(20).default([]),
   collectionBudget: z.object({ remaining: z.number().min(0).max(5), verifiedAt: z.iso.datetime(), expiresAt: z.iso.datetime() }).nullable().default(null),
   collectionJobs: z.array(jobSchema).max(100).default([]),

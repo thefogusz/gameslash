@@ -1,3 +1,5 @@
+import { tagSuggestionsSchema } from "@/lib/game-tags";
+import { requestGameTags, validateGameTags } from "@/lib/tag-service";
 import { z } from "zod";
 import { checkOrigin, fingerprint, readBody } from "@/lib/auth";
 import {
@@ -17,7 +19,7 @@ export async function POST(request: Request) {
         { status: 503 },
       );
     const raw = z
-      .object({ entry: entryInput, website: z.string().max(500).default("") })
+      .object({ entry: entryInput, tagSuggestions: tagSuggestionsSchema, website: z.string().max(500).default("") })
       .parse(await readBody(request, 40000));
     if (raw.website) return Response.json({ ok: true });
     if (!["game", "post"].includes(raw.entry.kind))
@@ -33,6 +35,8 @@ export async function POST(request: Request) {
       consumeLimit(db, `submit:${fingerprint(request)}`, 5, 60 * 60 * 1000);
       if (db.entries.filter((e) => e.status === "pending").length >= 300)
         throw new Error("คิวตรวจรายการเต็มชั่วคราว กรุณาลองภายหลัง");
+      validateGameTags(db, item);
+      requestGameTags(db, item, raw.tagSuggestions);
       checkDuplicate(db.entries, item);
       db.entries.unshift(item);
     });

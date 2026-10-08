@@ -4,6 +4,8 @@ import { readDatabase, storageReady, updateDatabase } from "@/lib/store";
 import { errorResponse } from "@/lib/http";
 const adminData = (db: Awaited<ReturnType<typeof readDatabase>>) => ({
   entries: db.entries,
+  customTags: db.customTags,
+  tagRequests: db.tagRequests,
   layout: db.layout,
   draftLayout: db.draftLayout,
   revision: db.revision,

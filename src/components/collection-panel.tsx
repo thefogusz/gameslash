@@ -1,4 +1,5 @@
 "use client";
+import type { TagSuggestion } from "@/lib/game-tags";
 import { useEffect, useState } from "react";
 import { ArrowUpRight, RefreshCw, Search } from "lucide-react";
 import type { Entry, EntryInput } from "@/lib/model";
@@ -6,7 +7,7 @@ import { activeJob, type CollectionJob, type CollectionSource } from "@/lib/coll
 import { EntryForm } from "./entry-form";
 type Snapshot = { sources: CollectionSource[]; jobs: (CollectionJob & { candidateCount: number; matchCount: number })[]; revision: number; configured: boolean; budget: { remaining: number; expiresAt: string } | null };
 const labels: Record<CollectionJob["status"], string> = { starting: "กำลังเริ่ม", unknown: "ต้องตรวจใน Apify", READY: "เข้าคิวแล้ว", RUNNING: "กำลังรวบรวม", SUCCEEDED: "อ่านผลได้แล้ว", FAILED: "งานไม่สำเร็จ", "TIMED-OUT": "หมดเวลา", ABORTING: "กำลังหยุด", ABORTED: "หยุดแล้ว" };
-export function CollectionPanel({ entries, categories, createDraft, openInbox, refreshCatalog }: { entries: Entry[]; categories: string[]; createDraft: (jobId: string, sourceUrl: string, entry: EntryInput) => Promise<void>; openInbox: () => void; refreshCatalog: () => Promise<void> }) {
+export function CollectionPanel({ entries, categories, createDraft, openInbox, refreshCatalog }: { entries: Entry[]; categories: string[]; createDraft: (jobId: string, sourceUrl: string, entry: EntryInput, tagSuggestions: TagSuggestion[]) => Promise<void>; openInbox: () => void; refreshCatalog: () => Promise<void> }) {
   const [data, setData] = useState<Snapshot | null>(null), [busy, setBusy] = useState(false), [error, setError] = useState("");
   const [selected, setSelected] = useState(""), [query, setQuery] = useState(""), [candidateUrl, setCandidateUrl] = useState("");
   const [page, setPage] = useState(0);
@@ -45,6 +46,6 @@ export function CollectionPanel({ entries, categories, createDraft, openInbox, r
       {matchCount > 12 && <div className="collection-job"><button className="button" disabled={page === 0} onClick={() => setPage(page - 1)}>ก่อนหน้า</button><span>หน้า {page + 1} / {Math.ceil(matchCount / 12)} · {matchCount} โพสต์</span><button className="button" disabled={(page + 1) * 12 >= matchCount} onClick={() => setPage(page + 1)}>ถัดไป</button></div>}
       {job.status === "SUCCEEDED" && !job.candidateCount && <p className="collection-empty">รอบนี้ไม่มีโพสต์ที่อ่านได้ ตรวจว่ากลุ่มเปิดสาธารณะและดูรายละเอียดใน Apify</p>}
     </> : <p className="collection-empty">งานที่เริ่มจาก Console จะแสดงที่นี่ พร้อมสถานะและเครดิตที่ใช้</p>}
-    {candidate && job && <section className="collection-draft" key={candidate.url}><div className="collection-title"><h3>เขียนสรุปใหม่เพื่อส่งตรวจ</h3><button className="button" onClick={() => setCandidateUrl("")}>ปิด</button></div><p className="field-hint">เลือกประเภท: เกม / เครื่องมือ (รวม repo) / บทความเทคนิค / คอมมูนิตี้ อย่าคัดลอกบทสนทนาทั้งชุด</p><EntryForm admin reviewOnly categories={categories} initial={{ kind: "article", author: candidate.author, sourceUrl: candidate.url, category: "เทคนิคทำเกม" }} onSave={async entry => { await createDraft(job.id, candidate.url, entry); setCandidateUrl(""); setNotice("ส่งเข้ากล่องรอตรวจแล้ว"); await load(); }} /></section>}
+    {candidate && job && <section className="collection-draft" key={candidate.url}><div className="collection-title"><h3>เขียนสรุปใหม่เพื่อส่งตรวจ</h3><button className="button" onClick={() => setCandidateUrl("")}>ปิด</button></div><p className="field-hint">เลือกประเภท: เกม / เครื่องมือ (รวม repo) / บทความเทคนิค / คอมมูนิตี้ อย่าคัดลอกบทสนทนาทั้งชุด</p><EntryForm admin reviewOnly categories={categories} initial={{ kind: "article", author: candidate.author, sourceUrl: candidate.url, category: "เทคนิคทำเกม" }} onSave={async (entry, _status, tagSuggestions) => { await createDraft(job.id, candidate.url, entry, tagSuggestions); setCandidateUrl(""); setNotice("ส่งเข้ากล่องรอตรวจแล้ว"); await load(); }} /></section>}
   </section>;
 }

@@ -2592,3 +2592,19 @@ textarea {
 .detail-article .detail-cover { height:clamp(220px,35vw,480px); }
 .detail-article .detail-cover .cover-image { object-fit:contain; }
 @media(max-width:600px) { .article-editor .tiptap {padding:16px} .article-prose h2 {font-size:24px} .article-prose h3 {font-size:20px} .image-field {padding:16px} }
+
+/* Shared submission and Console tag chooser. */
+.game-tag-picker { margin:0; padding:18px; border:1px solid var(--border, #303540); border-radius:12px; min-width:0; }
+.game-tag-picker legend { font-weight:700; padding:0 6px; }
+.game-tag-picker p,.tag-suggestion p { color:#abb2c2; font-size:14px; line-height:1.6; margin:8px 0 14px; }
+.tag-chips { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
+.tag-chips button { display:flex; align-items:center; gap:12px; border:1px solid #365c53; border-radius:20px; background:#18332d; color:#adf2df; padding:7px 12px; font-size:14px; }
+.tag-picker-results { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; max-height:260px; overflow:auto; margin-top:12px; }
+.tag-picker-results button { display:flex; flex-direction:column; text-align:left; gap:3px; padding:10px 12px; border:1px solid #303540; border-radius:8px; background:#1a1d27; color:#f0f2f8; min-width:0; overflow-wrap:anywhere; }
+.tag-picker-results button:hover:not(:disabled) { border-color:#79dfc4; background:#233832; }
+.tag-picker-results small { color:#abb2c2; font-size:12px; }
+.tag-picker-results button:disabled { opacity:.45; }
+.tag-suggestion { padding:16px 18px; border:1px solid #303540; border-radius:12px; }
+.tag-suggestion summary { font-weight:650; cursor:pointer; }
+.tag-suggestion label { margin-top:12px; }
+@media(max-width:600px) { .tag-picker-results { grid-template-columns:repeat(2,minmax(0,1fr)); } .game-tag-picker { padding:12px; } }

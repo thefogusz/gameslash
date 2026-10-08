@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import sharp from "sharp";
-const origin = "http://127.0.0.1:3020";
+const origin = process.env.SMOKE_ORIGIN || "http://127.0.0.1:3020";
 assert.ok(process.env.ADMIN_PASSWORD, "Load local environment first");
 const json = { "Content-Type": "application/json", Origin: origin };
 const login = await fetch(`${origin}/api/session`, { method: "POST", headers: json, body: JSON.stringify({ password: process.env.ADMIN_PASSWORD }) });
@@ -42,7 +42,7 @@ try {
   assert.equal(JSON.stringify(await snapshot()).includes(token), false);
   const initialized = await rpc(token, "initialize", { protocolVersion: "2025-11-25", capabilities: {}, clientInfo: { name: "gameslash-test", version: "1.0.0" } });
   assert.ok(initialized.serverInfo);
-  assert.equal((await rpc(token, "tools/list")).tools.length, 10);
+  assert.equal((await rpc(token, "tools/list")).tools.length, 14);
   assert.equal((await call(reader, "list_collections")).isError, true);
   assert.ok(Array.isArray((await call(token, "list_collections")).structuredContent.jobs));
   assert.ok((await call(token, "get_categories")).structuredContent.categories.length);
