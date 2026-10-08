@@ -374,6 +374,7 @@ export function Directory({
   const tags = [...new Set([...entries.flatMap(e => e.tags), ...(tag ? [tag] : [])])].sort((a,b) => a.localeCompare(b,"th"));
   const results = filterDirectory(likedOnly ? entries.filter(e => likedIds.includes(e.id)) : entries, { kind, query, category, tag, sort }, kind === "game" ? catalog.layout.featuredIds : []);
   const filtered = !!(query || category || tag || likedOnly || sort !== "curated");
+  const compactFilters = kind === "game" || kind === "article";
   const titles = {
     game: ["ค้นพบเกม", "ค้นหาเกมตามชื่อ ผู้สร้าง หรือหมวดหมู่"],
     tool: ["สร้างเกมด้วย AI", "ไกด์ตั้งแต่ยังไม่มีไอเดียจนเกมพร้อมให้คนเล่น พร้อมรวมเครื่องมือที่ใช้ในแต่ละขั้น"],
@@ -534,25 +535,25 @@ export function Directory({
                   ))}
                 </div>
               )}
-              {kind !== "tool" && <div className={`directory-filters${kind === "article" ? " news-filters" : ""}`} role="group" aria-label="ตัวกรองรายการ">
-                <label><span className={kind === "article" ? "sr-only" : undefined}>หมวดหมู่</span>
+              {kind !== "tool" && <div className={`directory-filters${compactFilters ? " compact-filters" : ""}`} role="group" aria-label="ตัวกรองรายการ">
+                <label><span className={compactFilters ? "sr-only" : undefined}>หมวดหมู่</span>
                   <select value={category} onChange={e => updateFilters({ category: e.target.value })}>
                     <option value="">ทุกหมวดหมู่ ({entries.length})</option>
                     {categories.map(c => <option key={c} value={c}>{c} ({entries.filter(e => e.category === c).length})</option>)}
                   </select>
                 </label>
-                <label><span className={kind === "article" ? "sr-only" : undefined}>{kind === "game" ? "แท็ก / แพลตฟอร์ม" : "แท็ก"}</span>
+                <label><span className={compactFilters ? "sr-only" : undefined}>{kind === "game" ? "แท็ก / แพลตฟอร์ม" : "แท็ก"}</span>
                   <select value={tag} onChange={e => updateFilters({ tag: e.target.value })}>
                     <option value="">ทุกแท็ก</option>
                     {tags.map(t => <option key={t} value={t}>{t} ({entries.filter(e => e.tags.includes(t)).length})</option>)}
                   </select>
                 </label>
-                <label><span className={kind === "article" ? "sr-only" : undefined}>เรียงลำดับ</span>
+                <label><span className={compactFilters ? "sr-only" : undefined}>เรียงลำดับ</span>
                   <select value={sort} onChange={e => updateFilters({ sort: e.target.value === "curated" ? "" : e.target.value })}>
                     {Object.entries(directorySorts).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                   </select>
                 </label>
-                {(kind !== "article" || filtered) && <button className="button secondary filter-reset" onClick={reset} disabled={!filtered}><X size={16} />ล้างตัวกรอง</button>}
+                {(!compactFilters || filtered) && <button className="button secondary filter-reset" onClick={reset} disabled={!filtered}><X size={16} />ล้างตัวกรอง</button>}
               </div>}
               {kind !== "tool" && <p className="result-count" role="status" aria-live="polite">
                 พบ {results.length} จาก {entries.length} {kindLabels[kind]}
