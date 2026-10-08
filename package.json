@@ -1,0 +1,31 @@
+{
+  "name": "gameslash",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev --hostname 127.0.0.1 --port 3020",
+    "build": "next build",
+    "start": "next start --hostname 127.0.0.1 --port 3020",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test tests/*.test.ts"
+  },
+  "dependencies": {
+    "next": "16.4.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "@vercel/blob": "2.8.1",
+    "lucide-react": "^0.468.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "@types/node": "^22.19.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "tsx": "^4.21.0"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}

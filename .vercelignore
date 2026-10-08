@@ -1,0 +1,6 @@
+.git
+.data
+.env*
+mockups
+artifacts
+tests

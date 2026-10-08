@@ -1,0 +1,888 @@
+<title>Lucid Arcade</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@400;500;600&family=Chakra+Petch:wght@600;700&display=swap" rel="stylesheet">
+<style>
+/* Layout: minimal AI game hub with three pages. Games = left genre rail + featured wall + genre shelves; Submit = form + live card preview; Create = step guide with idea generator + tools directory. */
+:root{
+  color-scheme:dark;
+  --ink:#0B0C14; --panel:#15172A; --raise:#1E2136; --line:rgba(230,228,255,.09); --line2:rgba(230,228,255,.18);
+  --fg:#F1EFFA; --soft:#D5D2E6; --muted:#9A97B2; --live:#6FF0CF; --live-ink:#04271F; --bad:#FF8FA8;
+  --display:"Chakra Petch","Anuphan",system-ui,sans-serif;
+  --body:"Anuphan","Chakra Petch",system-ui,sans-serif;
+  --gut:clamp(16px,3vw,36px);
+}
+html,body{background:var(--ink);color:var(--fg)}
+body{font-family:var(--body);font-size:15px;line-height:1.55;overflow-x:hidden}
+button{font:inherit;color:inherit;cursor:pointer}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--live);outline-offset:3px}
+svg{width:18px;height:18px;flex:none}
+h1,h2,h3{font-family:var(--display);margin:0}
+
+.top{position:fixed;inset:0 0 auto 0;z-index:40;display:flex;align-items:center;gap:22px;padding:calc(env(safe-area-inset-top,0px) + 14px) var(--gut) 14px;background:rgba(11,12,20,.92);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.logo{font-family:var(--display);font-weight:700;font-size:20px;letter-spacing:.02em;display:flex;align-items:center;gap:9px;background:none;border:0;padding:0;text-transform:uppercase;white-space:nowrap}
+.logo i{width:20px;height:20px;background:var(--live);clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);flex:none}
+.nav{display:flex;gap:4px}
+.nav button{background:none;border:0;border-radius:8px;padding:7px 12px;font-size:14.5px;color:var(--muted);white-space:nowrap}
+.nav button:hover{color:var(--fg)}
+.nav button[aria-current="true"]{color:var(--fg);background:var(--panel);font-weight:600}
+.search{flex:1;max-width:380px;display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 14px}
+.search svg{color:var(--muted)}
+.search input{flex:1;min-width:0;background:none;border:0;color:var(--fg);font:inherit;font-size:14.5px;outline:none}
+.search input::placeholder{color:var(--muted)}
+.search:focus-within{border-color:rgba(111,240,207,.5)}
+.spacer{flex:1}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:10px;padding:9px 16px;font-weight:600;font-size:14.5px;white-space:nowrap;text-decoration:none;transition:filter .15s,transform .1s}
+.btn:active{transform:scale(.98)}
+.btn.primary{background:var(--live);color:var(--live-ink)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.ghost{background:var(--raise);color:var(--fg)}
+.btn.ghost:hover{background:#272a43}
+.msearch{display:none;margin-bottom:16px;max-width:none}
+
+.app{display:grid;grid-template-columns:200px minmax(0,1fr);gap:32px;padding-inline:var(--gut);padding-block:calc(env(safe-area-inset-top,0px) + 80px) 0}
+.rail{position:sticky;top:calc(env(safe-area-inset-top,0px) + 80px);align-self:start;display:grid;gap:2px}
+.cat{display:flex;align-items:center;gap:12px;width:100%;background:none;border:0;border-radius:10px;padding:8px 10px;text-align:left;font-size:15px;color:#C9C6DB}
+.cat:hover{background:rgba(255,255,255,.04);color:var(--fg)}
+.cat[aria-current="true"]{background:var(--panel);color:var(--fg);font-weight:600}
+.sw{width:10px;height:10px;border-radius:3px;background:var(--gc);flex:none;display:inline-block}
+.cat em{margin-left:auto;font-style:normal;font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.sep{height:1px;background:var(--line);margin:10px 4px}
+
+main{min-width:0}
+.wall{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.tile{position:relative;border:0;padding:0;border-radius:14px;overflow:hidden;background-color:var(--raise);background-size:cover;background-position:center;aspect-ratio:16/9;text-align:left;display:flex;align-items:flex-end;min-width:0;transition:transform .2s}
+.tile:hover{transform:translateY(-3px)}
+.tile::after{content:"";position:absolute;inset:0;background:linear-gradient(0deg,rgba(8,9,16,.8),rgba(8,9,16,0) 55%)}
+.tile .tt{position:relative;z-index:1;padding:12px 14px;display:grid;gap:6px;min-width:0}
+.tile .tt b{font-family:var(--display);font-weight:700;font-size:16px;line-height:1.15;text-wrap:balance}
+.tile.big{grid-column:span 2;grid-row:span 2;aspect-ratio:auto}
+.tile.big .tt{padding:clamp(18px,2.4vw,28px);gap:10px}
+.tile.big .tt b{font-size:clamp(28px,3.4vw,44px);line-height:1.02}
+.tile.big .tt p{margin:0;color:var(--soft);font-size:14.5px}
+
+.hero{grid-column:span 2;grid-row:span 2;position:relative;border-radius:14px;overflow:hidden;background:var(--raise);min-height:100%}
+.slide{position:absolute;inset:0;border:0;padding:0;text-align:left;display:flex;align-items:flex-end;background-size:cover;background-position:center;opacity:0;visibility:hidden;transition:opacity .7s,visibility 0s .7s}
+.slide.on{opacity:1;visibility:visible;transition:opacity .7s}
+.slide::after{content:"";position:absolute;inset:0;background:linear-gradient(0deg,rgba(8,9,16,.85),rgba(8,9,16,0) 60%)}
+.slide .tt{position:relative;z-index:1;padding:clamp(18px,2.4vw,28px) clamp(18px,2.4vw,28px) clamp(30px,3.4vw,40px);display:grid;gap:10px;min-width:0}
+.slide .tt b{font-family:var(--display);font-weight:700;font-size:clamp(28px,3.4vw,44px);line-height:1.02;text-wrap:balance}
+.slide .tt p{margin:0;color:var(--soft);font-size:14.5px}
+.reason{position:absolute;top:16px;left:16px;z-index:2;display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;padding:5px 12px 5px 10px;border-radius:999px;background:rgba(11,12,20,.72);color:var(--rc);box-shadow:inset 0 0 0 1px var(--rc);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.reason svg{width:15px;height:15px}
+.dots{position:absolute;right:18px;bottom:16px;z-index:3;display:flex;gap:6px}
+.dots button{width:20px;height:4px;border:0;padding:0;border-radius:2px;background:rgba(255,255,255,.3);overflow:hidden;position:relative;transition:width .3s}
+.dots button::before{content:"";position:absolute;inset:-10px -2px}
+.dots button[aria-current="true"]{width:38px}
+.dots i{position:absolute;inset:0;background:#fff;transform-origin:left;animation:fill 6s linear forwards}
+.hero.paused .dots i{animation-play-state:paused}
+@keyframes fill{from{transform:scaleX(0)}}
+.chips{display:none;gap:8px;margin-top:22px;overflow-x:auto;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:none;border-radius:999px;padding:7px 14px;font-size:14px;color:#C9C6DB;white-space:nowrap}
+.chip[aria-pressed="true"]{background:var(--fg);color:var(--ink);border-color:var(--fg);font-weight:600}
+
+.shelf{margin-top:36px}
+.sh-head{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:12px}
+.sh-head h2{font-size:20px;font-weight:700;display:flex;align-items:center;gap:10px}
+.sh-head h2 .sw{width:12px;height:12px}
+.more{border:0;background:none;padding:4px 0;font-size:14px;color:var(--muted)}
+.more:hover{color:var(--fg)}
+.row{display:grid;grid-auto-flow:column;grid-auto-columns:clamp(210px,19vw,260px);gap:16px;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:6px;scrollbar-width:none}
+.row::-webkit-scrollbar{display:none}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:22px 16px}
+
+.card{background:none;border:0;padding:0;text-align:left;display:grid;gap:8px;align-content:start;scroll-snap-align:start;min-width:0}
+.card:focus-visible{outline:none}
+.art{position:relative;display:block;aspect-ratio:16/9;max-width:100%;border-radius:12px;background-size:cover;background-position:center;background-color:var(--raise);transition:transform .2s}
+.card:hover .art{transform:translateY(-3px)}
+.card:focus-visible .art{outline:2px solid var(--live);outline-offset:3px}
+.crow{display:flex;justify-content:space-between;align-items:baseline;gap:10px;min-width:0}
+.crow .cname{min-width:0}
+.lk{display:inline-flex;align-items:center;gap:4px;font-size:12.5px;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+.lk svg{width:13px;height:13px}
+.lk.on{color:#FF8FA8}
+.lk.on svg{fill:currentColor}
+.likebtn{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line2);background:none;border-radius:999px;padding:7px 15px;font-weight:600;font-size:14px;white-space:nowrap;font-variant-numeric:tabular-nums;transition:border-color .2s,background .2s}
+.likebtn:hover{border-color:#FF8FA8}
+.likebtn[aria-pressed="true"]{border-color:#FF8FA8;color:#FF8FA8;background:rgba(255,143,168,.1)}
+.likebtn[aria-pressed="true"] svg{fill:currentColor;animation:pop .35s}
+@keyframes pop{40%{transform:scale(1.35)}}
+.ttl-row{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+.cname{font-weight:600;font-size:15px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cby{font-size:13px;color:var(--muted);margin-top:-6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gtag{display:inline-block;font-size:12px;font-weight:600;padding:2px 9px;border-radius:6px;background:var(--gc);color:#14121f;white-space:nowrap;justify-self:start;line-height:1.5}
+.art .gtag{position:absolute;left:8px;bottom:8px}
+.empty{padding:48px 24px;text-align:center;color:var(--muted)}
+.empty strong{display:block;color:var(--fg);font-size:17px;margin-bottom:4px}
+footer{margin-top:56px;padding-block:20px 32px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
+
+.page{max-width:1080px;margin:0 auto;padding-inline:var(--gut);padding-block:calc(env(safe-area-inset-top,0px) + 92px) 0}
+.ph h1{font-size:clamp(28px,4vw,40px);line-height:1.1}
+.ph p{margin:8px 0 0;color:var(--muted);max-width:60ch}
+
+.formgrid{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:32px;margin-top:28px;align-items:start}
+form{display:grid;gap:16px}
+.fs{display:grid;gap:18px;padding:22px;background:var(--panel);border-radius:16px;border:0;margin:0;min-width:0}
+.fs legend{float:left;width:100%;padding:0;font-family:var(--display);font-weight:700;font-size:17px}
+.fs legend small{font-family:var(--body);font-weight:400;font-size:13px;color:var(--muted);margin-left:8px}
+.fs legend+*{clear:both}
+.field{display:grid;gap:6px;min-width:0}
+.field>label,.lbl{font-weight:600;font-size:14px}
+.opt{color:var(--muted);font-weight:400}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
+input[type=text],input[type=url],textarea,select{width:100%;box-sizing:border-box;background:var(--ink);border:1px solid var(--line2);border-radius:10px;padding:10px 12px;color:var(--fg);font:inherit;font-size:14.5px;outline:none}
+textarea{min-height:96px;resize:vertical}
+input:focus,textarea:focus,select:focus{border-color:rgba(111,240,207,.6)}
+input::placeholder,textarea::placeholder{color:#6E6B86}
+.help{font-size:12.5px;color:var(--muted)}
+.err{font-size:13px;color:var(--bad);min-height:0}
+.err:empty{display:none}
+.invalid input,.invalid textarea,.invalid select{border-color:var(--bad)}
+.drop{display:flex;gap:12px;align-items:center;flex-wrap:wrap;border:1.5px dashed var(--line2);border-radius:12px;padding:14px}
+.drop input[type=file]{position:absolute;width:1px;height:1px;opacity:0}
+.drop .thumbs{display:flex;gap:8px;flex-wrap:wrap}
+.drop .thumbs span{width:96px;aspect-ratio:16/9;border-radius:8px;background-size:cover;background-position:center;background-color:var(--raise)}
+.toolrow{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 40px;gap:8px}
+.iconbtn{width:40px;height:40px;border:0;border-radius:10px;background:var(--raise);display:grid;place-items:center;color:var(--muted)}
+.iconbtn:hover{color:var(--fg)}
+.radios{display:flex;gap:8px;flex-wrap:wrap}
+.radios label{display:inline-flex;gap:8px;align-items:center;border:1px solid var(--line2);border-radius:999px;padding:7px 14px;cursor:pointer;font-size:14.5px}
+.radios input,.check input{accent-color:var(--live);margin:0}
+.radios label:has(input:checked){border-color:var(--live);background:rgba(111,240,207,.08)}
+.check{display:flex;gap:10px;align-items:flex-start;font-size:14px;color:var(--soft)}
+.check input{margin-top:4px}
+.submitbar{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.preview{position:sticky;top:96px;display:grid;gap:10px}
+.preview .lbl{color:var(--muted);font-weight:500;font-size:13px}
+.preview .card{pointer-events:none}
+.preview .note{font-size:13px;color:var(--muted);line-height:1.5}
+.done{max-width:620px;margin-top:28px;background:var(--panel);border-radius:16px;padding:28px;display:grid;gap:18px}
+.done .ok{width:48px;height:48px;border-radius:50%;background:var(--live);color:var(--live-ink);display:grid;place-items:center}
+.done .ok svg{width:26px;height:26px}
+.done h2{font-size:24px}
+.track{list-style:none;margin:0;padding:0;display:grid;gap:12px}
+.track li{display:flex;gap:12px;align-items:center;color:var(--muted)}
+.track li i{width:24px;height:24px;border-radius:50%;border:2px solid var(--line2);display:grid;place-items:center;font-style:normal;flex:none}
+.track li.on{color:var(--fg)}
+.track li.on i{background:var(--live);border-color:var(--live);color:var(--live-ink)}
+.track li.now{color:var(--fg)}
+.track li.now i{border-color:var(--live)}
+.track li.now i::after{content:"";width:8px;height:8px;border-radius:50%;background:var(--live);animation:pulse 1.4s infinite}
+@keyframes pulse{50%{opacity:.25}}
+.track svg{width:14px;height:14px}
+
+.guide{display:grid;gap:12px;margin-top:28px;max-width:860px}
+.step{display:grid;grid-template-columns:40px minmax(0,1fr);gap:16px;background:var(--panel);border-radius:16px;padding:20px 22px}
+.step .no{width:40px;height:40px;border-radius:12px;background:var(--raise);display:grid;place-items:center;font-family:var(--display);font-weight:700;font-size:18px;color:var(--live)}
+.step h3{font-size:18px;line-height:40px}
+.step p{margin:0;color:var(--soft)}
+.step ul{margin:8px 0 0;padding-left:18px;color:var(--soft);display:grid;gap:4px}
+.tchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
+.tchip{font-size:13px;border:1px solid var(--line2);border-radius:999px;padding:4px 12px;background:none;color:var(--fg)}
+.tchip:hover{border-color:var(--live)}
+.idea{margin-top:14px;background:var(--ink);border-radius:12px;padding:16px 18px;display:grid;gap:12px}
+.idea .s{font-family:var(--display);font-size:clamp(18px,2.2vw,22px);font-weight:700;line-height:1.35;text-wrap:balance}
+.idea .acts{display:flex;gap:8px;flex-wrap:wrap}
+.idea .pr{font-size:13px;color:var(--muted);margin:0}
+.tdir{margin-top:44px}
+.tdir .chips{display:flex;margin:12px 0 16px}
+.tgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+.tool{background:var(--panel);border-radius:14px;padding:16px 18px;display:grid;gap:6px;align-content:start;transition:box-shadow .3s}
+.tool.flash{box-shadow:0 0 0 2px var(--live)}
+.tool .tn{font-weight:600;font-size:16px;display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.tool .tc{font-size:12.5px;color:var(--muted);white-space:nowrap}
+.tool p{margin:0;font-size:14px;color:var(--soft)}
+.tool a{font-size:13.5px;color:var(--live);text-decoration:none;display:inline-flex;gap:4px;align-items:center;margin-top:4px}
+.tool a:hover{text-decoration:underline}
+.oss{font-size:11.5px;color:var(--live);border:1px solid rgba(111,240,207,.35);border-radius:6px;padding:0 6px;margin-left:6px;font-weight:500}
+
+.overlay{position:fixed;inset:0;z-index:60;background:rgba(4,5,10,.82);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);overflow-y:auto;padding:calc(env(safe-area-inset-top,0px) + 24px) 16px calc(env(safe-area-inset-bottom,0px) + 40px);display:flex;justify-content:center;align-items:flex-start}
+.sheet{width:min(960px,100%);background:var(--panel);border-radius:18px;overflow:hidden;position:relative;animation:rise .28s cubic-bezier(.2,.8,.2,1)}
+@keyframes rise{from{transform:translateY(20px);opacity:0}}
+.x{position:absolute;top:12px;right:12px;z-index:5;width:38px;height:38px;border:0;border-radius:50%;background:rgba(11,12,20,.75);display:grid;place-items:center}
+.frame{position:relative;aspect-ratio:16/9;max-width:100%;background:#05060C;overflow:hidden}
+.frame .fbg{position:absolute;inset:0;background-size:cover;background-position:center;filter:brightness(.55);transition:filter .4s}
+.frame.on .fbg{filter:brightness(.85)}
+.frame .fc{position:absolute;inset:0;display:grid;place-items:center;align-content:center;gap:14px;text-align:center;padding:20px}
+.bigbtn{width:80px;height:80px;border:0;border-radius:50%;background:var(--live);color:var(--live-ink);display:grid;place-items:center;transition:transform .15s}
+.bigbtn:hover{transform:scale(1.06)}
+.bigbtn svg{width:32px;height:32px;margin-left:4px}
+.hint{font-size:14px;color:var(--soft);text-shadow:0 2px 10px rgba(0,0,0,.6)}
+.lbar{width:min(320px,80%);height:6px;border-radius:3px;background:rgba(255,255,255,.18);overflow:hidden}
+.lbar i{display:block;height:100%;width:0;background:var(--live);transition:width .2s linear}
+.info{padding:22px clamp(18px,3vw,30px) 30px;display:grid;gap:12px}
+.info h2{font-size:clamp(24px,3vw,32px);line-height:1.1}
+.info .meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:14px;color:var(--muted)}
+.info p{margin:0;color:var(--soft);max-width:64ch}
+.info h3{font-size:17px;margin:14px 0 2px}
+.built{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
+.bt{display:grid;gap:2px;text-align:left;background:var(--raise);border:0;border-radius:10px;padding:10px 12px;min-width:0}
+.bt b{font-weight:600;font-size:14.5px}
+.bt small{font-size:12.5px;color:var(--muted)}
+button.bt:hover{box-shadow:inset 0 0 0 1px var(--live)}
+
+.toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 24px);transform:translate(-50%,20px);opacity:0;z-index:95;background:var(--fg);color:var(--ink);padding:11px 18px;border-radius:10px;font-weight:600;font-size:14px;transition:opacity .25s,transform .25s;pointer-events:none;max-width:calc(100% - 32px);text-align:center}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+
+
+body.adm .top{display:none}
+.adm-wrap{display:grid;grid-template-columns:230px minmax(0,1fr);min-height:100vh}
+.adm-side{background:var(--panel);padding:20px 12px;position:sticky;top:0;height:100vh;box-sizing:border-box;display:flex;flex-direction:column;gap:2px;overflow-y:auto}
+.adm-logo{display:flex;align-items:center;gap:9px;font-family:var(--display);font-weight:700;font-size:17px;text-transform:uppercase;padding:4px 10px 18px}
+.adm-logo i{width:18px;height:18px;background:var(--live);clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%)}
+.adm-logo small{font-family:var(--body);font-weight:600;font-size:11px;letter-spacing:.08em;color:var(--ink);background:var(--fg);border-radius:5px;padding:1px 6px}
+.adm-side .cat em.qn{background:#FFC857;color:#2A1600;border-radius:999px;padding:0 7px;font-weight:600}
+.adm-main{padding:28px var(--gut) 56px;min-width:0;max-width:1180px}
+.adm-h{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin-bottom:20px;flex-wrap:wrap}
+.adm-h h1{font-size:26px}
+.adm-h p{margin:4px 0 0;color:var(--muted);font-size:14px}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.stat{background:var(--panel);border-radius:14px;padding:16px 18px;display:grid;gap:2px}
+.stat span{font-size:13px;color:var(--muted)}
+.stat b{font-family:var(--display);font-size:30px;font-variant-numeric:tabular-nums}
+.panels{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;margin-top:12px}
+.pnl{background:var(--panel);border-radius:14px;padding:18px;display:grid;gap:12px;align-content:start;min-width:0}
+.pnl h2{font-size:16px}
+.loglist{list-style:none;margin:0;padding:0;display:grid;gap:10px;font-size:14px}
+.loglist li{display:flex;justify-content:space-between;gap:12px}
+.loglist time{color:var(--muted);font-size:12.5px;white-space:nowrap}
+.tbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
+.tbar input,.tbar select{width:auto;min-width:0}
+.tbar input{flex:1;max-width:320px}
+.tblwrap{overflow-x:auto;background:var(--panel);border-radius:14px}
+.tbl{width:100%;border-collapse:collapse;font-size:14px;min-width:720px}
+.tbl th{text-align:left;font-weight:500;color:var(--muted);font-size:12.5px;padding:12px 14px;border-bottom:1px solid var(--line);white-space:nowrap}
+.tbl td{padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:0}
+.tbl td.num{font-variant-numeric:tabular-nums;text-align:right}
+.tbl .gname b{display:block;font-weight:600}
+.tbl .gname small{color:var(--muted);font-size:12.5px;display:block;max-width:320px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.thumb{width:76px;aspect-ratio:16/9;border-radius:6px;background-size:cover;background-position:center;background-color:var(--raise);display:block}
+.st{display:inline-block;font-size:12px;font-weight:600;padding:2px 10px;border-radius:999px;white-space:nowrap}
+.st.pub{background:rgba(111,240,207,.14);color:var(--live)}
+.st.hid{background:rgba(255,255,255,.08);color:var(--muted)}
+.st.pend{background:rgba(255,200,87,.15);color:#FFC857}
+.st.rej{background:rgba(255,143,168,.15);color:var(--bad)}
+.sm{padding:6px 12px;font-size:13.5px;border-radius:8px}
+.qlist{display:grid;gap:10px}
+.qrow{display:grid;grid-template-columns:110px minmax(0,1fr) auto auto;gap:16px;align-items:center;background:var(--panel);border-radius:14px;padding:12px 16px 12px 12px}
+.qrow .thumb{width:110px}
+.qrow b{font-weight:600;font-size:15.5px}
+.qrow small{display:block;color:var(--muted);font-size:13px}
+.ck{list-style:none;margin:0;padding:0;display:grid;gap:8px;font-size:14px}
+.ck li{display:flex;gap:10px;align-items:center}
+.ck i{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-size:12px;font-weight:700;flex:none}
+.ck .ok i{background:rgba(111,240,207,.18);color:var(--live)}
+.ck .warn i{background:rgba(255,200,87,.18);color:#FFC857}
+.ck .fail i{background:rgba(255,143,168,.18);color:var(--bad)}
+.scrim{position:fixed;inset:0;z-index:65;background:rgba(4,5,10,.6)}
+.drawer{position:fixed;top:0;right:0;bottom:0;z-index:70;width:min(560px,100%);background:var(--panel);overflow-y:auto;box-shadow:-24px 0 60px rgba(0,0,0,.45);animation:slidein .25s cubic-bezier(.2,.8,.2,1);display:flex;flex-direction:column}
+@keyframes slidein{from{transform:translateX(40px);opacity:0}}
+.dw-h{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:18px 22px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--panel);z-index:1}
+.dw-h h2{font-size:19px}
+.dw-b{padding:20px 22px;display:grid;gap:18px;flex:1}
+.dw-f{display:flex;gap:8px;justify-content:space-between;align-items:center;padding:14px 22px;border-top:1px solid var(--line);position:sticky;bottom:0;background:var(--panel);flex-wrap:wrap}
+.dw-b .field input[type=text],.dw-b .field input[type=url],.dw-b textarea,.dw-b select{background:var(--ink)}
+.togs{display:flex;flex-wrap:wrap;gap:6px}
+.tog{font-size:13px;border:1px solid var(--line2);border-radius:999px;padding:4px 12px;background:none}
+.tog[aria-pressed="true"]{background:var(--fg);color:var(--ink);border-color:var(--fg);font-weight:600}
+.edrow{display:grid;grid-template-columns:auto 44px minmax(0,1fr) 70px auto;gap:10px;align-items:center;background:var(--panel);border-radius:12px;padding:10px 12px}
+.edrow input[type=color]{width:40px;height:36px;border:0;padding:0;background:none;border-radius:8px;cursor:pointer}
+.edrow .cnt{font-size:13px;color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
+.updn{display:flex;flex-direction:column;gap:2px}
+.updn button{width:28px;height:18px;border:0;border-radius:5px;background:var(--raise);display:grid;place-items:center;color:var(--muted);padding:0}
+.updn button:hover{color:var(--fg)}
+.updn svg{width:12px;height:12px}
+.rowmsg{grid-column:1/-1;font-size:13px;color:var(--bad)}
+.slrow{display:grid;grid-template-columns:auto 96px minmax(0,1.3fr) minmax(0,1fr) minmax(0,1.3fr) 40px;gap:10px;align-items:center;background:var(--panel);border-radius:12px;padding:10px 12px}
+.slrow .thumb{width:96px}
+.savebar{display:flex;gap:10px;align-items:center;margin-top:16px;flex-wrap:wrap}
+.wsel{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.wsel>div{display:grid;gap:8px}
+.wsel .thumb{width:100%}
+.dirty{font-size:13px;color:#FFC857}
+@media (max-width:900px){.adm-wrap{grid-template-columns:minmax(0,1fr)}.adm-side{position:static;height:auto;flex-direction:row;overflow-x:auto;padding:12px;gap:4px}.adm-side .cat{width:auto;white-space:nowrap}.adm-logo{padding:4px 10px}.adm-side .grow{display:none}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.panels{grid-template-columns:minmax(0,1fr)}.qrow{grid-template-columns:80px minmax(0,1fr);}.qrow .thumb{width:80px}.slrow{grid-template-columns:auto minmax(0,1fr) 40px}.slrow .thumb{display:none}.slrow select,.slrow input{grid-column:2}.wsel{grid-template-columns:repeat(2,minmax(0,1fr))}.edrow{grid-template-columns:auto 44px minmax(0,1fr) auto}.edrow .cnt{display:none}}
+@media (max-width:1100px){.app{grid-template-columns:minmax(0,1fr)}.rail{display:none}#chips{display:flex}}
+@media (max-width:900px){.wall{grid-template-columns:repeat(2,minmax(0,1fr))}.hero{min-height:300px}.formgrid{grid-template-columns:minmax(0,1fr)}.preview{position:static;order:-1;max-width:280px}}
+@media (max-width:760px){.top .search{display:none}.msearch{display:flex}.logo span{display:none}.top{gap:10px}}
+@media (max-width:600px){.row{grid-auto-columns:72%}.wall .tile:nth-child(n+4){display:none}.two{grid-template-columns:minmax(0,1fr)}.toolrow{grid-template-columns:minmax(0,1fr) 40px}.toolrow select{grid-column:1;grid-row:2}.nav button{padding:7px 8px;font-size:14px}.top .btn span{display:none}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<header class="top">
+  <button class="logo" data-page="games" data-view="all" aria-label="Lucid Arcade หน้าแรก"><i aria-hidden="true"></i><span>Lucid Arcade</span></button>
+  <nav class="nav" aria-label="เมนูหลัก">
+    <button data-page="games" aria-current="true">เล่นเกม</button>
+    <button data-page="create">สร้างเกมด้วย AI</button>
+  </nav>
+  <label class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="q" type="search" placeholder="ค้นหาเกม" aria-label="ค้นหาเกม" autocomplete="off"></label>
+  <div class="spacer"></div>
+  <button class="btn primary" data-page="submit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>ส่งเกม</span></button>
+</header>
+
+<div id="page-games">
+  <div class="app">
+    <nav class="rail" id="rail" aria-label="หมวดเกม"></nav>
+    <main>
+      <label class="search msearch"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="q2" type="search" placeholder="ค้นหาเกม" aria-label="ค้นหาเกม" autocomplete="off"></label>
+      <section class="wall" id="wall" aria-label="เกมแนะนำ"></section>
+      <div class="chips" id="chips" role="group" aria-label="หมวดเกม"></div>
+      <div id="shelves"></div>
+      <footer style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap"><span>Mockup ตัวอย่าง · ชื่อเกมและข้อมูลทั้งหมดสมมติขึ้น</span><button class="more" data-page="admin">แอดมิน</button></footer>
+    </main>
+  </div>
+</div>
+
+<div id="page-submit" class="page" hidden>
+  <div class="ph"><h1>ส่งเกมของคุณ</h1><p>เกมที่ทำด้วย AI ส่งมาได้เลย ทีมงานจะตรวจข้อมูลกับลิงก์ จัดหมวดให้ แล้วเผยแพร่บน Lucid Arcade</p></div>
+  <div class="formgrid" id="formwrap">
+    <form id="sub" novalidate>
+      <fieldset class="fs"><legend>ข้อมูลเกม</legend>
+        <div class="field" data-f="url"><label for="f-url">ลิงก์เล่นเกม</label><input id="f-url" type="url" placeholder="https://yourname.itch.io/my-game" autocomplete="off"><span class="help">ลิงก์ที่เปิดแล้วเล่นได้ทันที เช่น itch.io, GitHub Pages หรือเว็บของคุณเอง</span><span class="err"></span></div>
+        <div class="two">
+          <div class="field" data-f="title"><label for="f-title">ชื่อเกม</label><input id="f-title" type="text" maxlength="60" placeholder="Neon Alibi"><span class="err"></span></div>
+          <div class="field" data-f="genre"><label for="f-genre">แนวเกม</label><select id="f-genre"><option value="">เลือกแนวเกม</option></select><span class="err"></span></div>
+        </div>
+        <div class="field" data-f="tag"><label for="f-tag">คำโปรย 1 บรรทัด</label><input id="f-tag" type="text" maxlength="80" placeholder="สอบปากคำผู้ต้องสงสัย AI คดีใหม่ทุกรอบ"><span class="help" id="tagCount">0 / 80</span><span class="err"></span></div>
+        <div class="field"><label for="f-desc">รายละเอียด <span class="opt">(ไม่บังคับ)</span></label><textarea id="f-desc" placeholder="เล่นยังไง มีอะไรน่าสนใจ เหมาะกับใคร"></textarea></div>
+      </fieldset>
+
+      <fieldset class="fs"><legend>ภาพและวิดีโอ</legend>
+        <div class="field"><span class="lbl">ภาพปก <span class="opt">(16:9)</span></span><div class="drop"><div class="thumbs" id="coverThumb"></div><label class="btn ghost" for="f-cover">เลือกภาพปก</label><input id="f-cover" type="file" accept="image/*"><span class="help">ถ้าไม่ใส่ จะใช้ภาพตามแนวเกมไปก่อน</span></div></div>
+        <div class="field"><span class="lbl">ภาพหน้าจอ <span class="opt">(สูงสุด 4 ภาพ)</span></span><div class="drop"><div class="thumbs" id="shotThumbs"></div><label class="btn ghost" for="f-shots">เพิ่มภาพหน้าจอ</label><input id="f-shots" type="file" accept="image/*" multiple></div></div>
+        <div class="field" data-f="video"><label for="f-video">ลิงก์วิดีโอตัวอย่าง <span class="opt">(ไม่บังคับ)</span></label><input id="f-video" type="url" placeholder="https://youtube.com/watch?v=…"><span class="err"></span></div>
+      </fieldset>
+
+      <fieldset class="fs"><legend>สร้างด้วยอะไร <small>ช่วยให้คนอื่นเรียนรู้จากเกมของคุณ</small></legend>
+        <div id="toolrows" style="display:grid;gap:8px"></div>
+        <datalist id="toolList"></datalist>
+        <button type="button" class="btn ghost" data-addtool style="justify-self:start">+ เพิ่มเครื่องมือ</button>
+      </fieldset>
+
+      <fieldset class="fs"><legend>ราคาและผู้สร้าง</legend>
+        <div class="field"><span class="lbl">ราคา</span><div class="radios"><label><input type="radio" name="price" value="free" checked>ฟรี</label><label><input type="radio" name="price" value="trial">ทดลองฟรี</label><label><input type="radio" name="price" value="paid">เสียเงิน</label></div></div>
+        <div class="field" data-f="by"><label for="f-by">ชื่อผู้สร้างหรือสตูดิโอ</label><input id="f-by" type="text" maxlength="40" placeholder="@yourname"><span class="err"></span></div>
+        <div class="field" data-f="agree"><label class="check"><input id="f-agree" type="checkbox"><span>ฉันเป็นเจ้าของเกมนี้ หรือได้รับอนุญาตให้เผยแพร่ และเครื่องมือ AI ที่ใช้อนุญาตให้นำผลงานไปเผยแพร่ได้</span></label><span class="err"></span></div>
+      </fieldset>
+
+      <div class="submitbar"><button type="submit" class="btn primary" style="padding:12px 24px;font-size:15.5px">ส่งเกม</button><span class="help">ตรวจและเผยแพร่ภายใน 1–2 วัน</span></div>
+    </form>
+    <aside class="preview" aria-label="ตัวอย่างการ์ด"><span class="lbl">ตัวอย่างการ์ดบนหน้าเว็บ</span><div id="pv"></div><p class="note">อัปเดตตามที่คุณกรอก</p></aside>
+  </div>
+  <footer>Mockup ตัวอย่าง · ฟอร์มนี้ยังไม่ได้ส่งข้อมูลไปที่ไหน</footer>
+</div>
+
+<div id="page-create" class="page" hidden>
+  <div class="ph"><h1>สร้างเกมด้วย AI</h1><p>ไกด์ตั้งแต่ยังไม่มีไอเดียจนเกมพร้อมให้คนเล่น พร้อมรวมเครื่องมือที่ใช้ในแต่ละขั้น</p></div>
+  <div class="guide" id="guide"></div>
+  <section class="tdir" id="tdir" aria-labelledby="tdirh">
+    <div class="sh-head" style="margin:0"><h2 id="tdirh" style="font-size:24px">รวมเครื่องมือ</h2><span class="help" id="tcount"></span></div>
+    <div class="chips" id="tchips" role="group" aria-label="ประเภทเครื่องมือ"></div>
+    <div class="tgrid" id="tgrid"></div>
+  </section>
+  <footer>Mockup ตัวอย่าง · รายชื่อเครื่องมือเป็นตัวอย่าง ควรเช็กราคาและเงื่อนไขการใช้งานจากเว็บของแต่ละเครื่องมือ</footer>
+</div>
+
+<div id="page-admin" hidden></div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+let GEN={rpg:['RPG','#B7A4FF'],mystery:['สืบสวน','#FF8FA8'],horror:['สยองขวัญ','#FF7A5C'],adventure:['ผจญภัย','#6FF0CF'],sim:['จำลอง','#FFC857'],strategy:['วางแผน','#8FC7FF'],puzzle:['ปริศนา','#A8E66F'],party:['ปาร์ตี้','#FFA45C']};
+const GENART={rpg:['#1a1240','#5b3a8c','#ffc98a','peaks'],mystery:['#0d0a24','#3a0f4a','#ff5fa2','city'],horror:['#07120f','#2b0f12','#e0503a','waves'],adventure:['#060a1e','#1b2b5e','#8fc7ff','orbit'],sim:['#3a1730','#d8738f','#ffe3c2','blobs'],strategy:['#1a1410','#4a3826','#f1e2c0','peaks'],puzzle:['#08111f','#123050','#7be8cf','grid'],party:['#26100a','#7a2e12','#ffd27a','shards']};
+const PRICE={free:'ฟรี',trial:'ทดลองฟรี',paid:'เสียเงิน'};
+const TCAT={code:'เขียนโค้ด',engine:'เอนจินเกม',art:'ภาพและอาร์ต',m3d:'โมเดล 3D',audio:'เสียงและเพลง',runtime:'AI ในเกม',publish:'เผยแพร่'};
+const TOOLS=[
+ {id:'claudecode',n:'Claude Code',c:'code',d:'AI coding agent สั่งงานเป็นภาษาคน ให้เขียน แก้ และรันโค้ดเกมทั้งโปรเจกต์',u:'https://www.anthropic.com/claude-code',use:'เขียนโค้ดเกม'},
+ {id:'cursor',n:'Cursor',c:'code',d:'โปรแกรมเขียนโค้ดที่มี AI ช่วยเขียนและแก้ไขในตัว',u:'https://cursor.com',use:'เขียนโค้ดเกม'},
+ {id:'copilot',n:'GitHub Copilot',c:'code',d:'AI ช่วยเติมโค้ดและตอบคำถามใน VS Code',u:'https://github.com/features/copilot',use:'เขียนโค้ดเกม'},
+ {id:'rosebud',n:'Rosebud AI',c:'code',d:'พิมพ์บอกแล้วได้เกมเว็บ เหมาะกับคนที่ยังไม่เขียนโค้ด',u:'https://rosebud.ai',use:'สร้างเกมจาก prompt'},
+ {id:'phaser',n:'Phaser',c:'engine',d:'เฟรมเวิร์กเกม 2D บนเว็บ เล่นผ่านลิงก์ได้ทันที',u:'https://phaser.io',os:1,use:'เอนจินเกม 2D'},
+ {id:'threejs',n:'Three.js',c:'engine',d:'ไลบรารี 3D บนเว็บ ใช้ทำเกม 3D ที่เปิดในเบราว์เซอร์',u:'https://threejs.org',os:1,use:'กราฟิก 3D บนเว็บ'},
+ {id:'godot',n:'Godot',c:'engine',d:'เอนจินเกม 2D/3D ฟรี export เป็นเว็บหรือ PC ได้',u:'https://godotengine.org',os:1,use:'เอนจินเกม'},
+ {id:'unity',n:'Unity',c:'engine',d:'เอนจินเกมยอดนิยม รองรับเกม 3D ขนาดใหญ่',u:'https://unity.com',use:'เอนจินเกม'},
+ {id:'midjourney',n:'Midjourney',c:'art',d:'สร้างภาพอาร์ตคุณภาพสูง เหมาะกับคอนเซปต์และภาพปก',u:'https://www.midjourney.com',use:'อาร์ตและภาพปก'},
+ {id:'firefly',n:'Adobe Firefly',c:'art',d:'สร้างและแก้ภาพด้วย AI ของ Adobe',u:'https://firefly.adobe.com',use:'ภาพประกอบ'},
+ {id:'scenario',n:'Scenario',c:'art',d:'สร้าง asset เกมให้สไตล์เดียวกันทั้งเกม',u:'https://www.scenario.com',use:'asset และสไปรต์'},
+ {id:'meshy',n:'Meshy',c:'m3d',d:'สร้างโมเดล 3D จากข้อความหรือภาพ',u:'https://www.meshy.ai',use:'โมเดล 3D'},
+ {id:'tripo',n:'Tripo',c:'m3d',d:'แปลงภาพเป็นโมเดล 3D พร้อมใช้ในเกม',u:'https://www.tripo3d.ai',use:'โมเดล 3D'},
+ {id:'elevenlabs',n:'ElevenLabs',c:'audio',d:'เสียงพากย์ตัวละครและเสียงเอฟเฟกต์',u:'https://elevenlabs.io',use:'เสียงพากย์และเอฟเฟกต์'},
+ {id:'suno',n:'Suno',c:'audio',d:'แต่งเพลงประกอบจากคำบรรยาย',u:'https://suno.com',use:'เพลงประกอบ'},
+ {id:'claudeapi',n:'Claude API',c:'runtime',d:'ใช้โมเดล Claude ให้ NPC คุยได้ หรือแต่งเนื้อเรื่องสดในเกม',u:'https://www.anthropic.com/api',use:'AI ในเกม: บทพูดและเนื้อเรื่อง'},
+ {id:'openai',n:'OpenAI API',c:'runtime',d:'เรียกโมเดลภาษาและภาพจากในเกม',u:'https://platform.openai.com',use:'AI ในเกม'},
+ {id:'gemini',n:'Gemini API',c:'runtime',d:'โมเดลของ Google สำหรับเรียกใช้จากเกม',u:'https://ai.google.dev',use:'AI ในเกม'},
+ {id:'inworld',n:'Inworld',c:'runtime',d:'แพลตฟอร์มสร้างตัวละคร AI สำหรับเกมโดยเฉพาะ',u:'https://inworld.ai',use:'ตัวละคร AI'},
+ {id:'ollama',n:'Ollama',c:'runtime',d:'รันโมเดลภาษาบนเครื่องตัวเอง ไม่ต้องจ่ายค่า API',u:'https://ollama.com',os:1,use:'AI ในเกม (รันในเครื่อง)'},
+ {id:'itch',n:'itch.io',c:'publish',d:'อัปโหลดเกมให้คนเล่นผ่านเว็บ ขายหรือแจกฟรีได้',u:'https://itch.io',use:'โฮสต์เกม'},
+ {id:'ghpages',n:'GitHub Pages',c:'publish',d:'โฮสต์เกมเว็บฟรีจาก repository บน GitHub',u:'https://pages.github.com',use:'โฮสต์เกม'},
+ {id:'vercel',n:'Vercel',c:'publish',d:'อัปเว็บเกมขึ้นออนไลน์ได้ในไม่กี่คลิก',u:'https://vercel.com',use:'โฮสต์เกม'},
+ {id:'netlify',n:'Netlify',c:'publish',d:'โฮสต์เว็บแบบลากไฟล์วางก็ออนไลน์',u:'https://www.netlify.com',use:'โฮสต์เกม'}
+];
+const toolById=Object.fromEntries(TOOLS.map(t=>[t.id,t]));
+
+const G=[
+{id:'veyra',t:'Echoes of Veyra',g:'rpg',by:'Lumen Forge',p:2400,art:['#1a1240','#5b3a8c','#ffc98a','peaks'],tag:'เมืองที่ NPC ทุกคนคุยกับคุณได้และจำคุณได้',tools:['claudeapi','godot','midjourney','elevenlabs']},
+{id:'bkk',t:'Bangkok 2099',g:'adventure',by:'Chao Phraya Labs',p:860,art:['#160b26','#6a1f3d','#ffb14a','grid'],tag:'ไซเบอร์พังก์ริมเจ้าพระยา ต่อราคากับพ่อค้าหุ่นยนต์ได้จริง',tools:['claudeapi','threejs','scenario','suno']},
+{id:'alibi',t:'Neon Alibi',g:'mystery',by:'Night Shift Games',p:1800,art:['#0d0a24','#3a0f4a','#ff5fa2','city'],tag:'สอบปากคำผู้ต้องสงสัย AI คดีใหม่ทุกรอบ',tools:['claudeapi','phaser','midjourney']},
+{id:'court',t:'Court of Lies',g:'party',by:'Gavel & Co.',p:640,art:['#0e1630','#2a3460','#e8c46a','shards'],tag:'เถียงให้ชนะอัยการ AI เล่นกับเพื่อนได้ 4 คน',tools:['openai','phaser','elevenlabs']},
+{id:'siam',t:'Siam Spirits',g:'horror',by:'Phi Studio',p:1100,art:['#07120f','#2b0f12','#e0503a','waves'],tag:'ผีไทยที่ตอบสนองต่อทุกคำที่คุณพิมพ์',tools:['claudeapi','godot','elevenlabs','meshy']},
+{id:'library',t:'The Infinite Library',g:'adventure',by:'Inkwell Collective',p:2100,pr:'trial',art:['#1d140c','#3d2a1a','#7fd6c4','orbit'],tag:'หยิบหนังสือเล่มไหนก็เดินเข้าไปในเรื่องที่ AI แต่งสด',tools:['claudeapi','threejs','firefly']},
+{id:'dungeon',t:'Dungeon of Whispers',g:'rpg',by:'Crypt Lantern',p:1300,art:['#0b1210','#1f3a2f','#9be36a','shards'],tag:'ดันเจี้ยนที่เปลี่ยนใหม่ทุกครั้งที่คุณตาย',tools:['gemini','godot','scenario']},
+{id:'mochi',t:'Mochi Café Tycoon',g:'sim',by:'Soft Serve Studio',p:1500,art:['#3a1730','#d8738f','#ffe3c2','blobs'],tag:'ร้านขนมที่ลูกค้าทุกคนมีนิสัยและเรื่องเล่าของตัวเอง',tools:['claudeapi','phaser','midjourney','suno']},
+{id:'starfarer',t:"Starfarer's Tale",g:'adventure',by:'Parsec Works',p:1200,pr:'paid',art:['#060a1e','#1b2b5e','#8fc7ff','orbit'],tag:'สำรวจกาแล็กซีที่ทุกดาวมีอารยธรรมของตัวเอง',tools:['openai','unity','meshy']},
+{id:'ghost',t:'Ghost in the Prompt',g:'puzzle',by:'Riddle Room',p:3000,art:['#08111f','#123050','#7be8cf','grid'],tag:'หลอกถามความลับจาก AI ที่ถูกสั่งห้ามบอก',tools:['claudeapi','phaser']},
+{id:'wordsmith',t:'Wordsmith Duel',g:'party',by:'Quip Club',p:720,art:['#26100a','#7a2e12','#ffd27a','shards'],tag:'ดวลคำคม 1v1 กรรมการเป็น AI',tools:['gemini','phaser']},
+{id:'tinygods',t:'Tiny Gods',g:'sim',by:'Pocket Pantheon',p:980,pr:'trial',art:['#0f1a2e','#3b6c8f','#fff0b3','peaks'],tag:'เป็นเทพของชาวเมืองจิ๋วที่คิดเองได้',tools:['claudeapi','unity','scenario']},
+{id:'heist',t:'Heist.exe',g:'strategy',by:'Blackbox Interactive',p:540,art:['#0a0a12','#232347','#5ee0ff','city'],tag:'วางแผนปล้นกับทีมโจร AI สี่คน',tools:['inworld','unity','elevenlabs']},
+{id:'paper',t:'Paper Kingdoms',g:'strategy',by:'Origami Games',p:1000,art:['#1a1410','#4a3826','#f1e2c0','peaks'],tag:'เจรจาการทูตกับกษัตริย์ AI ที่จำทุกคำสัญญา',tools:['claudeapi','phaser','firefly']},
+{id:'dream',t:'Dream Diary',g:'adventure',by:'Somnia',p:830,art:['#120c2a','#4b3b8f','#f3c6ff','blobs'],tag:'เล่าความฝันเมื่อคืน แล้วเดินเข้าไปในนั้น',tools:['claudeapi','threejs','midjourney']},
+{id:'lighthouse',t:'The Last Lighthouse Keeper',g:'adventure',by:'Tidewater',p:690,art:['#08121c','#1e3a52','#ffe9a8','waves'],tag:'ฟังเรื่องเล่าของกะลาสีในคืนพายุ',tools:['openai','godot','suno']},
+{id:'monsoon',t:'Monsoon Market',g:'strategy',by:'Chao Phraya Labs',p:410,art:['#0a1820','#1f4f5e','#f0c35e','waves'],tag:'ค้าขายในตลาดที่ราคาขึ้นลงตามข่าวลือ',tools:['gemini','phaser']},
+{id:'mecha',t:'Mecha Tutor',g:'puzzle',by:'Bolt Academy',p:350,art:['#0d1418','#24414d','#6fe3ff','grid'],tag:'ปริศนาคณิตกับหุ่นยนต์ครูที่ปรับโจทย์ตามคุณ',tools:['ollama','godot']},
+{id:'signal',t:'Signal Lost',g:'horror',by:'@static.fm',p:210,art:['#14140c','#3c3a1c','#e9d36b','waves'],tag:'สถานีวิทยุร้างกลางทะเลทราย',tools:['claudecode','phaser','elevenlabs','suno']},
+{id:'orbitg',t:'Orbit Gardener',g:'sim',by:'@mintleaf',p:150,art:['#0b1a12','#2f6b48','#c9f59a','orbit'],tag:'ปลูกสวนบนดาวขนาดเท่าลูกบอล',tools:['cursor','threejs','meshy']},
+{id:'pets',t:'Pixel Pets Infinite',g:'sim',by:'@nong.pixel',p:420,art:['#2a1440','#7d4bc2','#ffd1f0','blobs'],tag:'สัตว์เลี้ยงพิกเซลที่ไม่ซ้ำใคร',tools:['claudecode','phaser','scenario']},
+{id:'chef',t:'Rogue Chef',g:'rpg',by:'@spatula_dev',p:260,art:['#2a0f0a','#8a3a14','#ffb36b','peaks'],tag:'ทำอาหารสู้มอนสเตอร์',tools:['copilot','phaser','midjourney']},
+{id:'cats',t:'Cipher Cats',g:'puzzle',by:'@catnip.games',p:310,art:['#101018','#2d2350','#ffd166','city'],tag:'ไขรหัสลับกับแก๊งแมวสายลับ',tools:['claudecode','phaser']},
+{id:'lantern',t:'Lantern Night',g:'party',by:'@loykrathong',p:190,art:['#0c0a1c','#2a1a40','#ffb347','blobs'],tag:'ปล่อยโคมพร้อมคำอธิษฐานกับเพื่อน',tools:['cursor','threejs','suno']}
+];
+const byId=Object.fromEntries(G.map(g=>[g.id,g]));
+const WALL=['alibi','bkk','library','mochi'];
+const RS={
+ new:['มาใหม่','#6FF0CF','<path d="m12 3 1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 15v4M17 17h4"/>'],
+ chart:['ติดชาร์ต','#FFC857','<path d="M4 20h16M7 16v-5M12 16V7M17 16v-8"/>'],
+ hot:['ผู้เล่นสูงสุด','#FF8FA8','<path d="M12 3c1 3.5 5 5.5 5 10a5 5 0 0 1-10 0c0-2 1-3.5 2-4.5 0 2 1 3 2 3 0-3-1-5 1-8.5z"/>']};
+const SLIDES=[['veyra','hot','ผู้เล่นสูงสุดวันนี้'],['orbitg','new','มาใหม่วันนี้'],['ghost','chart','อันดับ 1 ชาร์ตสัปดาห์นี้'],['signal','new','มาใหม่วันนี้'],['siam','chart','ติดชาร์ต อันดับ 3'],['starfarer','hot','ผู้เล่นพุ่ง +40% สัปดาห์นี้']];
+const NEW=[['orbitg',0],['signal',0],['lantern',1],['cats',2],['pets',3],['chef',4],['mecha',5],['monsoon',6],['lighthouse',8],['dream',9]];
+const HOT=['ghost','veyra','library','alibi','mochi','dungeon','starfarer','siam','paper','tinygods'];
+
+const STEPS=[
+ {t:'คิดไอเดีย',d:'เริ่มจากคำถามว่า AI ทำให้เกมนี้เล่นแล้วต่างจากเกมปกติยังไง',pts:['ให้ AI เป็นแกนของการเล่น เช่น NPC คุยได้ หรือเนื้อเรื่องเปลี่ยนตามผู้เล่น','เริ่มจากเกมเล็ก เล่นจบใน 5–10 นาที','สรุปไอเดียให้จบใน 1 ประโยค'],idea:1},
+ {t:'วางแผนให้เล็กพอทำเสร็จ',d:'เขียนแผนหน้าเดียวก่อนลงมือ',pts:['core loop: ผู้เล่นทำอะไรซ้ำ ๆ แล้วได้อะไร','เลือกแพลตฟอร์ม เกมเว็บเริ่มง่ายที่สุดและแชร์ลิงก์ได้ทันที','ลิสต์ฉาก ตัวละคร ภาพ และเสียงที่ต้องใช้']},
+ {t:'เขียนโค้ด',d:'ใช้ AI ช่วยเขียน แต่สั่งทีละฟีเจอร์และเล่นทดสอบทุกครั้ง',pts:['ยังไม่เขียนโค้ด ลองเครื่องมือที่สร้างเกมจาก prompt','เขียนโค้ดเป็น ใช้ AI coding agent กับเอนจินที่ถนัด','เกมเว็บ 2D ใช้ Phaser ถ้า 3D ใช้ Three.js'],tools:['rosebud','claudecode','cursor','phaser','threejs','godot']},
+ {t:'สร้างภาพและเสียง',d:'คุมสไตล์ให้เหมือนกันทั้งเกม',pts:['ทำภาพตัวละครและฉากจากสไตล์อ้างอิงเดียวกัน','เพิ่มเสียงพากย์ เสียงเอฟเฟกต์ และเพลงประจำฉาก','เช็กว่าเครื่องมืออนุญาตให้ใช้ผลงานในเชิงพาณิชย์'],tools:['midjourney','firefly','scenario','meshy','elevenlabs','suno']},
+ {t:'ใส่ AI ในเกม',d:'ข้ามขั้นนี้ได้ ถ้าใช้ AI แค่ตอนสร้าง',pts:['เรียกโมเดลภาษาผ่าน API ให้ NPC คุยหรือแต่งเนื้อเรื่อง','เขียนกติกาให้ AI อยู่ในบทบาทและไม่หลุดเรื่อง','คำนวณค่า API ต่อการเล่นหนึ่งรอบ หรือใช้โมเดลที่รันในเครื่อง'],tools:['claudeapi','openai','gemini','inworld','ollama']},
+ {t:'ทดสอบและเผยแพร่',d:'ให้คนอื่นเล่นก่อนปล่อยจริง',pts:['ให้เพื่อน 3–5 คนลองเล่น แล้วแก้จุดที่งง','อัปโหลดขึ้นโฮสต์ให้เล่นผ่านลิงก์ได้','ส่งเกมมาที่ Lucid Arcade'],tools:['itch','ghpages','vercel','netlify'],cta:1}
+];
+const IDEA={g:['เกมสืบสวน','เกมสยองขวัญ','เกม RPG','เกมเปิดร้าน','เกมปริศนา','เกมปาร์ตี้','เกมวางแผน','เกมผจญภัย'],
+ m:['ที่ผู้ต้องสงสัยโกหกได้','ที่ NPC จำทุกอย่างที่คุณพูด','ที่ด่านเปลี่ยนตามคำบรรยายของผู้เล่น','ที่ต้องโน้มน้าว AI ให้ทำตาม','ที่ AI เป็นกรรมการตัดสิน','ที่เนื้อเรื่องแต่งใหม่ทุกรอบ','ที่ AI ต้องเดาว่าคุณคิดอะไร','ที่ทุกตัวละครมีความลับ'],
+ s:['ในตลาดน้ำปี 2099','ในโรงเรียนร้างตอนเที่ยงคืน','บนสถานีอวกาศที่ออกซิเจนใกล้หมด','ในร้านกาแฟแมว','ในวังสมัยอยุธยา','ใต้ทะเลลึก','ในเมืองที่ทุกคนพูดเป็นกลอน','ในห้องสอบที่ไม่มีวันจบ']};
+
+const PLAY='<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z"/></svg>';
+const X='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>';
+const CHECK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>';
+const EXT='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>';
+
+function hash(s){let h=2166136261;for(const ch of s){h^=ch.charCodeAt(0);h=Math.imul(h,16777619)}return h>>>0}
+function rng(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function rgb(h){const n=parseInt(h.slice(1),16);return[n>>16&255,n>>8&255,n&255]}
+function mix(a,b,t,al=1){const x=rgb(a),y=rgb(b);return`rgba(${x.map((v,i)=>Math.round(v+(y[i]-v)*t)).join(',')},${al})`}
+const short=k=>k>=1000?(k/1000).toFixed(1).replace(/\.0$/,'')+'M':k+'K';
+
+const cache={};
+function art(g,kind){
+ if(g.cover)return g.cover;
+ const key=g.id+kind+g.art.join();if(cache[key])return cache[key];
+ const [w,h]=kind==='h'?[1280,720]:[480,270];
+ const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d');
+ const [a,b,k,mo]=g.art,r=rng(hash(g.id)),s=Math.min(w,h);
+ let gr=x.createLinearGradient(0,0,w,h);gr.addColorStop(0,a);gr.addColorStop(1,b);x.fillStyle=gr;x.fillRect(0,0,w,h);
+ const stars=n=>{for(let i=0;i<n;i++){x.fillStyle=`rgba(255,255,255,${(r()*.7+.1).toFixed(2)})`;const z=r()*s*.006+.6;x.fillRect(r()*w,r()*h*.65,z,z)}};
+ const sun=(cx,cy,R)=>{const rg=x.createRadialGradient(cx,cy,0,cx,cy,R*2.6);rg.addColorStop(0,mix(k,k,0,.55));rg.addColorStop(1,mix(k,k,0,0));x.fillStyle=rg;x.fillRect(0,0,w,h);x.fillStyle=k;x.beginPath();x.arc(cx,cy,R,0,Math.PI*2);x.fill()};
+ if(mo==='peaks'){stars(70);sun(w*(.5+r()*.3),h*.36,s*.12);
+  for(let i=0;i<4;i++){const base=h*(.5+i*.13);x.fillStyle=mix(b,'#05060c',.3+i*.2);x.beginPath();x.moveTo(0,h);x.lineTo(0,base);let px=0;while(px<w){px+=w*(.05+r()*.11);x.lineTo(px,base-r()*h*.2*(1-i*.15))}x.lineTo(w,h);x.closePath();x.fill()}}
+ else if(mo==='grid'){stars(90);const hz=h*.6;sun(w*.5,hz-s*.02,s*.2);x.fillStyle=mix(a,'#000000',.35);x.fillRect(0,hz,w,h-hz);
+  x.fillStyle=mix(a,'#000000',.2);for(let i=0;i<5;i++){x.fillRect(0,hz-s*(.03+i*.035),w,s*(.006+i*.003))}
+  x.strokeStyle=mix(k,k,0,.55);x.lineWidth=Math.max(1,s*.004);x.beginPath();
+  for(let i=1;i<=14;i++){const y=hz+(h-hz)*Math.pow(i/14,2);x.moveTo(0,y);x.lineTo(w,y)}
+  for(let i=-22;i<=22;i++){x.moveTo(w/2+i*w*.015,hz);x.lineTo(w/2+i*w*.16,h)}x.stroke()}
+ else if(mo==='city'){const mg=x.createRadialGradient(w*.75,h*.2,0,w*.75,h*.2,s*.7);mg.addColorStop(0,mix(k,k,0,.45));mg.addColorStop(1,mix(k,k,0,0));x.fillStyle=mg;x.fillRect(0,0,w,h);
+  for(let L=0;L<2;L++){let px=-10;while(px<w){const bw=w*(.04+r()*.07),bh=h*(.25+r()*.5)*(L?1:.75);x.fillStyle=mix(a,'#000000',L?.55:.25);x.fillRect(px,h-bh,bw,bh);
+   if(L){x.fillStyle=mix(k,k,0,.85);for(let yy=h-bh+s*.03;yy<h;yy+=s*.035)for(let xx=px+s*.015;xx<px+bw-s*.015;xx+=s*.03)if(r()>.72)x.fillRect(xx,yy,s*.012,s*.016)}px+=bw+w*.004}}}
+ else if(mo==='orbit'){stars(160);const cx=w*(.3+r()*.4),cy=h*(.42+r()*.2),R=s*.27;
+  const pg=x.createRadialGradient(cx-R*.4,cy-R*.4,R*.1,cx,cy,R);pg.addColorStop(0,k);pg.addColorStop(.6,mix(k,b,.6));pg.addColorStop(1,mix(b,'#000000',.5));x.fillStyle=pg;x.beginPath();x.arc(cx,cy,R,0,Math.PI*2);x.fill();
+  x.save();x.translate(cx,cy);x.rotate(-.32);x.strokeStyle=mix(k,k,0,.6);x.lineWidth=s*.012;x.beginPath();x.ellipse(0,0,R*1.75,R*.42,0,0,Math.PI*2);x.stroke();x.restore()}
+ else if(mo==='waves'){const ph=r()*6;for(let i=0;i<30;i++){x.strokeStyle=mix(k,k,0,(.06+.55*(i/30)).toFixed(2));x.lineWidth=Math.max(1,s*.004);x.beginPath();const y0=h*(.28+i*.022),amp=s*(.02+r()*.05),f=(2+r()*3)/w*Math.PI;for(let px=0;px<=w;px+=6){const y=y0+Math.sin(px*f+ph+i*.35)*amp;px?x.lineTo(px,y):x.moveTo(px,y)}x.stroke()}}
+ else if(mo==='shards'){sun(w*(.6+r()*.2),h*(.3+r()*.15),s*.1);for(let i=0;i<30;i++){x.fillStyle=mix(b,k,r(),(.15+r()*.45).toFixed(2));const cx=r()*w,cy=r()*h,R=s*(.08+r()*.3);x.beginPath();for(let j=0;j<3;j++){const an=r()*Math.PI*2;x.lineTo(cx+Math.cos(an)*R,cy+Math.sin(an)*R)}x.closePath();x.fill()}}
+ else if(mo==='blobs'){x.filter=`blur(${Math.round(s*.07)}px)`;for(let i=0;i<8;i++){x.fillStyle=[k,b,mix(k,'#ffffff',.45)][i%3];x.globalAlpha=.55+r()*.35;x.beginPath();x.arc(r()*w,r()*h*.9,s*(.12+r()*.22),0,Math.PI*2);x.fill()}x.filter='none';x.globalAlpha=1}
+ else{x.fillStyle='rgba(255,255,255,.06)';for(let i=0;i<6;i++)x.fillRect(r()*w,r()*h,s*.2,s*.2)}
+ return cache[key]=c.toDataURL('image/jpeg',.86);
+}
+
+const state={page:'games',view:'all',q:'',tcat:'all',cover:null,shots:[],sub:null,toolN:0};
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const gtag=g=>g.g?`<span class="gtag" style="--gc:${GEN[g.g][1]}">${GEN[g.g][0]}</span>`:'';
+const ago=d=>d===0?'เพิ่มวันนี้':`เพิ่ม ${d} วันก่อน`;
+const HEART='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg>';
+const fmtN=n=>n>=1e6?(n/1e6).toFixed(1).replace(/\.0$/,'')+'M':n>=1e3?(n/1e3).toFixed(1).replace(/\.0$/,'')+'K':String(n);
+const LIKED=new Set();try{(JSON.parse(localStorage.getItem('lucid-liked')||'[]')||[]).forEach(id=>LIKED.add(id))}catch(e){}
+const lkHTML=g=>`${HEART}${fmtN(g.l||0)}`;
+const likeBtn=g=>`<button class="likebtn" data-like="${g.id}" aria-pressed="${LIKED.has(g.id)}" aria-label="${LIKED.has(g.id)?'เลิกถูกใจ':'ถูกใจ'} ${esc(g.t)}">${HEART}${LIKED.has(g.id)?'ถูกใจแล้ว':'ถูกใจ'} · ${fmtN(g.l||0)}</button>`;
+let likeTimes=[];
+function toggleLike(id){
+ const g=byId[id];if(!g)return;const now=Date.now();likeTimes=likeTimes.filter(t=>now-t<10000);
+ if(likeTimes.length>=6)return toast('กดถี่เกินไป ลองใหม่อีกสักครู่');likeTimes.push(now);
+ const on=!LIKED.has(id);on?LIKED.add(id):LIKED.delete(id);g.l=Math.max(0,(g.l||0)+(on?1:-1));
+ try{localStorage.setItem('lucid-liked',JSON.stringify([...LIKED]))}catch(e){}save();
+ document.querySelectorAll(`[data-like="${id}"]`).forEach(b=>b.outerHTML=likeBtn(g));
+ document.querySelectorAll(`[data-lk="${id}"]`).forEach(el=>{el.innerHTML=lkHTML(g);el.classList.toggle('on',on)});
+}
+const card=(g,sub)=>`<button class="card" data-open="${g.id}"><span class="art" style="background-image:url(${art(g,'l')})">${gtag(g)}</span><span class="crow"><span class="cname">${esc(g.t||'ชื่อเกม')}</span>${g.preview?'':`<span class="lk${LIKED.has(g.id)?' on':''}" data-lk="${g.id}">${lkHTML(g)}</span>`}</span><span class="cby">${esc(g.by||'ผู้สร้าง')} · ${typeof sub==='string'?sub:(g.p?`เล่นแล้ว ${short(g.p)}`:'ใหม่')}</span></button>`;
+const PUB=()=>G.filter(g=>!g.hidden);
+const live=id=>byId[id]&&!byId[id].hidden;
+const newCards=()=>NEW.filter(([id])=>live(id)).map(([id,d])=>card(byId[id],ago(d))).join('');
+const head=(title,color,more)=>`<div class="sh-head"><h2>${color?`<span class="sw" style="--gc:${color}"></span>`:''}${title}</h2>${more?`<button class="more" data-view="${more}">ดูทั้งหมด</button>`:''}</div>`;
+
+/* ---------- pages ---------- */
+function setPage(p,opts={}){
+ state.page=p;['games','submit','create','admin'].forEach(k=>$('#page-'+k).hidden=k!==p);document.body.classList.toggle('adm',p==='admin');if(p==='admin')renderAdmin();
+ document.querySelectorAll('.nav button').forEach(b=>b.setAttribute('aria-current',String(b.dataset.page===p)));
+ try{history.replaceState(null,'',p==='games'?location.pathname+location.search:'#'+p)}catch(e){}
+ if(!opts.keepScroll)scrollTo(0,0);
+}
+
+/* ---------- games ---------- */
+function renderNav(){
+ const items=[['all','หน้าแรก','',''],['new','ใหม่ล่าสุด','',''],['hot','ยอดนิยม','',''],null,...Object.entries(GEN).map(([k,[l,c]])=>[k,l,c,PUB().filter(g=>g.g===k).length])];
+ const on=k=>state.view===k&&!state.q;
+ $('#rail').innerHTML=items.map(it=>it?`<button class="cat" data-view="${it[0]}" aria-current="${on(it[0])}">${it[2]?`<span class="sw" style="--gc:${it[2]}"></span>`:''}${it[1]}<em>${it[3]}</em></button>`:'<div class="sep"></div>').join('');
+ $('#chips').innerHTML=items.filter(Boolean).map(it=>`<button class="chip" data-view="${it[0]}" aria-pressed="${on(it[0])}">${it[2]?`<span class="sw" style="--gc:${it[2]}"></span>`:''}${it[1]}</button>`).join('');
+}
+let slide=0,LS=[];
+function renderWall(){
+ LS=SLIDES.filter(s=>live(s[0]));if(slide>=LS.length)slide=0;
+ const sl=LS.map(([id,r,label],i)=>{const g=byId[id],[,c,p]=RS[r];return`<button class="slide${i===slide?' on':''}" data-open="${id}" style="background-image:url(${art(g,'h')})" aria-label="${esc(label)}: ${esc(g.t)}"${i===slide?'':' tabindex="-1"'}><span class="reason" style="--rc:${c}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>${esc(label)}</span><span class="tt">${gtag(g)}<b>${esc(g.t)}</b><p>${esc(g.tag)}</p></span></button>`}).join('');
+ $('#wall').innerHTML=`<div class="hero" id="hero" role="region" aria-roledescription="สไลด์โชว์" aria-label="เกมเด่น">${sl}<div class="dots" id="dots"></div></div>`+WALL.filter(live).map(id=>{const g=byId[id];return`<button class="tile" data-open="${id}" style="background-image:url(${art(g,'l')})"><span class="tt">${gtag(g)}<b>${esc(g.t)}</b></span></button>`}).join('');
+ renderDots();
+ const h=$('#hero');
+ h.addEventListener('mouseenter',()=>h.classList.add('paused'));h.addEventListener('mouseleave',()=>h.classList.remove('paused'));
+ h.addEventListener('focusin',()=>h.classList.add('paused'));h.addEventListener('focusout',()=>h.classList.remove('paused'));
+ h.addEventListener('animationend',e=>{if(e.animationName==='fill'&&!$('.overlay'))goSlide(slide+1)});
+}
+function renderDots(){$('#dots').innerHTML=LS.map((s,i)=>`<button data-slide="${i}" aria-label="สไลด์ ${i+1}: ${esc(byId[s[0]].t)}" aria-current="${i===slide}">${i===slide?'<i></i>':''}</button>`).join('')}
+function goSlide(i){
+ slide=(i+LS.length)%LS.length;
+ document.querySelectorAll('.slide').forEach((el,j)=>{el.classList.toggle('on',j===slide);j===slide?el.removeAttribute('tabindex'):el.setAttribute('tabindex','-1')});
+ renderDots();
+}
+function renderShelves(){
+ const v=state.view,q=state.q.trim().toLowerCase();let out='';
+ if(q){
+  const res=PUB().filter(g=>g.t.toLowerCase().includes(q)||g.tag.includes(state.q.trim())||GEN[g.g][0].toLowerCase().includes(q)||g.by.toLowerCase().includes(q));
+  out=`<section class="shelf" style="margin-top:0">${head(`ผลการค้นหา “${esc(state.q.trim())}”`)}${res.length?`<div class="grid">${res.map(g=>card(g)).join('')}</div>`:'<div class="empty"><strong>ไม่พบเกม</strong>ลองค้นด้วยชื่อเกม แนวเกม หรือชื่อผู้สร้าง</div>'}</section>`;
+ }else if(v==='all'){
+  out+=`<section class="shelf">${head('ใหม่ล่าสุด','','new')}<div class="row">${newCards()}</div></section>`;
+  out+=`<section class="shelf">${head('ยอดนิยม','','hot')}<div class="row">${HOT.filter(live).map(id=>card(byId[id])).join('')}</div></section>`;
+  for(const [k,[l,c]] of Object.entries(GEN))if(PUB().some(g=>g.g===k))out+=`<section class="shelf">${head(l,c,k)}<div class="row">${PUB().filter(g=>g.g===k).sort((a,b)=>b.p-a.p).map(g=>card(g)).join('')}</div></section>`;
+ }else{
+  const body=v==='new'?newCards():(v==='hot'?HOT.filter(live).map(id=>byId[id]):PUB().filter(g=>g.g===v)).map(g=>card(g)).join('');
+  out=`<section class="shelf" style="margin-top:0">${head(v==='new'?'ใหม่ล่าสุด':v==='hot'?'ยอดนิยม':GEN[v][0],GEN[v]?GEN[v][1]:'')}<div class="grid">${body}</div></section>`;
+ }
+ $('#shelves').innerHTML=out;$('#wall').hidden=v!=='all'||!!q;
+}
+function setQuery(val){state.q=val;$('#q').value=val;$('#q2').value=val;if(state.page!=='games')setPage('games');renderNav();renderShelves()}
+
+/* ---------- game page ---------- */
+let lastFocus,loadT;
+function builtWith(g){
+ if(!g.tools||!g.tools.length)return'';
+ return`<h3>สร้างด้วย</h3><div class="built">${g.tools.map(t=>{const tl=typeof t==='string'?toolById[t]:toolById[TOOLS.find(x=>x.n.toLowerCase()===t[0].toLowerCase())?.id];
+  const name=typeof t==='string'?tl.n:t[0],use=typeof t==='string'?tl.use:t[1];
+  return tl?`<button class="bt" data-tool="${tl.id}"><b>${esc(name)}</b><small>${esc(use)}</small></button>`:`<div class="bt"><b>${esc(name)}</b><small>${esc(use)}</small></div>`}).join('')}</div>`;
+}
+function openModal(g){
+ if(typeof g==='string')g=byId[g];if(!g)return;closeModal(true);lastFocus=document.activeElement;
+ const sim=g.g?PUB().filter(x=>x.id!==g.id&&x.g===g.g).concat(PUB().filter(x=>x.id!==g.id&&x.g!==g.g)).slice(0,4):[];
+ const el=document.createElement('div');el.className='overlay';el.innerHTML=`<div class="sheet" role="dialog" aria-modal="true" aria-labelledby="mt">
+  <button class="x" data-close aria-label="ปิด">${X}</button>
+  <div class="frame" id="frame"><div class="fbg" style="background-image:url(${art(g,'h')})"></div><div class="fc" id="fc"><button class="bigbtn" data-start aria-label="เล่น ${esc(g.t)}">${PLAY}</button><div class="hint">${g.preview?'ตัวอย่างหน้าเกมของคุณ':'กดเพื่อเล่น'}</div></div></div>
+  <div class="info"><div class="ttl-row"><h2 id="mt">${esc(g.t)}</h2>${g.preview?'':likeBtn(g)}</div><div class="meta">${gtag(g)}<span>${esc(g.by)}</span>${g.p?`<span>· เล่นแล้ว ${short(g.p)}</span>`:''}<span>· ${PRICE[g.pr||'free']}</span></div><p>${esc(g.tag)}</p>${g.desc?`<p>${esc(g.desc)}</p>`:''}
+   ${builtWith(g)}
+   ${sim.length?`<h3>เกมอื่น ๆ</h3><div class="grid">${sim.map(x=>card(x)).join('')}</div>`:''}</div></div>`;
+ document.body.appendChild(el);document.documentElement.style.overflow='hidden';el.querySelector('[data-start]').focus();
+}
+function closeModal(silent){clearInterval(loadT);const o=$('.overlay');if(!o)return;o.remove();document.documentElement.style.overflow='';if(!silent&&lastFocus&&document.contains(lastFocus))lastFocus.focus()}
+function startGame(){
+ const fc=$('#fc');$('#frame').classList.add('on');fc.innerHTML='<div class="lbar"><i id="lbar"></i></div><div class="hint">กำลังโหลด…</div>';
+ let p=0;clearInterval(loadT);loadT=setInterval(()=>{p=Math.min(100,p+6+Math.random()*10);$('#lbar').style.width=p+'%';if(p>=100){clearInterval(loadT);fc.innerHTML='<div class="hint">ตัวเกมจะเล่นในกรอบนี้ (mockup)</div>'}},140);
+}
+
+/* ---------- submit ---------- */
+const ROLES=['เขียนโค้ด','ภาพและอาร์ต','โมเดล 3D','เสียงและเพลง','เนื้อเรื่องและบทพูด','AI ที่ทำงานในเกม','อื่น ๆ'];
+function addToolRow(name='',role=''){
+ const n=++state.toolN,row=document.createElement('div');row.className='toolrow';
+ row.innerHTML=`<input id="tool-${n}" type="text" list="toolList" placeholder="ชื่อเครื่องมือ เช่น Claude Code" aria-label="ชื่อเครื่องมือ" value="${esc(name)}"><select id="role-${n}" aria-label="ใช้ทำอะไร"><option value="">ใช้ทำอะไร</option>${ROLES.map(r=>`<option${r===role?' selected':''}>${r}</option>`).join('')}</select><button type="button" class="iconbtn" data-rmtool aria-label="ลบเครื่องมือนี้">${X}</button>`;
+ $('#toolrows').appendChild(row);return row;
+}
+function formData(){
+ const g=$('#f-genre').value;
+ return{id:'preview-'+($('#f-title').value||'new'),preview:1,t:$('#f-title').value.trim()||'ชื่อเกม',g,by:$('#f-by').value.trim()||'ผู้สร้าง',tag:$('#f-tag').value.trim()||'คำโปรยของเกม',desc:$('#f-desc').value.trim(),
+  pr:(document.querySelector('input[name=price]:checked')||{}).value||'free',art:GENART[g]||['#15172A','#2a2d48','#6FF0CF','none'],cover:state.cover,
+  tools:[...document.querySelectorAll('.toolrow')].map(r=>[r.querySelector('input').value.trim(),r.querySelector('select').value||'ใช้ในการสร้างเกม']).filter(t=>t[0])};
+}
+function renderPreview(){$('#pv').innerHTML=card(formData(),PRICE[formData().pr])}
+const isUrl=v=>/^https?:\/\/[^\s.]+\.[^\s]+$/i.test(v);
+function setErr(f,msg){const el=document.querySelector(`[data-f="${f}"]`);el.classList.toggle('invalid',!!msg);el.querySelector('.err').textContent=msg||''}
+function validate(){
+ const v=id=>$(id).value.trim(),errs=[];
+ const chk=(f,ok,msg)=>{setErr(f,ok?'':msg);if(!ok)errs.push(f)};
+ chk('url',isUrl(v('#f-url')),v('#f-url')?'ลิงก์ต้องขึ้นต้นด้วย https:// และเปิดเล่นได้':'ใส่ลิงก์ที่เปิดแล้วเล่นเกมได้');
+ chk('title',!!v('#f-title'),'ใส่ชื่อเกม');
+ chk('genre',!!v('#f-genre'),'เลือกแนวเกม');
+ chk('tag',!!v('#f-tag'),'ใส่คำโปรยสั้น ๆ 1 บรรทัด');
+ chk('video',!v('#f-video')||isUrl(v('#f-video')),'ลิงก์วิดีโอต้องขึ้นต้นด้วย https://');
+ chk('by',!!v('#f-by'),'ใส่ชื่อผู้สร้างหรือสตูดิโอ');
+ chk('agree',$('#f-agree').checked,'ติ๊กยืนยันก่อนส่ง');
+ return errs;
+}
+function readFiles(files,cb){[...files].forEach(f=>{if(!f.type.startsWith('image/'))return;const r=new FileReader();r.onload=()=>cb(r.result);r.readAsDataURL(f)})}
+function showDone(){
+ const d=formData();state.sub=d;QUEUE.unshift({...d,preview:0,id:'q'+Date.now(),url:$('#f-url').value.trim(),sent:'เมื่อสักครู่',st:'pend'});logIt(`ได้รับคำขอส่งเกม ${d.t}`);save();
+ $('#formwrap').innerHTML=`<div class="done" role="status"><span class="ok">${CHECK}</span><div><h2>ส่ง ${esc(d.t)} แล้ว</h2><p class="help" style="font-size:14px;margin:6px 0 0">ทีมงานจะแจ้งผลทางอีเมลเมื่อเกมเผยแพร่ ปกติใช้เวลา 1–2 วัน</p></div>
+  <ol class="track"><li class="on"><i>${CHECK}</i>ส่งเกมแล้ว</li><li class="now"><i></i>ตรวจข้อมูลและลิงก์</li><li><i></i>จัดหมวดและติดแท็ก</li><li><i></i>เผยแพร่ในหมวด "ใหม่ล่าสุด"</li></ol>
+  <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" data-viewsub>ดูตัวอย่างหน้าเกม</button><button class="btn ghost" data-again>ส่งเกมอีกเกม</button></div></div>`;
+ scrollTo(0,0);
+}
+let formHTML;
+function initForm(){
+ $('#f-genre').insertAdjacentHTML('beforeend',Object.entries(GEN).map(([k,[l]])=>`<option value="${k}">${l}</option>`).join(''));
+ $('#toolList').innerHTML=TOOLS.map(t=>`<option value="${t.n}">`).join('');
+ addToolRow();renderPreview();
+}
+function bindForm(){
+ const f=$('#sub');
+ f.addEventListener('input',e=>{const fld=e.target.closest('[data-f]');if(fld&&fld.classList.contains('invalid'))setErr(fld.dataset.f,'');if(e.target.id==='f-tag')$('#tagCount').textContent=`${e.target.value.length} / 80`;renderPreview()});
+ f.addEventListener('change',e=>{
+  if(e.target.id==='f-agree')setErr('agree','');
+  if(e.target.id==='f-genre')setErr('genre','');
+  if(e.target.id==='f-cover'){readFiles([e.target.files[0]].filter(Boolean),u=>{state.cover=u;$('#coverThumb').innerHTML=`<span style="background-image:url(${u})"></span>`;renderPreview()})}
+  if(e.target.id==='f-shots'){readFiles(e.target.files,u=>{if(state.shots.length<4){state.shots.push(u);$('#shotThumbs').innerHTML=state.shots.map(s=>`<span style="background-image:url(${s})"></span>`).join('')}})}
+  renderPreview();
+ });
+ f.addEventListener('submit',e=>{e.preventDefault();const errs=validate();if(errs.length){const el=document.querySelector(`[data-f="${errs[0]}"] input,[data-f="${errs[0]}"] select`);el&&el.focus();return}showDone()});
+}
+
+/* ---------- create ---------- */
+function newIdea(){const p=a=>a[Math.floor(Math.random()*a.length)];return`${p(IDEA.g)} ${p(IDEA.m)} ${p(IDEA.s)}`}
+let idea=newIdea();
+const ideaPrompt=()=>`ช่วยต่อยอดไอเดียเกมนี้: "${idea}" เสนอ core loop, สิ่งที่ AI ทำในเกม, และสโคปที่ทำเสร็จได้ใน 1 สัปดาห์`;
+function renderGuide(){
+ $('#guide').innerHTML=STEPS.map((s,i)=>`<article class="step"><span class="no">${i+1}</span><div><h3>${s.t}</h3><p>${s.d}</p><ul>${s.pts.map(p=>`<li>${p}</li>`).join('')}</ul>
+  ${s.idea?`<div class="idea"><span class="help">สุ่มไอเดียตั้งต้น</span><div class="s" id="ideaText">${idea}</div><div class="acts"><button class="btn ghost" data-idea>สุ่มใหม่</button><button class="btn ghost" data-copyidea>คัดลอก prompt ไปถาม AI</button></div><p class="pr" id="ideaPrompt">${esc(ideaPrompt())}</p></div>`:''}
+  ${s.tools?`<div class="tchips">${s.tools.map(id=>`<button class="tchip" data-tool="${id}">${toolById[id].n}</button>`).join('')}</div>`:''}
+  ${s.cta?`<div style="margin-top:14px"><button class="btn primary" data-page="submit">ส่งเกมของคุณ</button></div>`:''}</div></article>`).join('');
+}
+function renderTools(){
+ const list=TOOLS.filter(t=>state.tcat==='all'||t.c===state.tcat);
+ $('#tchips').innerHTML=[['all','ทั้งหมด'],...Object.entries(TCAT)].map(([k,l])=>`<button class="chip" data-tcat="${k}" aria-pressed="${state.tcat===k}">${l}</button>`).join('');
+ $('#tcount').textContent=`${list.length} เครื่องมือ`;
+ $('#tgrid').innerHTML=list.map(t=>`<article class="tool" id="t-${t.id}"><div class="tn"><span>${t.n}${t.os?'<span class="oss">โอเพนซอร์ส</span>':''}</span><span class="tc">${TCAT[t.c]}</span></div><p>${t.d}</p><a href="${t.u}" target="_blank" rel="noopener">เปิดเว็บ ${EXT}</a></article>`).join('');
+}
+function showTool(id){
+ closeModal(true);setPage('create');state.tcat='all';renderTools();
+ const el=$('#t-'+id);if(!el)return;el.scrollIntoView({behavior:'smooth',block:'center'});el.classList.add('flash');setTimeout(()=>el.classList.remove('flash'),1800);
+}
+
+/* ---------- admin ---------- */
+const QUEUE=[
+ {id:'q1',t:'Kaiju Karaoke',g:'party',by:'@neonbeat',tag:'ร้องเพลงสู้ไคจูยักษ์ AI ให้คะแนนเสียงคุณ',desc:'เปิดไมค์แล้วร้องให้ไคจูหยุดทำลายเมือง ยิ่งร้องเพราะยิ่งโจมตีแรง',url:'https://neonbeat.itch.io/kaiju-karaoke',pr:'free',tools:[['Claude Code','เขียนโค้ด'],['Suno','เสียงและเพลง']],sent:'2 ชม.ที่แล้ว',st:'pend'},
+ {id:'q2',t:'Ayutthaya Escape',g:'adventure',by:'@siam.dev',tag:'หนีออกจากวังที่ทางเดินเปลี่ยนทุกครั้งที่เล่น',url:'https://siamdev.github.io/ayutthaya',pr:'free',tools:[['Cursor','เขียนโค้ด'],['Midjourney','ภาพและอาร์ต'],['Claude API','AI ที่ทำงานในเกม']],sent:'เมื่อวาน',st:'pend'},
+ {id:'q3',t:'Prompt Poker',g:'strategy',by:'@cardshark',tag:'โป๊กเกอร์ที่ต้องหลอก AI ด้วยคำพูดแทนการลงเงิน',url:'http://cardshark-games.net/poker',pr:'paid',tools:[],sent:'2 วันก่อน',st:'pend'}
+];
+const LOG=[['เผยแพร่ Orbit Gardener','วันนี้ 09:12'],['เผยแพร่ Signal Lost','วันนี้ 08:40'],['แก้ไขสไลด์หน้าแรก','เมื่อวาน'],['เพิ่มหมวด ปาร์ตี้','3 วันก่อน']];
+const REJECT=['ลิงก์เปิดเล่นไม่ได้','ข้อมูลไม่ครบ','ไม่ใช่เกมที่ทำด้วย AI','เนื้อหาไม่เหมาะสม'];
+const UPI='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 15 6-6 6 6"/></svg>';
+const DNI='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
+function logIt(m){const d=new Date();LOG.unshift([m,`วันนี้ ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`]);LOG.length=Math.min(LOG.length,8)}
+const STORE='lucid-admin-v1';let DEF;
+const snapshot=()=>JSON.stringify({G,GEN,SLIDES,WALL,NEW,HOT,QUEUE,LOG});
+function apply(d){G.splice(0,G.length,...d.G);GEN=d.GEN;SLIDES.splice(0,SLIDES.length,...d.SLIDES);WALL.splice(0,WALL.length,...d.WALL);NEW.splice(0,NEW.length,...d.NEW);HOT.splice(0,HOT.length,...d.HOT);QUEUE.splice(0,QUEUE.length,...d.QUEUE);LOG.splice(0,LOG.length,...d.LOG);reindex()}
+function save(){try{localStorage.setItem(STORE,snapshot())}catch(e){}}
+function load(){try{const d=JSON.parse(localStorage.getItem(STORE)||'null');if(d&&Array.isArray(d.G))apply(d)}catch(e){}}
+function reindex(){for(const k in byId)delete byId[k];G.forEach(g=>byId[g.id]=g)}
+const genArt=k=>GENART[k]||['#15172A','#2a2d48',(GEN[k]||['','#9A97B2'])[1],'peaks'];
+function refreshPublic(){reindex();renderNav();renderWall();renderShelves();const sel=$('#f-genre');if(sel){const v=sel.value;sel.innerHTML='<option value="">เลือกแนวเกม</option>'+Object.entries(GEN).map(([k,[l]])=>`<option value="${k}">${esc(l)}</option>`).join('');sel.value=GEN[v]?v:''}}
+function commit(msg){if(!adm.sDirty)adm.sDraft=adm.wDraft=null;if(!adm.gDirty)adm.gDraft=null;logIt(msg);save();refreshPublic();renderAdmin();toast(msg)}
+
+const adm={sec:'overview',qf:'pend',gq:'',gg:'',gDraft:null,sDraft:null,wDraft:null,edit:null};
+const pend=()=>QUEUE.filter(q=>q.st==='pend').length;
+const qArt=q=>({...q,art:genArt(q.g)});
+const checks=q=>[[/^https:\/\//.test(q.url||'')?'ok':'fail','ลิงก์ขึ้นต้นด้วย https://'],[q.cover?'ok':'warn',q.cover?'มีภาพปก':'ไม่มีภาพปก จะใช้ภาพตามแนวเกม'],[q.tools&&q.tools.length?'ok':'warn',q.tools&&q.tools.length?`ระบุเครื่องมือ ${q.tools.length} รายการ`:'ไม่ได้ระบุเครื่องมือที่ใช้'],[q.tag&&q.tag.length<=80?'ok':'fail','คำโปรยไม่เกิน 80 ตัวอักษร']];
+const QST={pend:['pend','รอตรวจ'],ok:['pub','เผยแพร่แล้ว'],rej:['rej','ปฏิเสธ']};
+function qRow(q){const c=checks(q),ok=c.filter(x=>x[0]==='ok').length,fail=c.some(x=>x[0]==='fail');
+ return`<div class="qrow"><span class="thumb" style="background-image:url(${art(qArt(q),'l')})"></span><div style="min-width:0"><b>${esc(q.t)}</b><small>${esc(q.by)} · ส่ง${esc(q.sent)}</small><small style="color:${fail?'var(--bad)':'var(--muted)'}">ผ่านการตรวจอัตโนมัติ ${ok}/${c.length}</small></div><span class="st ${QST[q.st][0]}">${QST[q.st][1]}</span><button class="btn ghost sm" data-a="review" data-id="${q.id}">${q.st==='pend'?'ตรวจ':'ดู'}</button></div>`}
+const genreOpts=(sel,blank)=>(blank?`<option value="">${blank}</option>`:'')+Object.entries(GEN).map(([k,[l]])=>`<option value="${k}"${k===sel?' selected':''}>${esc(l)}</option>`).join('');
+const gameOpts=sel=>PUB().slice().sort((a,b)=>a.t.localeCompare(b.t)).map(g=>`<option value="${g.id}"${g.id===sel?' selected':''}>${esc(g.t)}</option>`).join('');
+
+const SEC={
+ overview(){const pq=QUEUE.filter(q=>q.st==='pend'),tp=G.reduce((a,g)=>a+(g.p||0),0);
+  return`<div class="adm-h"><div><h1>ภาพรวม</h1><p>สรุปเว็บวันนี้</p></div><button class="btn primary sm" data-a="edit">+ เพิ่มเกม</button></div>
+  <div class="stats"><div class="stat"><span>เกมที่เผยแพร่</span><b>${PUB().length}</b></div><div class="stat"><span>รอตรวจ</span><b style="color:#FFC857">${pq.length}</b></div><div class="stat"><span>หมวดเกม</span><b>${Object.keys(GEN).length}</b></div><div class="stat"><span>ยอดเล่นรวม</span><b>${short(tp)}</b></div></div>
+  <div class="panels"><section class="pnl"><div class="sh-head" style="margin:0"><h2>รอตรวจ</h2><button class="more" data-a="sec" data-k="queue">ดูทั้งหมด</button></div>${pq.length?`<div class="qlist">${pq.slice(0,3).map(qRow).join('')}</div>`:'<p class="help">ไม่มีคำขอค้างอยู่</p>'}</section>
+  <section class="pnl"><h2>อัปเดตล่าสุด</h2><ul class="loglist">${LOG.map(([m,t])=>`<li><span>${esc(m)}</span><time>${t}</time></li>`).join('')}</ul></section></div>`},
+ queue(){const list=QUEUE.filter(q=>q.st===adm.qf);
+  return`<div class="adm-h"><div><h1>คำขอส่งเกม</h1><p>ตรวจข้อมูลและลิงก์ เลือกหมวด แล้วอนุมัติเพื่อเผยแพร่</p></div></div>
+  <div class="chips" style="display:flex;margin:0 0 14px">${Object.entries(QST).map(([k,[,l]])=>`<button class="chip" data-a="qf" data-k="${k}" aria-pressed="${adm.qf===k}">${l} ${QUEUE.filter(q=>q.st===k).length}</button>`).join('')}</div>
+  ${list.length?`<div class="qlist">${list.map(qRow).join('')}</div>`:`<div class="empty"><strong>ไม่มีรายการ</strong>${adm.qf==='pend'?'คำขอใหม่จากหน้า "ส่งเกม" จะมาอยู่ที่นี่':''}</div>`}`},
+ games(){const hid=G.filter(g=>g.hidden).length;
+  return`<div class="adm-h"><div><h1>เกมทั้งหมด</h1><p>${G.length} เกม · เผยแพร่ ${G.length-hid} · ซ่อน ${hid}</p></div><button class="btn primary sm" data-a="edit">+ เพิ่มเกม</button></div>
+  <div class="tbar"><input id="adm-q" type="search" placeholder="ค้นหาชื่อเกมหรือผู้สร้าง" aria-label="ค้นหาเกม" value="${esc(adm.gq)}"><select id="adm-g" aria-label="กรองตามหมวด">${genreOpts(adm.gg,'ทุกหมวด')}</select></div>
+  <div class="tblwrap"><table class="tbl"><thead><tr><th></th><th>ชื่อเกม</th><th>หมวด</th><th>ผู้สร้าง</th><th style="text-align:right">เล่นแล้ว</th><th style="text-align:right">ถูกใจ</th><th>ราคา</th><th>สถานะ</th><th></th></tr></thead><tbody id="gbody">${gameRows()}</tbody></table></div>`},
+ genres(){adm.gDraft=adm.gDraft||Object.entries(GEN).map(([k,[n,c]])=>({k,n,c}));
+  return`<div class="adm-h"><div><h1>หมวดเกม</h1><p>ลำดับที่นี่คือลำดับบนแถบซ้ายและแถวบนหน้าแรก</p></div><button class="btn ghost sm" data-a="gadd">+ เพิ่มหมวด</button></div>
+  <div style="display:grid;gap:8px">${adm.gDraft.map((d,i)=>{const n=G.filter(g=>g.g===d.k).length;return`<div class="edrow"><div class="updn"><button data-a="gmv" data-i="${i}" data-d="-1" aria-label="เลื่อนขึ้น">${UPI}</button><button data-a="gmv" data-i="${i}" data-d="1" aria-label="เลื่อนลง">${DNI}</button></div><input type="color" id="gc-${d.k}" value="${d.c}" data-gi="${i}" data-gf="c" aria-label="สีหมวด"><input type="text" id="gn-${d.k}" value="${esc(d.n)}" data-gi="${i}" data-gf="n" placeholder="ชื่อหมวด" aria-label="ชื่อหมวด"><span class="cnt">${n} เกม</span><button class="iconbtn" data-a="gdel" data-i="${i}" aria-label="ลบหมวด">${X}</button>${d.msg?`<span class="rowmsg">${d.msg}</span>`:''}</div>`}).join('')}</div>
+  <div class="savebar"><button class="btn primary" data-a="gsave">บันทึกหมวด</button><button class="btn ghost" data-a="greset">ยกเลิก</button><span class="dirty" id="dirty">${adm.gDirty?'มีการแก้ไขที่ยังไม่บันทึก':''}</span></div>`},
+ home(){adm.sDraft=adm.sDraft||SLIDES.map(s=>[...s]);adm.wDraft=adm.wDraft||[...WALL];
+  return`<div class="adm-h"><div><h1>หน้าแรก</h1><p>เลือกเกมในสไลด์โชว์และ 4 ช่องข้างสไลด์ พร้อมป้ายบอกเหตุผล</p></div></div>
+  <div class="sh-head"><h2>สไลด์โชว์</h2><button class="btn ghost sm" data-a="sadd">+ เพิ่มสไลด์</button></div>
+  <div style="display:grid;gap:8px">${adm.sDraft.map(([id,r,l],i)=>`<div class="slrow"><div class="updn"><button data-a="smv" data-i="${i}" data-d="-1" aria-label="เลื่อนขึ้น">${UPI}</button><button data-a="smv" data-i="${i}" data-d="1" aria-label="เลื่อนลง">${DNI}</button></div><span class="thumb" style="background-image:url(${byId[id]?art(byId[id],'l'):''})"></span><select id="sg-${i}" data-si="${i}" data-sf="0" aria-label="เกม">${gameOpts(id)}</select><select id="sr-${i}" data-si="${i}" data-sf="1" aria-label="ป้าย">${Object.entries(RS).map(([k,[n]])=>`<option value="${k}"${k===r?' selected':''}>${n}</option>`).join('')}</select><input type="text" id="sl-${i}" data-si="${i}" data-sf="2" value="${esc(l)}" placeholder="ข้อความบนป้าย" aria-label="ข้อความบนป้าย"><button class="iconbtn" data-a="sdel" data-i="${i}" aria-label="ลบสไลด์">${X}</button></div>`).join('')}</div>
+  <div class="sh-head" style="margin-top:28px"><h2>4 ช่องข้างสไลด์</h2></div>
+  <div class="wsel">${adm.wDraft.map((id,i)=>`<div><span class="thumb" style="background-image:url(${byId[id]?art(byId[id],'l'):''})"></span><select id="w-${i}" data-wi="${i}" aria-label="ช่องที่ ${i+1}">${gameOpts(id)}</select></div>`).join('')}</div>
+  <div class="savebar"><button class="btn primary" data-a="ssave">บันทึกหน้าแรก</button><button class="btn ghost" data-a="sreset">ยกเลิก</button><span class="dirty" id="dirty">${adm.sDirty?'มีการแก้ไขที่ยังไม่บันทึก':''}</span></div>`}
+};
+function gameRows(){
+ const q=adm.gq.trim().toLowerCase(),list=G.filter(g=>(!adm.gg||g.g===adm.gg)&&(!q||g.t.toLowerCase().includes(q)||g.by.toLowerCase().includes(q)));
+ if(!list.length)return'<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:32px">ไม่พบเกม</td></tr>';
+ return list.map(g=>`<tr><td><span class="thumb" style="background-image:url(${art(g,'l')})"></span></td><td class="gname"><b>${esc(g.t)}</b><small>${esc(g.tag)}</small></td><td>${gtag(g)}</td><td>${esc(g.by)}</td><td class="num">${g.p?short(g.p):'ใหม่'}</td><td class="num">${fmtN(g.l||0)}</td><td>${PRICE[g.pr||'free']}</td><td><span class="st ${g.hidden?'hid':'pub'}">${g.hidden?'ซ่อน':'เผยแพร่'}</span></td><td><button class="btn ghost sm" data-a="edit" data-id="${g.id}">แก้ไข</button></td></tr>`).join('');
+}
+function renderAdmin(){
+ const nav=[['overview','ภาพรวม',''],['queue','คำขอส่งเกม',pend()||''],['games','เกมทั้งหมด',G.length],['genres','หมวดเกม',Object.keys(GEN).length],['home','หน้าแรก','']];
+ $('#page-admin').innerHTML=`<div class="adm-wrap"><nav class="adm-side" aria-label="เมนูแอดมิน"><div class="adm-logo"><i aria-hidden="true"></i>Lucid<small>ADMIN</small></div>${nav.map(([k,l,c])=>`<button class="cat" data-a="sec" data-k="${k}" aria-current="${adm.sec===k}">${l}<em${k==='queue'&&c?' class="qn"':''}>${c}</em></button>`).join('')}<div class="grow" style="flex:1"></div><button class="cat" data-page="games">← กลับไปหน้าเว็บ</button><button class="cat" data-a="reset">รีเซ็ตข้อมูลตัวอย่าง</button></nav><main class="adm-main" id="admMain">${SEC[adm.sec]()}</main></div>`;
+}
+function drawer(title,body,foot){
+ closeDrawer();const w=document.createElement('div');w.id='dw';
+ w.innerHTML=`<div class="scrim" data-a="closedw"></div><aside class="drawer" role="dialog" aria-modal="true" aria-labelledby="dwh"><div class="dw-h"><h2 id="dwh">${title}</h2><button class="iconbtn" data-a="closedw" aria-label="ปิด">${X}</button></div><div class="dw-b">${body}</div>${foot?`<div class="dw-f">${foot}</div>`:''}</aside>`;
+ document.body.appendChild(w);document.documentElement.style.overflow='hidden';const f=w.querySelector('.dw-b input:not([type=file]),.dw-b select,.dw-f button');f&&f.focus();
+}
+function closeDrawer(){const w=$('#dw');if(w){w.remove();document.documentElement.style.overflow=''}}
+function dErr(f,msg){const el=document.querySelector(`#dw [data-f="${f}"]`);if(!el)return;el.classList.toggle('invalid',!!msg);el.querySelector('.err').textContent=msg||''}
+function review(id){
+ const q=QUEUE.find(x=>x.id===id);if(!q)return;
+ const body=`<span class="thumb" style="width:100%;border-radius:12px;background-image:url(${art(qArt(q),'h')})"></span>
+  <div class="info" style="padding:0;gap:8px"><div class="meta">${gtag(q)}<span>${esc(q.by)}</span><span>· ${PRICE[q.pr||'free']}</span><span>· ส่ง${esc(q.sent)}</span></div><p style="color:var(--fg);font-weight:600">${esc(q.tag)}</p>${q.desc?`<p>${esc(q.desc)}</p>`:''}</div>
+  <div class="field"><span class="lbl">ลิงก์เล่นเกม</span><code style="font-size:13.5px;background:var(--ink);padding:8px 10px;border-radius:8px;overflow-wrap:anywhere">${esc(q.url||'-')}</code></div>
+  ${q.tools&&q.tools.length?`<div class="field"><span class="lbl">สร้างด้วย</span><div class="built">${q.tools.map(t=>`<div class="bt"><b>${esc(t[0])}</b><small>${esc(t[1])}</small></div>`).join('')}</div></div>`:''}
+  <div class="field"><span class="lbl">ตรวจอัตโนมัติ</span><ul class="ck">${checks(q).map(([s,l])=>`<li class="${s}"><i>${s==='ok'?'✓':s==='warn'?'!':'✕'}</i>${l}</li>`).join('')}</ul></div>
+  ${q.st==='pend'?`<div class="field" data-f="r-g"><label for="r-g">จัดเข้าหมวด</label><select id="r-g">${genreOpts(q.g,'เลือกหมวด')}</select><span class="err"></span></div>
+  <label class="check"><input type="checkbox" id="r-slide" checked><span>ขึ้นสไลด์หน้าแรกพร้อมป้าย "มาใหม่"</span></label>`:`<p class="help" style="font-size:14px">${q.st==='ok'?'เผยแพร่แล้ว':`ปฏิเสธแล้ว เหตุผล: ${esc(q.why||'-')}`}</p>`}`;
+ const foot=q.st==='pend'?`<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><select id="r-why" aria-label="เหตุผลที่ปฏิเสธ" style="width:auto">${REJECT.map(r=>`<option>${r}</option>`).join('')}</select><button class="btn ghost" data-a="reject" data-id="${q.id}">ปฏิเสธ</button></div><button class="btn primary" data-a="approve" data-id="${q.id}">อนุมัติและเผยแพร่</button>`
+  :q.st==='ok'&&byId[q.gameId]?`<span></span><button class="btn ghost" data-a="edit" data-id="${q.gameId}">แก้ไขข้อมูลเกม</button>`:'';
+ drawer(esc(q.t),body,foot);
+}
+function editGame(id){
+ const g=id?byId[id]:{t:'',tag:'',desc:'',g:'',by:'',url:'',pr:'free',hidden:false,tools:[]};
+ adm.edit={id,tools:new Set((g.tools||[]).filter(t=>typeof t==='string')),custom:(g.tools||[]).filter(t=>typeof t!=='string'),cover:g.cover||null,del:false};
+ const pv=id?art(g,'h'):'';
+ const body=`<div class="field"><span class="lbl">ภาพปก</span><span class="thumb" id="e-pv" style="width:100%;border-radius:12px;background-image:url(${pv})"></span><div><label class="btn ghost sm" for="e-cover">เปลี่ยนภาพปก</label><input id="e-cover" type="file" accept="image/*" style="position:absolute;width:1px;height:1px;opacity:0"></div></div>
+  <div class="field" data-f="e-t"><label for="e-t">ชื่อเกม</label><input id="e-t" type="text" maxlength="60" value="${esc(g.t)}"><span class="err"></span></div>
+  <div class="field" data-f="e-tag"><label for="e-tag">คำโปรย 1 บรรทัด</label><input id="e-tag" type="text" maxlength="80" value="${esc(g.tag)}"><span class="err"></span></div>
+  <div class="field"><label for="e-desc">รายละเอียด <span class="opt">(ไม่บังคับ)</span></label><textarea id="e-desc">${esc(g.desc||'')}</textarea></div>
+  <div class="two"><div class="field" data-f="e-g"><label for="e-g">หมวด</label><select id="e-g">${genreOpts(g.g,'เลือกหมวด')}</select><span class="err"></span></div><div class="field"><label for="e-pr">ราคา</label><select id="e-pr">${Object.entries(PRICE).map(([k,l])=>`<option value="${k}"${k===(g.pr||'free')?' selected':''}>${l}</option>`).join('')}</select></div></div>
+  <div class="two"><div class="field" data-f="e-by"><label for="e-by">ผู้สร้าง</label><input id="e-by" type="text" maxlength="40" value="${esc(g.by)}"><span class="err"></span></div><div class="field"><label for="e-url">ลิงก์เล่นเกม</label><input id="e-url" type="url" value="${esc(g.url||'')}" placeholder="https://"></div></div>
+  <div class="field"><span class="lbl">สถานะ</span><div class="radios"><label><input type="radio" name="e-st" value="pub"${g.hidden?'':' checked'}>เผยแพร่</label><label><input type="radio" name="e-st" value="hid"${g.hidden?' checked':''}>ซ่อน</label></div></div>
+  <div class="field"><span class="lbl">สร้างด้วย</span><div class="togs">${TOOLS.map(t=>`<button type="button" class="tog" data-a="tog" data-id="${t.id}" aria-pressed="${adm.edit.tools.has(t.id)}">${t.n}</button>`).join('')}</div>${adm.edit.custom.length?`<span class="help">ผู้สร้างระบุเพิ่ม: ${adm.edit.custom.map(t=>esc(t[0])).join(', ')}</span>`:''}</div>`;
+ const foot=`${id?`<button class="btn ghost" data-a="del" style="color:var(--bad)">ลบเกม</button>`:'<span></span>'}<div style="display:flex;gap:8px"><button class="btn ghost" data-a="closedw">ยกเลิก</button><button class="btn primary" data-a="esave">บันทึก</button></div>`;
+ drawer(id?'แก้ไขเกม':'เพิ่มเกม',body,foot);
+}
+function saveGame(){
+ const v=i=>$('#'+i).value.trim();let bad=0;
+ [['e-t','ใส่ชื่อเกม'],['e-tag','ใส่คำโปรย'],['e-g','เลือกหมวด'],['e-by','ใส่ชื่อผู้สร้าง']].forEach(([f,m])=>{const ok=!!v(f);dErr(f,ok?'':m);if(!ok&&!bad){bad=1;$('#'+f).focus()}});
+ if(bad)return;
+ const id=adm.edit.id,isNew=!id,g=isNew?{id:'a'+Date.now().toString(36),p:0,art:genArt(v('e-g'))}:byId[id];
+ Object.assign(g,{t:v('e-t'),tag:v('e-tag'),desc:v('e-desc'),g:v('e-g'),by:v('e-by'),url:v('e-url'),pr:$('#e-pr').value,hidden:document.querySelector('input[name=e-st]:checked').value==='hid',cover:adm.edit.cover,tools:[...adm.edit.tools,...adm.edit.custom]});
+ if(isNew){G.push(g);NEW.unshift([g.id,0])}
+ closeDrawer();commit(`${isNew?'เพิ่ม':'แก้ไข'} ${g.t}`);
+}
+function delGame(btn){
+ if(!adm.edit.del){adm.edit.del=true;btn.textContent='กดอีกครั้งเพื่อยืนยันการลบ';return}
+ const id=adm.edit.id,t=byId[id].t;
+ G.splice(G.findIndex(g=>g.id===id),1);
+ [NEW,SLIDES].forEach(a=>{for(let i=a.length-1;i>=0;i--)if(a[i][0]===id)a.splice(i,1)});
+ for(let i=HOT.length-1;i>=0;i--)if(HOT[i]===id)HOT.splice(i,1);
+ const wi=WALL.indexOf(id);if(wi>-1){const alt=G.find(g=>!g.hidden&&!WALL.includes(g.id));WALL[wi]=alt?alt.id:WALL[wi]}
+ closeDrawer();commit(`ลบ ${t}`);
+}
+const mv=(a,i,d)=>{const j=i+d;if(j<0||j>=a.length)return;[a[i],a[j]]=[a[j],a[i]]};
+const setDirty=k=>{adm[k]=true;const el=$('#dirty');if(el)el.textContent='มีการแก้ไขที่ยังไม่บันทึก'};
+
+document.addEventListener('click',e=>{
+ const t=e.target.closest('[data-a]');if(!t)return;const a=t.dataset.a,id=t.dataset.id,i=+t.dataset.i,d=+t.dataset.d;
+ if(a==='sec'){adm.sec=t.dataset.k;if(!adm.sDirty)adm.sDraft=adm.wDraft=null;if(!adm.gDirty)adm.gDraft=null;renderAdmin();return scrollTo(0,0)}
+ if(a==='closedw')return closeDrawer();
+ if(a==='qf'){adm.qf=t.dataset.k;return renderAdmin()}
+ if(a==='review')return review(id);
+ if(a==='approve'){const g=$('#r-g').value;if(!g)return dErr('r-g','เลือกหมวดก่อนอนุมัติ');const q=QUEUE.find(x=>x.id===id),nid='u'+Date.now().toString(36);
+  G.push({id:nid,t:q.t,g,by:q.by,tag:q.tag,desc:q.desc||'',p:0,pr:q.pr||'free',art:genArt(g),cover:q.cover||null,tools:q.tools||[],url:q.url});NEW.unshift([nid,0]);
+  if($('#r-slide').checked){SLIDES.unshift([nid,'new','มาใหม่วันนี้']);slide=0}
+  q.st='ok';q.gameId=nid;q.g=g;closeDrawer();return commit(`เผยแพร่ ${q.t}`)}
+ if(a==='reject'){const q=QUEUE.find(x=>x.id===id);q.st='rej';q.why=$('#r-why').value;closeDrawer();return commit(`ปฏิเสธ ${q.t}`)}
+ if(a==='edit')return editGame(id);
+ if(a==='tog'){const s=adm.edit.tools;s.has(id)?s.delete(id):s.add(id);t.setAttribute('aria-pressed',s.has(id));return}
+ if(a==='esave')return saveGame();
+ if(a==='del')return delGame(t);
+ if(a==='gmv'){mv(adm.gDraft,i,d);setDirty('gDirty');return renderAdmin()}
+ if(a==='gadd'){adm.gDraft.push({k:'g'+Date.now().toString(36),n:'',c:'#9AA0FF'});adm.gDirty=true;renderAdmin();const ins=document.querySelectorAll('.edrow input[type=text]');return ins[ins.length-1].focus()}
+ if(a==='gdel'){const r=adm.gDraft[i],n=G.filter(g=>g.g===r.k).length;if(n){r.msg=`มี ${n} เกมในหมวดนี้ ย้ายเกมไปหมวดอื่นก่อนลบ`}else{adm.gDraft.splice(i,1);adm.gDirty=true}return renderAdmin()}
+ if(a==='gsave'){let bad=false;adm.gDraft.forEach(r=>{r.msg=r.n.trim()?'':'ใส่ชื่อหมวด';if(!r.n.trim())bad=true});if(bad)return renderAdmin();
+  GEN=Object.fromEntries(adm.gDraft.map(r=>[r.k,[r.n.trim(),r.c]]));adm.gDraft=null;adm.gDirty=false;return commit('อัปเดตหมวดเกม')}
+ if(a==='greset'){adm.gDraft=null;adm.gDirty=false;return renderAdmin()}
+ if(a==='smv'){mv(adm.sDraft,i,d);setDirty('sDirty');return renderAdmin()}
+ if(a==='sadd'){const g=PUB()[0];adm.sDraft.push([g.id,'new',RS.new[0]]);adm.sDirty=true;return renderAdmin()}
+ if(a==='sdel'){if(adm.sDraft.length<=1)return toast('ต้องมีอย่างน้อย 1 สไลด์');adm.sDraft.splice(i,1);adm.sDirty=true;return renderAdmin()}
+ if(a==='ssave'){SLIDES.splice(0,SLIDES.length,...adm.sDraft.map(s=>[s[0],s[1],s[2].trim()||RS[s[1]][0]]));WALL.splice(0,WALL.length,...adm.wDraft);slide=0;adm.sDraft=adm.wDraft=null;adm.sDirty=false;return commit('อัปเดตหน้าแรก')}
+ if(a==='sreset'){adm.sDraft=adm.wDraft=null;adm.sDirty=false;return renderAdmin()}
+ if(a==='reset'){apply(JSON.parse(DEF));try{localStorage.removeItem(STORE)}catch(err){}adm.gDraft=adm.sDraft=adm.wDraft=null;adm.gDirty=adm.sDirty=false;slide=0;refreshPublic();renderAdmin();return toast('รีเซ็ตเป็นข้อมูลตัวอย่างแล้ว')}
+});
+document.addEventListener('input',e=>{
+ const t=e.target,ds=t.dataset;
+ if(t.id==='adm-q'){adm.gq=t.value;$('#gbody').innerHTML=gameRows();return}
+ if(ds.gi!=null){adm.gDraft[+ds.gi][ds.gf]=t.value;return setDirty('gDirty')}
+ if(ds.si!=null&&ds.sf==='2'){adm.sDraft[+ds.si][2]=t.value;return setDirty('sDirty')}
+ const f=t.closest('#dw [data-f]');if(f)dErr(f.dataset.f,'');
+});
+document.addEventListener('change',e=>{
+ const t=e.target,ds=t.dataset;
+ if(t.id==='adm-g'){adm.gg=t.value;$('#gbody').innerHTML=gameRows();return}
+ if(ds.si!=null&&ds.sf!=='2'){const row=adm.sDraft[+ds.si];if(ds.sf==='1'){const defs=Object.values(RS).map(r=>r[0]);if(!row[2]||defs.includes(row[2]))row[2]=RS[t.value][0];row[1]=t.value}else row[0]=t.value;adm.sDirty=true;return renderAdmin()}
+ if(ds.wi!=null){adm.wDraft[+ds.wi]=t.value;adm.sDirty=true;return renderAdmin()}
+ if(t.id==='e-cover'&&t.files[0]){readFiles([t.files[0]],u=>{adm.edit.cover=u;$('#e-pv').style.backgroundImage=`url(${u})`})}
+ if(t.id==='r-g'||t.id==='e-g'){dErr(t.id,'')}
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('#dw'))closeDrawer()});
+
+/* ---------- toast + events ---------- */
+let toastT;
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2600)}
+document.addEventListener('click',e=>{
+ if(e.target.classList.contains('overlay'))return closeModal();
+ const t=e.target.closest('button');if(!t)return;const d=t.dataset;
+ if(d.like)return toggleLike(d.like);
+ if(d.slide){goSlide(+d.slide);return}
+ if('start'in d)return startGame();
+ if(d.open)return openModal(d.open);
+ if('close'in d)return closeModal();
+ if(d.tool)return showTool(d.tool);
+ if(d.page){closeModal(true);setPage(d.page);if(d.view){state.view=d.view;setQuery('')}return}
+ if(d.view){state.view=d.view;setQuery('');return scrollTo({top:0,behavior:'smooth'})}
+ if(d.tcat){state.tcat=d.tcat;return renderTools()}
+ if('addtool'in d){addToolRow().querySelector('input').focus();return}
+ if('rmtool'in d){t.closest('.toolrow').remove();if(!document.querySelector('.toolrow'))addToolRow();return renderPreview()}
+ if('idea'in d){idea=newIdea();$('#ideaText').textContent=idea;$('#ideaPrompt').textContent=ideaPrompt();return}
+ if('copyidea'in d){const sel=()=>{const r=document.createRange();r.selectNodeContents($('#ideaPrompt'));const s=getSelection();s.removeAllRanges();s.addRange(r);toast('เลือกข้อความไว้แล้ว กด Ctrl+C เพื่อคัดลอก')};
+  try{navigator.clipboard.writeText(ideaPrompt()).then(()=>toast('คัดลอก prompt แล้ว'),sel)}catch(err){sel()}return}
+ if('viewsub'in d)return openModal(state.sub);
+ if('again'in d){$('#formwrap').innerHTML=formHTML;state.cover=null;state.shots=[];state.toolN=0;initForm();bindForm();return scrollTo(0,0)}
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()});
+$('#q').addEventListener('input',e=>setQuery(e.target.value));
+$('#q2').addEventListener('input',e=>setQuery(e.target.value));
+
+G.forEach(g=>{if(g.l==null)g.l=Math.round(g.p*40+hash(g.id)%900)});
+DEF=snapshot();load();
+formHTML=$('#formwrap').innerHTML;
+renderNav();renderWall();renderShelves();initForm();bindForm();renderGuide();renderTools();
+const h=location.hash.slice(1);if(h==='submit'||h==='create'||h==='admin')setPage(h);else if(byId[h])openModal(h);
+</script>
