@@ -1,4 +1,5 @@
 "use client";
+import { ConsoleSelect } from "./console-select";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -68,7 +69,7 @@ export function Login({ configured }: { configured: boolean }) {
   return (
     <main className="login-page">
       <Link className="wordmark" href="/">
-        game<span className="wordmark-slash">/</span>slash
+        <img className="brand-mark" src="/gameslash-symbol.svg" alt="" width={34} height={34} />GAMESLASH
       </Link>
       <div className="login-card">
         <div className="login-icon">
@@ -216,7 +217,7 @@ export function Admin() {
       <a href="#studio-main" className="console-skip">ข้ามไปเนื้อหา</a>
       <header className="admin-header">
         <Link className="wordmark" href="/">
-          game<span className="wordmark-slash">/</span>slash{" "}
+          <img className="brand-mark" src="/gameslash-symbol.svg" alt="" width={34} height={34} />GAMESLASH{" "}
           <span className="admin-badge">STUDIO</span>
         </Link>
         <div className="studio-breadcrumb"><span>พื้นที่ทำงาน</span><ChevronRight size={15}/><strong>{tabNames[tab]}</strong></div>
@@ -242,7 +243,7 @@ export function Admin() {
           </button>
         </div>
       </header>
-      <label className="console-mobile-navigation">เมนูจัดการ<select value={tab} onChange={e=>navigate(e.target.value as typeof tab)}>{Object.entries(tabNames).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>
+      <div className="console-mobile-navigation">เมนูจัดการ<ConsoleSelect label="เมนูจัดการ" value={tab} onChange={value =>navigate(value as typeof tab)}>{Object.entries(tabNames).map(([value,label])=><option key={value} value={value}>{label}</option>)}</ConsoleSelect></div>
       <nav className="studio-nav" aria-label="เมนูจัดการเว็บไซต์">
         <p className="nav-section-label">จัดการเนื้อหา</p>
         <button aria-current={tab==="inbox"?"page":undefined} className={tab === "inbox" ? "active" : ""} onClick={() => navigate("inbox")}>
@@ -570,45 +571,45 @@ function LayoutEditor({
                       onChange={(e) => changeSection({ title: e.target.value })}
                     />
                   </label>
-                  <label>
+                  <div className="console-field">
                     เนื้อหา
-                    <select
+                    <ConsoleSelect label="เนื้อหา"
                       value={section.kind}
-                      onChange={(e) =>
+                      onChange={(value) =>
                         changeSection({
-                          kind: e.target.value as Entry["kind"],
+                          kind: value as Entry["kind"],
                           category: "",
                         })
                       }
                     >
-                      {Object.entries(kindLabels).map(([k, l]) => (
+                      {Object.entries(kindLabels).filter(([k]) => k !== "post" || section.kind === "post").map(([k, l]) => (
                         <option key={k} value={k}>
                           {l}
                         </option>
                       ))}
-                    </select>
-                  </label>
-                  <label>
+                    </ConsoleSelect>
+                  </div>
+                  <div className="console-field">
                     เทมเพลต
-                    <select
+                    <ConsoleSelect label="เทมเพลต"
                       value={section.template}
-                      onChange={(e) =>
+                      onChange={(value) =>
                         changeSection({
-                          template: e.target.value as "shelf" | "grid" | "list",
+                          template: value as "shelf" | "grid" | "list",
                         })
                       }
                     >
                       <option value="shelf">แถวเลื่อนแนวนอน</option>
                       <option value="grid">กริด</option>
                       <option value="list">รายการแนวตั้ง</option>
-                    </select>
-                  </label>
-                  <label>
+                    </ConsoleSelect>
+                  </div>
+                  <div className="console-field">
                     กรองหมวดหมู่
-                    <select
+                    <ConsoleSelect label="กรองหมวดหมู่"
                       value={section.category}
-                      onChange={(e) =>
-                        changeSection({ category: e.target.value })
+                      onChange={(value) =>
+                        changeSection({ category: value })
                       }
                     >
                       <option value="">ทุกหมวด</option>
@@ -621,8 +622,8 @@ function LayoutEditor({
                       ].map((c) => (
                         <option key={c}>{c}</option>
                       ))}
-                    </select>
-                  </label>
+                    </ConsoleSelect>
+                  </div>
                   <label className="checkbox">
                     <input
                       type="checkbox"

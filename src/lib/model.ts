@@ -7,8 +7,8 @@ export const kinds = ["game", "tool", "article", "post"] as const;
 export const kindLabels = {
   game: "เกม",
   tool: "เครื่องมือ",
-  article: "บทความ",
-  post: "คอมมูนิตี้",
+  article: "ข่าว AI game",
+  post: "โพสต์เดิม",
 };
 export function publicUrl(value: string) {
   return publicHttps(value);

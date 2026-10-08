@@ -1,4 +1,6 @@
 "use client";
+import { toolWorkflowCategories } from "@/lib/directory-filters";
+import { ConsoleSelect } from "./console-select";
 import { useState } from "react";
 import { GameTagPicker } from "./game-tag-picker";
 import { tagSuggestionsSchema, type TagSuggestion } from "@/lib/game-tags";
@@ -30,6 +32,12 @@ export function EntryForm({
   onDirty?:()=>void;
 }) {
   const [kind, setKind] = useState<Entry["kind"]>(initial?.kind || "game");
+  const [category, setCategory] = useState(initial?.category || "");
+  const [customCategory, setCustomCategory] = useState(false);
+  const categoryOptions = [...new Set([
+    ...(kind === "tool" ? toolWorkflowCategories : kind === "game" ? categories : kind === "article" ? ["ข่าว AI game", "อัปเดตเครื่องมือ", "เทคนิคทำเกม"] : ["พูดคุย", "โชว์ผลงาน", "ขอฟีดแบ็ก"]),
+    ...(initial?.kind === kind && initial.category ? [initial.category] : []),
+  ])];
   const [gameTags, setGameTags] = useState(initial?.tags || []);
   const [busy, setBusy] = useState(false),
     [error, setError] = useState("");
@@ -53,7 +61,7 @@ export function EntryForm({
       imageAlt: data.get("imageAlt") || "",
       body,
       ...(kind === "article" ? { content } : {}),
-      tags: kind === "game" ? gameTags : String(data.get("tags") || "")
+      tags: kind === "game" ? gameTags : kind === "tool" ? initial?.tags || [] : String(data.get("tags") || "")
         .split(",")
         .map((s) => s.trim())
         .filter(Boolean),
@@ -80,19 +88,19 @@ export function EntryForm({
   return (
     <form className="entry-form" onSubmit={submit} onChangeCapture={onDirty}>
       {admin && (
-        <label>
+        <div className="console-field">
           ประเภท
-          <select
+          <ConsoleSelect label="ประเภท"
             value={kind}
-            onChange={(e) => setKind(e.target.value as Entry["kind"])}
+            onChange={(value) => { setKind(value as Entry["kind"]); setCategory(""); setCustomCategory(false); onDirty?.(); }}
           >
-            {Object.entries(kindLabels).map(([k, l]) => (
+            {Object.entries(kindLabels).filter(([k]) => k !== "post" || initial?.kind === "post").map(([k, l]) => (
               <option key={k} value={k}>
                 {l}
               </option>
             ))}
-          </select>
-        </label>
+          </ConsoleSelect>
+        </div>
       )}
       <div className="form-pair">
         <label>
@@ -109,7 +117,7 @@ export function EntryForm({
           />
         </label>
         <label>
-          {kind === "game" ? "ผู้สร้าง / สตูดิโอ" : "ชื่อผู้เขียน"}
+          {kind === "game" ? "ผู้สร้าง / สตูดิโอ" : kind === "tool" ? "ผู้พัฒนาเครื่องมือ" : "ชื่อผู้เขียน"}
           <input
             name="author"
             required
@@ -133,33 +141,22 @@ export function EntryForm({
         />
       </label>
       <div className="form-pair">
-        <label>
+        <div className="console-field">
           หมวดหมู่
-          <input
-            name="category"
-            list="entry-categories"
-            required
-            maxLength={60}
-            defaultValue={
-              initial?.category || (kind === "post" ? "พูดคุย" : "")
-            }
-            placeholder="เลือกหรือพิมพ์หมวดหมู่"
-          />
-          <datalist id="entry-categories">
-            {[
-              ...categories,
-              "พูดคุย",
-              "โชว์ผลงาน",
-              "ขอฟีดแบ็ก",
-              "เขียนโค้ด",
-              "เอนจินเกม",
-              "เริ่มต้นทำเกม",
-            ].map((c) => (
-              <option key={c} value={c} />
-            ))}
-          </datalist>
-        </label>
-        {kind !== "game" && <label>แท็ก <span className="field-hint">คั่นด้วยจุลภาค สูงสุด 20 แท็ก</span><input name="tags" maxLength={1200} defaultValue={initial?.tags?.join(", ")} placeholder="เครื่องมือ, เทคนิค" /></label>}
+          {admin ? <>
+            <ConsoleSelect label="หมวดหมู่" value={customCategory ? "__custom" : category}
+              onChange={value => { setCustomCategory(value === "__custom"); setCategory(value === "__custom" ? "" : value); onDirty?.(); }}>
+              <option value="">เลือกหมวดหมู่</option>
+              {categoryOptions.map(c => <option key={c} value={c}>{c}</option>)}
+              <option value="__custom">เพิ่มหมวดหมู่ใหม่…</option>
+            </ConsoleSelect>
+            {customCategory ? <input name="category" aria-label="ชื่อหมวดหมู่ใหม่" required maxLength={60} value={category} onChange={e => setCategory(e.target.value)} placeholder="ชื่อหมวดหมู่ใหม่" /> : <input type="hidden" name="category" value={category} />}
+          </> : <>
+            <input name="category" list="entry-categories" required maxLength={60} defaultValue={initial?.category || (kind === "post" ? "พูดคุย" : "")} placeholder="เลือกหรือพิมพ์หมวดหมู่" />
+            <datalist id="entry-categories">{categoryOptions.map(c => <option key={c} value={c} />)}</datalist>
+          </>}
+        </div>
+        {kind !== "game" && kind !== "tool" && <label>แท็ก <span className="field-hint">คั่นด้วยจุลภาค สูงสุด 20 แท็ก</span><input name="tags" maxLength={1200} defaultValue={initial?.tags?.join(", ")} placeholder="เครื่องมือ, เทคนิค" /></label>}
       </div>
       {kind === "game" && <>
         <GameTagPicker value={gameTags} onChange={tags => { setGameTags(tags); onDirty?.(); }} />
@@ -199,15 +196,15 @@ export function EntryForm({
       <label>คำอธิบายภาพปก<input name="imageAlt" defaultValue={initial?.imageAlt || ""} maxLength={300} placeholder="อธิบายสิ่งที่เห็นในภาพ"/></label>
       {kind === "article" ? <section><h3>เนื้อหาบทความ</h3><ArticleEditor initial={content} onChange={(doc,text)=>{setContent(doc);setBody(text.slice(0,20000));onDirty?.();}} onBusy={setEditorBusy}/></section> : <label>รายละเอียดเพิ่มเติม<textarea name="body" maxLength={20000} rows={kind === "post" ? 8 : 4} value={body} onChange={e=>setBody(e.target.value)} placeholder="วิธีเล่น แพลตฟอร์ม หรือสิ่งที่ควรรู้"/></label>}
       {admin && !reviewOnly && (
-        <label>
+        <div className="console-field">
           สถานะ
-          <select name="status" defaultValue={initial?.status || "draft"}>
+          <ConsoleSelect label="สถานะ" name="status" defaultValue={initial?.status || "draft"} onChange={() => onDirty?.()}>
             <option value="draft">ฉบับร่าง</option>
             <option value="pending">รอตรวจสอบ</option>
             <option value="published">เผยแพร่บนเว็บไซต์</option>
             <option value="archived">เก็บเข้าคลัง (ซ่อนจากเว็บ)</option>
-          </select>
-        </label>
+          </ConsoleSelect>
+        </div>
       )}
       {!admin && (
         <label className="checkbox">

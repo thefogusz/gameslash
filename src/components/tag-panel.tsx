@@ -1,4 +1,5 @@
 "use client";
+import { ConsoleSelect } from "./console-select";
 import { useState } from "react";
 import type { Database } from "@/lib/model";
 import { gameTags, findGameTag, tagKey, tagSource, tagSourceDate } from "@/lib/game-tags";
@@ -34,7 +35,7 @@ export function TagPanel({ data, busy, resolve, openAgents, onDirty }: {
           try { await resolve({ requestId: request.id, expectedUpdatedAt: entry.updatedAt, decision, name: name || undefined, existingTagId: findGameTag(tags, name)?.id, reason: String(form.get("reason")), evidenceUrls: [String(form.get("evidence"))] }); } catch { /* Admin displays the error. */ }
         }}>
           <p>ผู้ดูแลตรวจแทนได้: เปิดเกมและตรวจหลักฐานก่อนสรุปผล</p>
-          <label>ผลการตรวจ<select name="decision"><option value="map">ใช้แท็กเดิมในคลัง</option><option value="add">เพิ่มแท็กใหม่ที่ตรวจแล้ว</option><option value="reject">ไม่รับแท็กนี้</option></select></label>
+          <div className="console-field">ผลการตรวจ<ConsoleSelect label="ผลการตรวจ" name="decision" onChange={onDirty}><option value="map">ใช้แท็กเดิมในคลัง</option><option value="add">เพิ่มแท็กใหม่ที่ตรวจแล้ว</option><option value="reject">ไม่รับแท็กนี้</option></ConsoleSelect></div>
           <label>ชื่อแท็กเดิม หรือชื่อใหม่ที่ตรวจแล้ว<input name="tag" list="registered-game-tags" maxLength={60} defaultValue={request.name} /></label>
           <label>เหตุผลจากการตรวจ<textarea name="reason" minLength={20} maxLength={1000} required rows={3} /></label>
           <label>ลิงก์หลักฐาน<input name="evidence" type="url" required maxLength={2000} defaultValue={entry.url} /></label>

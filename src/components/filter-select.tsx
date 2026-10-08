@@ -16,8 +16,15 @@ export function FilterSelect({ label, value, options, onChange, compact }: {
   const search = useRef({ text: "", at: 0 });
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
+  const [up, setUp] = useState(false);
   const selected = Math.max(0, options.findIndex(option => option.value === value));
 
+  useEffect(() => {
+    if (open && trigger.current) {
+      const rect = trigger.current.getBoundingClientRect();
+      setUp(window.innerHeight - rect.bottom < Math.min(320, options.length * 44 + 12) && rect.top > window.innerHeight - rect.bottom);
+    }
+  }, [open, options.length]);
   useEffect(() => {
     if (!open) return;
     const outside = (event: PointerEvent) => {
@@ -63,7 +70,7 @@ export function FilterSelect({ label, value, options, onChange, compact }: {
       }}>
       <span>{options[selected]?.label}</span><ChevronDown size={16} aria-hidden="true" />
     </button>
-    {open && <div id={id} className="filter-select-menu" role="listbox" aria-label={label}>
+    {open && <div id={id} className="filter-select-menu" style={up ? { top: "auto", bottom: "calc(100% + 6px)" } : undefined} role="listbox" aria-label={label}>
       {options.map((option, index) => <div key={option.value} id={`${id}-${index}`} role="option"
         aria-selected={option.value === value} className={index === active ? "filter-select-option active" : "filter-select-option"}
         onPointerMove={() => setActive(index)} onPointerDown={event => event.preventDefault()} onClick={() => choose(index)}>
