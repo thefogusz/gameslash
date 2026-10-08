@@ -516,13 +516,21 @@ export function Directory({
                   )}
                 </div>
               </div>
-              <div className="directory-filters" role="group" aria-label="ตัวกรองรายการ">
-                <label>หมวดหมู่
+              {kind === "tool" && (
+                <div className="filter-chips tool-categories" role="group" aria-label="ประเภทเครื่องมือ">
+                  <button type="button" aria-pressed={!category} onClick={() => updateFilters({ category: "" })}>ทั้งหมด</button>
+                  {categories.map(c => (
+                    <button type="button" key={c} aria-pressed={category === c} onClick={() => updateFilters({ category: c })}>{c}</button>
+                  ))}
+                </div>
+              )}
+              <div className={`directory-filters${kind === "tool" ? " tool-filters" : ""}`} role="group" aria-label="ตัวกรองรายการ">
+                {kind !== "tool" && <label>หมวดหมู่
                   <select value={category} onChange={e => updateFilters({ category: e.target.value })}>
                     <option value="">ทุกหมวดหมู่ ({entries.length})</option>
                     {categories.map(c => <option key={c} value={c}>{c} ({entries.filter(e => e.category === c).length})</option>)}
                   </select>
-                </label>
+                </label>}
                 <label>{kind === "game" ? "แท็ก / แพลตฟอร์ม" : "แท็ก"}
                   <select value={tag} onChange={e => updateFilters({ tag: e.target.value })}>
                     <option value="">ทุกแท็ก</option>

@@ -702,6 +702,14 @@ a:focus-visible {
   color: var(--bg);
   border-color: var(--ink);
 }
+.tool-categories { gap: 8px; margin-bottom: 20px; }
+.filter-chips.tool-categories button { min-height: 44px; padding: 9px 18px; border-radius: 999px; color: var(--ink); font-size: 15px; font-weight: 600; }
+.tool-categories button:hover { border-color: var(--accent); }
+.tool-categories button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.tool-categories button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.directory-filters.tool-filters { display: flex; flex-wrap: wrap; gap: 12px; padding: 0 0 20px; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: none; }
+.tool-filters label { flex: 0 1 200px; }
+@media (max-width: 480px) { .tool-filters label { flex: 1 1 140px; } }
 .result-count {
   font-size: 14px;
   color: var(--muted);
