@@ -1,6 +1,7 @@
 "use client";
 import { ArticleContent } from "./article-content";
-import { ToolsGuide, ToolDirectoryCard } from "./tools-guide";
+import { ToolDirectoryCard } from "./tool-directory-card";
+import { FilterSelect } from "./filter-select";
 import Link from "next/link";
 import { useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
@@ -377,7 +378,7 @@ export function Directory({
   const compactFilters = kind === "game" || kind === "article";
   const titles = {
     game: ["ค้นพบเกม", "ค้นหาเกมตามชื่อ ผู้สร้าง หรือหมวดหมู่"],
-    tool: ["สร้างเกมด้วย AI", "ไกด์ตั้งแต่ยังไม่มีไอเดียจนเกมพร้อมให้คนเล่น พร้อมรวมเครื่องมือที่ใช้ในแต่ละขั้น"],
+    tool: ["เครื่องมือทำเกม", "เลือกเครื่องมือที่ใช่ ตั้งแต่ไอเดีย เขียนโค้ด สร้างภาพ ไปจนถึงทดสอบเกม"],
     article: ["ข่าว AI game", "ข่าวสาร อัปเดต และเรื่องน่ารู้ในวงการเกม AI"],
     post: ["คอมมูนิตี้", "แชร์ผลงาน ถามคำถาม และขอฟีดแบ็ก"],
   };
@@ -520,10 +521,6 @@ export function Directory({
                   )}
                 </div>
               </div>
-              {kind === "tool" && !searching && <>
-                <a className="tools-directory-jump" href="#tool-directory">ดูรวมเครื่องมือ <ArrowRight size={16} /></a>
-                <ToolsGuide entries={entries} />
-              </>}
               {kind === "tool" && <div className="tool-directory-heading" id="tool-directory">
                 <h2>รวมเครื่องมือ</h2><span role="status" aria-live="polite">{results.length} เครื่องมือ</span>
               </div>}
@@ -536,23 +533,15 @@ export function Directory({
                 </div>
               )}
               {kind !== "tool" && <div className={`directory-filters${compactFilters ? " compact-filters" : ""}`} role="group" aria-label="ตัวกรองรายการ">
-                <label><span className={compactFilters ? "sr-only" : undefined}>หมวดหมู่</span>
-                  <select value={category} onChange={e => updateFilters({ category: e.target.value })}>
-                    <option value="">ทุกหมวดหมู่ ({entries.length})</option>
-                    {categories.map(c => <option key={c} value={c}>{c} ({entries.filter(e => e.category === c).length})</option>)}
-                  </select>
-                </label>
-                <label><span className={compactFilters ? "sr-only" : undefined}>{kind === "game" ? "แท็ก / แพลตฟอร์ม" : "แท็ก"}</span>
-                  <select value={tag} onChange={e => updateFilters({ tag: e.target.value })}>
-                    <option value="">ทุกแท็ก</option>
-                    {tags.map(t => <option key={t} value={t}>{t} ({entries.filter(e => e.tags.includes(t)).length})</option>)}
-                  </select>
-                </label>
-                <label><span className={compactFilters ? "sr-only" : undefined}>เรียงลำดับ</span>
-                  <select value={sort} onChange={e => updateFilters({ sort: e.target.value === "curated" ? "" : e.target.value })}>
-                    {Object.entries(directorySorts).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-                  </select>
-                </label>
+                <FilterSelect label="หมวดหมู่" compact={compactFilters} value={category}
+                  options={[{ value: "", label: `ทุกหมวดหมู่ (${entries.length})` }, ...categories.map(c => ({ value: c, label: `${c} (${entries.filter(e => e.category === c).length})` }))]}
+                  onChange={category => updateFilters({ category })} />
+                <FilterSelect label={kind === "game" ? "แท็ก / แพลตฟอร์ม" : "แท็ก"} compact={compactFilters} value={tag}
+                  options={[{ value: "", label: "ทุกแท็ก" }, ...tags.map(t => ({ value: t, label: `${t} (${entries.filter(e => e.tags.includes(t)).length})` }))]}
+                  onChange={tag => updateFilters({ tag })} />
+                <FilterSelect label="เรียงลำดับ" compact={compactFilters} value={sort}
+                  options={Object.entries(directorySorts).map(([value, label]) => ({ value, label }))}
+                  onChange={sort => updateFilters({ sort: sort === "curated" ? "" : sort })} />
                 {(!compactFilters || filtered) && <button className="button secondary filter-reset" onClick={reset} disabled={!filtered}><X size={16} />ล้างตัวกรอง</button>}
               </div>}
               {kind !== "tool" && <p className="result-count" role="status" aria-live="polite">
