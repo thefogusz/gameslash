@@ -98,7 +98,7 @@ test("form parser rejects duplicate fields, wrong content type and oversized bod
   await assert.rejects(readOAuthForm(new Request("https://example.com", { method: "POST", body: "code=a" })), /invalid_request/);
 });
 
-test("consent CSP permits the ChatGPT callback redirect while keeping other form destinations blocked", async () => {
+test("consent preserves same-origin form authentication and permits only the ChatGPT callback redirect", async () => {
   const originalFetch = globalThis.fetch;
   const originalPassword = process.env.ADMIN_PASSWORD;
   process.env.ADMIN_PASSWORD = "isolated-oauth-test-password-123456";
@@ -106,6 +106,7 @@ test("consent CSP permits the ChatGPT callback redirect while keeping other form
   try {
     const response = await authorizationPage(new Request(`https://gameslash.vercel.app/oauth/authorize?${new URLSearchParams(input)}`));
     assert.equal(response.status, 200);
+    assert.equal(response.headers.get("Referrer-Policy"), "same-origin");
     const csp = response.headers.get("Content-Security-Policy")!;
     assert.equal(csp.split(";").map(value => value.trim()).find(value => value.startsWith("form-action")), "form-action 'self' https://chatgpt.com");
     assert.ok(csp.includes("frame-ancestors 'none'"));

@@ -20,7 +20,7 @@ function consentPage(input: Authorization, csrf: string, error = "") {
     <p>คุณยังเป็นคนยืนยันเผยแพร่ใน Console การเชื่อมต่อนี้ไม่ให้สิทธิ์จัดการเว็บหรือเผยแพร่โดยตรง</p>
     <div class="actions"><button name="decision" value="allow" type="submit">อนุญาตและเชื่อมต่อ</button><button name="decision" value="deny" type="submit">ยกเลิก</button></div></form></main></body></html>`,
     { status: error ? 401 : 200, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store",
-      "Referrer-Policy": "no-referrer", "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; form-action 'self' https://chatgpt.com; frame-ancestors 'none'; base-uri 'none'" } });
+      "Referrer-Policy": "same-origin", "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; form-action 'self' https://chatgpt.com; frame-ancestors 'none'; base-uri 'none'" } });
 }
 export async function GET(request: Request) {
   try {
