@@ -76,7 +76,15 @@ try {
   assert.equal((await snapshot()).revision,beforeUploadRevision,"Uploads must not invalidate the open editor");
   const downloaded=await fetch(`${origin}${media.url}`);
   assert.equal(downloaded.status,200); assert.equal(downloaded.headers.get("content-type"),"image/webp");
-  assert.ok((await call(token,"get_article_format")).structuredContent.example);
+  const articleFormat = (await call(reader, "get_article_format")).structuredContent;
+  assert.ok(articleFormat.example);
+  assert.deepEqual(articleFormat.editorialGuides.map((skill: { id: string }) => skill.id), ["image-research", "thai-editorial", "draft-workflow"]);
+  for (const guide of articleFormat.editorialGuides) {
+    const canonical = (await call(reader, "get_editorial_skills", { skillId: guide.id })).structuredContent;
+    assert.deepEqual(guide, canonical.skill, "Article format must reuse the canonical playbook");
+    assert.equal(articleFormat.editorialScope, canonical.editorialScope);
+    assert.equal(canonical.permissions.canWriteDrafts, false, "Reading guidance must not grant write permission");
+  }
   const skills = (await call(reader, "get_editorial_skills")).structuredContent;
   assert.equal(skills.permissions.canWriteDrafts, false);
   assert.equal(skills.skills.length, 7);
@@ -149,3 +157,4 @@ try {
   for (const id of agentIds) await manage({ action: "revoke_agent", id });
   await fetch(`${origin}/api/session`, { method: "DELETE", headers });
 }
+
