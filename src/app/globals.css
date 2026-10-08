@@ -141,6 +141,13 @@ a:focus-visible {
   flex-shrink: 0;
   border-radius: 7px;
 }
+@media (max-width: 380px) {
+  .topbar .wordmark { font-size: 15px; gap: 6px; }
+  .topbar .brand-mark { width: 24px; height: 24px; }
+  .topbar .topbar-start { gap: 6px; }
+  .topbar .topbar-end { gap: 4px; }
+  .topbar .submit-nav { padding: 8px; gap: 4px; }
+}
 .topbar-end {
   display: flex;
   align-items: center;
