@@ -1,5 +1,5 @@
 "use client";
-import { ArticleContent } from "./article-content";
+import { ArticleContent, legacyGuideDocument } from "./article-content";
 import { ToolDirectoryCard } from "./tool-directory-card";
 import { FilterSelect } from "./filter-select";
 import Link from "next/link";
@@ -252,12 +252,14 @@ export function HomeContent({
   );
 }
 function Detail({ entry }: { entry: Entry }) {
+  const legacyGuide = entry.kind === "article" && !entry.content && ["first-small-game", "share-your-game"].includes(entry.id);
+  const guideContent = legacyGuide ? legacyGuideDocument(entry.body) : entry.content;
   return (
     <article className={`detail detail-${entry.kind}`}>
       <Link href={`/${paths[entry.kind]}`} className="text-link">
         <ArrowLeft size={15} /> กลับไป{kindLabels[entry.kind]}
       </Link>
-      {(entry.kind === "game" || (entry.kind === "article" && entry.image)) && (
+      {entry.kind === "game" && (
         <div className="detail-cover">
           <Cover entry={entry} priority />
         </div>
@@ -289,7 +291,8 @@ function Detail({ entry }: { entry: Entry }) {
           <span key={t}>{t}</span>
         ))}
       </div>
-      <ArticleContent content={entry.content} body={entry.body}/>
+      {entry.kind === "article" && entry.image && <div className="detail-cover"><Cover entry={entry} priority /></div>}
+      <ArticleContent content={guideContent} body={entry.body}/>
       {entry.kind === "game" && (
         <div className="source-note">
           <Globe size={18} />

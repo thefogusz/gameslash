@@ -5,7 +5,17 @@ import { renderToStaticMarkup } from "react-dom/server";
 import sharp from "sharp";
 import { articleDocumentSchema, imageUrl, textDocument } from "../src/lib/article";
 import { normalizeImage, maxImageBytes } from "../src/lib/media";
-import { ArticleContent } from "../src/components/article-content";
+import { ArticleContent, legacyGuideDocument } from "../src/components/article-content";
+test("legacy guides gain real headings and a linked table of contents without losing text",()=>{
+  const body="หัวข้อแรก\n\nคำอธิบายแรก\n\nหัวข้อสอง\n\nคำอธิบายสอง";
+  const doc=legacyGuideDocument(body);
+  assert.equal(articleDocumentSchema.safeParse(doc).success,true);
+  const html=renderToStaticMarkup(<ArticleContent content={doc}/>);
+  assert.match(html,/<nav[^>]+aria-label="สารบัญบทความ"/);
+  assert.match(html,/<h2 id="section-0">หัวข้อแรก<\/h2>/);
+  assert.match(html,/href="#section-2"/);
+  for(const part of body.split("\n\n"))assert.ok(html.includes(part));
+});
 test("illustrated article roundtrip preserves formatting, image caption and legacy text",()=>{
   const doc=articleDocumentSchema.parse({type:"doc",content:[{type:"paragraph",content:[{type:"text",text:"<script>alert(1)</script>",marks:[{type:"bold"}]}]},{type:"image",attrs:{src:"https://example.com/scene.png",alt:"ฉากตัวอย่าง",title:"เครดิตผู้สร้าง"}}]});
   assert.deepEqual(articleDocumentSchema.parse(JSON.parse(JSON.stringify(doc))),doc);
