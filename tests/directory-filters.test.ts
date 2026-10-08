@@ -1,10 +1,24 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { filterDirectory, gameMakingTools, toolWorkflowCategories } from "../src/lib/directory-filters";
+import { filterDirectory, gameMakingTools, rankedGameCategories, toolWorkflowCategories } from "../src/lib/directory-filters";
 import { seedDatabase } from "../src/lib/seed";
 
 const entries = seedDatabase().entries;
 const defaults = { kind: "game" as const, query: "", category: "", tag: "", sort: "curated" };
+
+test("sidebar ranks game counts, preserves ties and color indices, and keeps empty genres last", () => {
+  const categories = [...seedDatabase().layout.categories, "แอ็กชัน"];
+  const sample = [
+    ...[5, 4, 5].map(index => ({ ...entries[0], kind: "game" as const, category: categories[index] })),
+    { ...entries[0], kind: "tool" as const, category: categories[0] },
+  ];
+  const before = JSON.stringify({ categories, sample });
+  assert.deepEqual(rankedGameCategories(categories, sample), [5, 4, 0, 1, 2, 3, 6, 7].map(index => ({
+    category: categories[index], index, count: index === 5 ? 2 : index === 4 ? 1 : 0,
+  })));
+  assert.deepEqual(rankedGameCategories(categories, []), categories.map((category, index) => ({ category, index, count: 0 })));
+  assert.equal(JSON.stringify({ categories, sample }), before);
+});
 
 test("tool workflow excludes publishing and ignores retired tag filters in old links", () => {
   const before = JSON.stringify(entries);

@@ -22,7 +22,7 @@ const chakra = Chakra_Petch({
 export const metadata: Metadata = {
   metadataBase: new URL(siteOrigin()),
   title: {
-    default: "GameSlash รวมเกมเอไอ",
+    default: "GameSlash รวมเกมที่สร้างด้วย AI",
     template: "%s · gameslash",
   },
   description:
@@ -39,7 +39,7 @@ export const metadata: Metadata = {
       url: "/images/gameslash-social-v3.png",
       width: 1730,
       height: 909,
-      alt: "GameSlash แพลตฟอร์มรวมเกมเอไอ — RPG ผจญภัย ปริศนา และจำลอง",
+      alt: "GameSlash รวมเกมที่สร้างด้วย AI — RPG ผจญภัย ปริศนา และจำลอง",
     }],
   },
   twitter: {
@@ -58,7 +58,7 @@ export default function RootLayout({
       className={`${geist.variable} ${anuphan.variable} ${chakra.variable}`}
     >
       <body>
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd({ "@context": "https://schema.org", "@type": "WebSite", "@id": absoluteUrl("/#website"), name: "GameSlash", alternateName: ["GameSlash รวมเกมเอไอ", "GameSlash AI Games"], url: absoluteUrl("/"), description: seoDescription, inLanguage: "th" }) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd({ "@context": "https://schema.org", "@type": "WebSite", "@id": absoluteUrl("/#website"), name: "GameSlash", alternateName: ["GameSlash รวมเกมที่สร้างด้วย AI", "GameSlash Games Made with AI"], url: absoluteUrl("/"), description: seoDescription, inLanguage: "th" }) }} />
         <GamePreferencesProvider>{children}</GamePreferencesProvider>
       </body>
     </html>

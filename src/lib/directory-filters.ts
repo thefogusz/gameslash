@@ -1,5 +1,11 @@
 import type { Entry } from "./model";
 
+export function rankedGameCategories(categories: string[], entries: Entry[]) {
+  return categories.map((category, index) => ({
+    category, index, count: entries.filter(e => e.kind === "game" && e.category === category).length,
+  })).sort((a, b) => b.count - a.count);
+}
+
 export const toolWorkflowCategories = [
   "ไอเดียและออกแบบ", "เอนจินเกม", "สร้างเกมแบบไม่เขียนโค้ด", "เขียนโค้ด",
   "ภาพและอาร์ต", "สไปรต์และภาพ 2D", "โมเดล 3D", "แอนิเมชัน", "เสียงและเพลง", "คลังแอสเซ็ต", "บทสนทนาและเนื้อเรื่อง", "AI ในเกม", "ทดสอบเกม",

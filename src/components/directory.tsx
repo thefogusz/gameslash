@@ -6,7 +6,7 @@ import { FilterSelect } from "./filter-select";
 import Link from "next/link";
 import { useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { directorySorts, filterDirectory, gameMakingTools, toolWorkflowCategories } from "@/lib/directory-filters";
+import { directorySorts, filterDirectory, gameMakingTools, rankedGameCategories, toolWorkflowCategories } from "@/lib/directory-filters";
 import {
   ArrowUpRight,
   ArrowRight,
@@ -33,7 +33,7 @@ import { Cover } from "./cover";
 export { Cover } from "./cover";
 import { Spotlight } from "./spotlight";
 import { LikeButton, useGamePreferences } from "./game-preferences";
-const kindLabels = { ...contentKindLabels, article: "ข่าว AI game" };
+const kindLabels = { ...contentKindLabels, article: "ข่าวสร้างเกมด้วย AI" };
 export type View =
   | "home"
   | "games"
@@ -220,7 +220,7 @@ export function HomeContent({
 }) {
   return (
     <>
-      {!editSection && <h1 className="sr-only">gameslash — รวมเกม AI</h1>}
+      {!editSection && <h1 className="sr-only">gameslash — รวมเกมที่สร้างด้วย AI</h1>}
       <div className={editSection ? "editable-region" : ""}>
         {editSection && (
           <button
@@ -373,7 +373,7 @@ export function Directory({
   const titles = {
     game: ["ค้นพบเกม", "ค้นหาเกมตามชื่อ ผู้สร้าง หรือหมวดหมู่"],
     tool: ["เครื่องมือทำเกม", "เลือกเครื่องมือที่ใช่ ตั้งแต่ไอเดีย เขียนโค้ด สร้างภาพ ไปจนถึงทดสอบเกม"],
-    article: ["ข่าว AI game", "ข่าวสาร อัปเดต และเรื่องน่ารู้ในวงการเกม AI"],
+    article: ["ข่าวสร้างเกมด้วย AI", "ข่าวสาร อัปเดต และเทคนิคสำหรับคนสร้างเกมด้วย AI"],
     post: ["คอมมูนิตี้", "แชร์ผลงาน ถามคำถาม และขอฟีดแบ็ก"],
   };
   function reset() {
@@ -399,7 +399,7 @@ export function Directory({
               <img className="brand-mark" src="/gameslash-symbol.svg" alt="" width={34} height={34} />
               GAMESLASH
             </Link>
-            <span className="brand-tagline">แพลตฟอร์มรวมเกม AI</span>
+            <span className="brand-tagline">รวมเกมที่สร้างด้วย AI</span>
           </div>
         </div>
         <label className="search-box">
@@ -452,7 +452,7 @@ export function Directory({
             </Link>
           </div>
           <div className="sidebar-group">
-            {catalog.layout.categories.map((c, i) => {
+            {rankedGameCategories(catalog.layout.categories, catalog.entries).map(({ category: c, index: i, count }) => {
               return (
                 <Link
                   key={c}
@@ -476,9 +476,7 @@ export function Directory({
                   />
                   {c}
                   <span className="side-count">
-                    {catalog.entries.filter(
-                      (e) => e.kind === "game" && e.category === c,
-                    ).length || "—"}
+                    {count || "—"}
                   </span>
                 </Link>
               );
@@ -492,7 +490,7 @@ export function Directory({
             </Link>
             <Link className="sidebar-link" href="/journal">
               <BookOpen size={16} />
-              ข่าว AI game
+              ข่าวสร้างเกมด้วย AI
             </Link>
           </div>
         </aside>
@@ -599,9 +597,9 @@ export function Directory({
             <HomeContent catalog={catalog} />
           )}
           {view === "home" && <section className="discovery-about" aria-label="เกี่ยวกับ GameSlash">
-            <h2>GameSlash — แพลตฟอร์มรวมเกม AI</h2>
-            <p>ค้นพบเกมที่มี AI NPC เกมสร้างด้วย AI และประสบการณ์ใหม่ ๆ ทั้ง RPG ผจญภัย ปริศนา และจำลอง พร้อมเครื่องมือสร้างเกมและข่าวสำหรับคนสร้างเกม</p>
-            <p lang="en">Discover AI games, intelligent NPCs and generative AI experiences, from RPGs and adventures to puzzle and simulation games. Explore AI game development tools and gaming news.</p>
+            <h2>GameSlash — รวมเกมที่สร้างด้วย AI</h2>
+            <p>ค้นพบเกมที่ผู้สร้างใช้ AI ช่วยพัฒนา ทั้ง RPG ผจญภัย ปริศนา และจำลอง พร้อมเครื่องมือ เทคนิค และข่าวสำหรับคนสร้างเกมด้วย AI</p>
+            <p lang="en">Discover games made with AI, from RPGs and adventures to puzzle and simulation games. Explore AI tools, workflows and news for game creators.</p>
           </section>}
           <footer className="site-footer">
             <Link href="/" className="wordmark small">

@@ -10,14 +10,14 @@ export function siteOrigin(value = process.env.GAMESLASH_SITE_URL || "https://ga
 }
 export const indexable = !["preview", "development"].includes(process.env.VERCEL_ENV || "");
 export const absoluteUrl = (path: string) => new URL(path, `${siteOrigin()}/`).href;
-export const seoDescription = "รวมเกม AI เกมเอไอ เกมที่มี AI NPC และเกมสร้างด้วย AI พร้อมเครื่องมือสร้างเกมและข่าวเกม — Discover AI games, AI-powered NPCs, AI game development tools and news.";
-export const seoKeywords = ["GameSlash", "เกม AI", "เกมเอไอ", "รวมเกม AI", "เกมที่มี AI", "เกมสร้างด้วย AI", "AI games", "AI-powered games", "AI NPC", "generative AI games", "AI game directory", "เครื่องมือสร้างเกม", "AI game development tools", "ข่าวเกม AI"];
+export const seoDescription = "รวมเกมที่สร้างด้วย AI พร้อมเครื่องมือ เทคนิค และข่าวสำหรับคนสร้างเกมด้วย AI — Discover games made with AI, AI game development tools, workflows and news.";
+export const seoKeywords = ["GameSlash", "เกมสร้างด้วย AI", "เกมที่สร้างด้วย AI", "สร้างเกมด้วย AI", "รวมเกมสร้างด้วย AI", "games made with AI", "AI-assisted game development", "AI-made games", "เครื่องมือสร้างเกม", "AI game development tools", "เทคนิคสร้างเกมด้วย AI"];
 export const sectionSeo: Record<string, { title: string; description: string; kind?: Entry["kind"] }> = {
-  games: { title: "ค้นพบเกม AI และเกมเอไอ | AI Games", description: "ค้นพบเกม AI เกมที่มี AI NPC เกมสร้างด้วย AI ทั้ง RPG ผจญภัย ปริศนา และจำลอง — Explore AI games, AI NPC games and generative AI experiences.", kind: "game" },
-  tools: { title: "เครื่องมือ AI สร้างเกม | AI Game Development Tools", description: "ค้นหาเครื่องมือ AI สำหรับสร้างเกม ภาพ แอนิเมชัน โค้ด และระบบ NPC — Discover AI game development tools for art, animation, coding and intelligent characters.", kind: "tool" },
-  journal: { title: "ข่าวเกม AI และเทคนิคสร้างเกม | AI Gaming News", description: "อ่านข่าวเกม AI บทความและเทคนิคพัฒนาเกมด้วย AI — AI gaming news, game development articles and generative AI workflows.", kind: "article" },
-  community: { title: "คอมมูนิตี้คนสร้างเกม AI | AI Game Dev Community", description: "สำรวจไอเดียและโพสต์จากชุมชนคนสร้างเกม AI — Discover ideas and discussions from the AI game development community.", kind: "post" },
-  submit: { title: "ส่งเกมและเครื่องมือ AI | Submit Your AI Game", description: "แนะนำเกม AI หรือเครื่องมือสร้างเกมให้ทีม GameSlash ตรวจสอบก่อนเผยแพร่ — Submit an AI game or game development tool for review." },
+  games: { title: "ค้นพบเกมที่สร้างด้วย AI | Games Made with AI", description: "ค้นพบเกมที่ผู้สร้างใช้ AI ช่วยพัฒนา ทั้ง RPG ผจญภัย ปริศนา และจำลอง — Explore games made with AI across RPG, adventure, puzzle and simulation genres.", kind: "game" },
+  tools: { title: "เครื่องมือ AI สร้างเกม | AI Game Development Tools", description: "ค้นหาเครื่องมือ AI ช่วยสร้างเกม เขียนโค้ด ทำภาพ แอนิเมชัน เสียง และเนื้อเรื่อง — Discover AI tools for game development, coding, art, animation, audio and storytelling.", kind: "tool" },
+  journal: { title: "ข่าวและเทคนิคสร้างเกมด้วย AI | AI Game Development News", description: "อ่านข่าว บทความ และเทคนิคสร้างเกมด้วย AI — Read AI-assisted game development news, articles and workflows.", kind: "article" },
+  community: { title: "คอมมูนิตี้คนสร้างเกมด้วย AI | AI Game Dev Community", description: "สำรวจไอเดียและโพสต์จากชุมชนคนสร้างเกมด้วย AI — Discover ideas and discussions from creators making games with AI.", kind: "post" },
+  submit: { title: "ส่งเกมที่สร้างด้วย AI และเครื่องมือ | Submit Your Game", description: "แนะนำเกมที่สร้างด้วย AI หรือเครื่องมือช่วยสร้างเกมให้ทีม GameSlash ตรวจสอบก่อนเผยแพร่ — Submit a game made with AI or a game development tool for review." },
 };
 export function pageMetadata(path: string, title: string, description: string, image?: string): Metadata {
   return {
@@ -36,7 +36,7 @@ export function entrySchema(entry: Entry) {
   const url = absoluteUrl(`/item/${entry.id}`);
   return { "@context": "https://schema.org", "@graph": [
     { "@type": "WebPage", "@id": url, url, name: entry.title, description: entry.description, inLanguage: "th", isPartOf: { "@id": absoluteUrl("/#website") }, mainEntity: { "@id": `${url}#entity` }, breadcrumb: { "@id": `${url}#breadcrumb` } },
-    { "@type": "BreadcrumbList", "@id": `${url}#breadcrumb`, itemListElement: [{ "@type": "ListItem", position: 1, name: "GameSlash", item: absoluteUrl("/") }, { "@type": "ListItem", position: 2, name: { game: "เกม AI", tool: "เครื่องมือสร้างเกม", article: "ข่าวเกม AI", post: "คอมมูนิตี้" }[entry.kind], item: absoluteUrl(`/${{ game: "games", tool: "tools", article: "journal", post: "community" }[entry.kind]}`) }, { "@type": "ListItem", position: 3, name: entry.title, item: url }] },
+    { "@type": "BreadcrumbList", "@id": `${url}#breadcrumb`, itemListElement: [{ "@type": "ListItem", position: 1, name: "GameSlash", item: absoluteUrl("/") }, { "@type": "ListItem", position: 2, name: { game: "เกมที่สร้างด้วย AI", tool: "เครื่องมือสร้างเกม", article: "ข่าวสร้างเกมด้วย AI", post: "คอมมูนิตี้" }[entry.kind], item: absoluteUrl(`/${{ game: "games", tool: "tools", article: "journal", post: "community" }[entry.kind]}`) }, { "@type": "ListItem", position: 3, name: entry.title, item: url }] },
     { "@type": { game: "VideoGame", tool: "SoftwareApplication", article: "Article", post: "DiscussionForumPosting" }[entry.kind], "@id": `${url}#entity`, name: entry.title, ...(entry.kind === "article" || entry.kind === "post" ? { headline: entry.title } : {}), description: entry.description, url, mainEntityOfPage: { "@id": url }, ...(entry.image ? { image: absoluteUrl(entry.image) } : {}), ...(entry.url ? { sameAs: entry.url } : {}), keywords: entry.tags.join(", "), ...(entry.kind === "game" ? { genre: entry.category } : {}), ...(entry.kind === "tool" ? { applicationCategory: "DeveloperApplication" } : {}), dateModified: entry.updatedAt },
   ] };
 }

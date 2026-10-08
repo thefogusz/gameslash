@@ -1,7 +1,15 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { seedDatabase } from "../src/lib/seed";
-import { collectionSchema, entrySchema, jsonLd, pageMetadata, siteOrigin, sitemapEntries } from "../src/lib/seo";
+import { collectionSchema, entrySchema, jsonLd, pageMetadata, seoDescription, seoKeywords, sectionSeo, siteOrigin, sitemapEntries } from "../src/lib/seo";
+
+test("site discovery metadata describes games made with AI rather than runtime AI", () => {
+  assert.match(seoDescription, /เกมที่สร้างด้วย AI/);
+  assert.match(sectionSeo.games.title, /Games Made with AI/);
+  const metadata = [pageMetadata("/", "GameSlash", seoDescription), ...Object.entries(sectionSeo).map(([section, seo]) => pageMetadata(`/${section}`, seo.title, seo.description))];
+  assert.doesNotMatch(JSON.stringify({ metadata, seoKeywords }), /NPC|intelligent|AI-powered|เกมที่มี AI|generative AI experiences/i);
+  assert.equal(entrySchema(seedDatabase().entries[0])["@graph"][1].itemListElement?.[1].name, "เกมที่สร้างด้วย AI");
+});
 
 test("canonical origin accepts future domains and rejects misleading URL configuration", () => {
   assert.equal(siteOrigin("https://gameslash.example/"), "https://gameslash.example");

@@ -100,10 +100,10 @@ Keyword coverage follows the actual content, without search-volume claims:
 
 | Page | Thai intent | English intent |
 | --- | --- | --- |
-| Home / games | เกม AI, เกมเอไอ, รวมเกม AI, เกมที่มี AI, เกมสร้างด้วย AI, RPG, ผจญภัย, ปริศนา, จำลอง | AI games, AI-powered games, AI NPC games, generative AI games, AI game directory |
-| Tools | เครื่องมือ AI สร้างเกม, ภาพ, แอนิเมชัน, โค้ด, ระบบ NPC | AI game development tools, game art, animation, coding, intelligent characters |
-| Journal | ข่าวเกม AI, บทความพัฒนาเกม, เทคนิคสร้างเกมด้วย AI | AI gaming news, game development articles, generative AI workflows |
-| Community | คอมมูนิตี้คนสร้างเกม AI, ไอเดียสร้างเกม | AI game dev community, game development ideas |
+| Home / games | เกมที่สร้างด้วย AI, สร้างเกมด้วย AI, RPG, ผจญภัย, ปริศนา, จำลอง | games made with AI, AI-made games, AI-assisted game development |
+| Tools | เครื่องมือ AI สร้างเกม, ภาพ, แอนิเมชัน, โค้ด, เสียง, เนื้อเรื่อง | AI game development tools, game art, animation, coding, audio, storytelling |
+| Journal | ข่าวสร้างเกมด้วย AI, บทความพัฒนาเกม, เทคนิคสร้างเกมด้วย AI | AI game development news, articles, workflows |
+| Community | คอมมูนิตี้คนสร้างเกมด้วย AI, ไอเดียสร้างเกม | AI game dev community, game development ideas |
 
 This is a Thai site with bilingual discovery copy, not separate translated pages; no fake English hreflang URLs are emitted. Meta keywords are descriptive metadata, not a Google ranking mechanism. Add substantive bilingual entries for additional search intents.
 

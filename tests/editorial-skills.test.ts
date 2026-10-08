@@ -22,6 +22,7 @@ test("AI-assisted development qualifies without requiring AI gameplay or named t
   assert.ok(editorialHandbook().includes(editorialScope));
   assert.match(editorialScope, /ไม่ต้องรู้ชื่อเครื่องมือ ไม่ต้องมี AI ใน gameplay/);
   assert.match(editorialScope, /ห้ามเติมข้อความปฏิเสธ/);
+  assert.match(editorialScope, /การมีระบบ AI หรือ NPC ในเกมเพียงอย่างเดียวไม่ใช่เกณฑ์รับเกม/);
   const verification = editorialSkills.find(s => s.id === "source-verification")!;
   assert.ok(verification.instructions.some(s => s.includes("เพียงพอสำหรับเข้าคลัง") && s.includes("สร้างด้วย AI")));
   const writing = editorialSkills.find(s => s.id === "thai-editorial")!;
