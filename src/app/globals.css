@@ -843,6 +843,10 @@ a:focus-visible {
   grid-template-columns: minmax(0, 1fr);
   gap: 20px;
 }
+.catalog-section.section-article {
+  max-width: 960px;
+  margin-inline: auto;
+}
 .template-home-news .article-card {
   grid-template-columns: minmax(200px, 30%) minmax(0, 1fr);
   gap: 28px;
