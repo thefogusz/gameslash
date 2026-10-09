@@ -557,17 +557,12 @@ export function Directory({
                   )}
                 </div>
               </div>
-              {kind === "tool" && <div className="tool-directory-meta"><details className="popularity-method">
-                <summary>ดาวความนิยมคิดจากอะไร?</summary>
-                <p>Gameslash ประเมินจากหลักฐานฐานผู้ใช้ ผลงานและระบบนิเวศ และการเป็นที่รู้จักในวงการทำเกม คลิกดาวของแต่ละเครื่องมือเพื่อดูเหตุผล แหล่งข้อมูล และวันที่ตรวจ เป็นการประเมินเชิงเปรียบเทียบ ไม่ใช่ยอดผู้ใช้แบบเรียลไทม์หรือคะแนนคุณภาพ</p>
-                <p>5 ดาว: แพร่หลายและมีหลักฐานเด่นครบทั้งสามด้าน · 4 ดาว: เป็นที่ยอมรับ มีหลักฐานหลายด้าน · 3 ดาว: มีชุมชนหรือผลงานชัดเจนในกลุ่มเฉพาะ · 2 ดาว: เริ่มมีการนำไปใช้ในกลุ่มเล็ก · 1 ดาว: มีหลักฐานว่ายังมีผู้ใช้น้อยมาก · หากหลักฐานไม่เพียงพอจะยังไม่ให้ดาว</p>
-              </details><span role="status" aria-live="polite">{results.length} เครื่องมือ</span></div>}
-              {kind === "tool" && (
-                <div className="tool-categories" id="tool-directory" role="group" aria-label="หมวดเครื่องมือ">
-                  <button type="button" aria-pressed={!category} onClick={() => updateFilters({ category: "", q: "" })}>ทั้งหมด</button>
-                  {categories.map(c => <button type="button" key={c} aria-pressed={category === c} onClick={() => updateFilters({ category: c })}>{c}</button>)}
-                </div>
-              )}
+              {kind === "tool" && <div className="tool-directory-toolbar" id="tool-directory">
+                <FilterSelect label="หมวดเครื่องมือ" compact value={category}
+                  options={[{ value: "", label: "ทุกหมวด" }, ...categories.map(c => ({ value: c, label: c }))]}
+                  onChange={category => updateFilters({ category, q: "" })} />
+                <span role="status" aria-live="polite">{results.length} เครื่องมือ</span>
+              </div>}
               {kind !== "tool" && <div className={`directory-filters${compactFilters ? " compact-filters" : ""}${kind === "game" ? " game-directory-filters" : ""}`} role="group" aria-label="ตัวกรองรายการ">
                 <FilterSelect label={kind === "game" ? "แนวเกม" : "หมวดหมู่"} compact={compactFilters && kind !== "game"} value={category}
                   options={[{ value: "", label: `${kind === "game" ? "ทุกแนวเกม" : "ทุกหมวดหมู่"} (${entries.length})` }, ...categories.map(c => ({ value: c, label: `${c} (${entries.filter(e => e.category === c).length})` }))]}
@@ -602,6 +597,11 @@ export function Directory({
                   )}
                 </div>
               )}
+              {kind === "tool" && <details className="popularity-method">
+                <summary>ดาวความนิยมคิดจากอะไร?</summary>
+                <p>Gameslash ประเมินจากหลักฐานฐานผู้ใช้ ผลงานและระบบนิเวศ และการเป็นที่รู้จักในวงการทำเกม คลิกดาวของแต่ละเครื่องมือเพื่อดูเหตุผล แหล่งข้อมูล และวันที่ตรวจ เป็นการประเมินเชิงเปรียบเทียบ ไม่ใช่ยอดผู้ใช้แบบเรียลไทม์หรือคะแนนคุณภาพ</p>
+                <p>5 ดาว: แพร่หลายและมีหลักฐานเด่นครบทั้งสามด้าน · 4 ดาว: เป็นที่ยอมรับ มีหลักฐานหลายด้าน · 3 ดาว: มีชุมชนหรือผลงานชัดเจนในกลุ่มเฉพาะ · 2 ดาว: เริ่มมีการนำไปใช้ในกลุ่มเล็ก · 1 ดาว: มีหลักฐานว่ายังมีผู้ใช้น้อยมาก · หากหลักฐานไม่เพียงพอจะยังไม่ให้ดาว</p>
+              </details>}
               {kind === "post" && (
                 <a
                   className="community-external"

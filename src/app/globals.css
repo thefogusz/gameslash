@@ -835,19 +835,19 @@ a:focus-visible {
   color: var(--bg);
   border-color: var(--ink);
 }
-.tool-categories { display: flex; flex-wrap: wrap; gap: 4px 6px; margin-bottom: 24px; scroll-margin-top: 100px; }
-.tool-categories > button { min-height: 40px; max-width: 100%; padding: 7px 12px; border: 0; border-radius: 6px; color: var(--muted); font-size: 14px; font-weight: 400; line-height: 1.5; }
-.tool-categories > button:hover { color: var(--ink); background: var(--surface); }
-.tool-categories > button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
 .tools-page { width: 100%; max-width: 1080px; margin-inline: auto; }
-.tool-directory-meta { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin: 0 0 20px; }
-.tool-directory-meta > span { flex-shrink: 0; color: var(--muted); font-size: 14px; }
-.tool-directory-meta .popularity-method { margin: 0; }
+.tool-directory-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; scroll-margin-top: 100px; }
+.tool-directory-toolbar > .filter-select { width: 280px; max-width: calc(100% - 100px); }
+.tool-directory-toolbar > span { flex-shrink: 0; color: var(--muted); font-size: 14px; }
+.tool-directory-toolbar .filter-select-trigger { font-weight: 500; background: transparent; }
+.tool-directory-toolbar .filter-select-menu { width: min(640px, calc(100vw - 64px)); display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); max-height: min(440px, 60vh); }
+.tool-directory-toolbar .filter-select-option { min-height: 44px; }
+.tools-page > .popularity-method { margin: 24px 0 0; font-size: 13px; }
 header.topbar.tools-topbar { grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto; height: 76px; }
 header.topbar.tools-topbar .topbar-start { grid-column: 1; grid-row: 1; }
 header.topbar.tools-topbar .topbar-end { grid-column: 2; grid-row: 1; }
 @media (max-width: 760px) {
-  .tool-categories > button { min-height: 44px; padding: 7px 12px; font-size: 13px; }
+  .tool-directory-toolbar .filter-select-menu { width: min(360px, calc(100vw - 40px)); grid-template-columns: minmax(0, 1fr); }
 }
 .tool-directory-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: 12px; }
 .tool-directory-card { display: flex; flex-direction: column; gap: 8px; padding: 18px; border-radius: 14px; background: var(--surface); scroll-margin-top: 100px; }
