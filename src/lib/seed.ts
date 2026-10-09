@@ -234,6 +234,7 @@ export function seedDatabase(): Database {
   return structuredClone({
     version: 1,
     feedback: [],
+    gameLikes: {},
     customTags: [],
     tagRequests: [],
     revision: 0,

@@ -1,9 +1,15 @@
 # Likes and local recommendations
 
-Likes use `gameslash:likes:v1` in localStorage: `{ "version": 1, "likedIds": ["game-id"] }`.
-Only game IDs are stored. No account, tracking request, aggregate like counter or server write is involved.
-The provider loads after hydration, synchronizes same-origin tabs, validates stored IDs and reports unavailable storage. Failed writes keep preferences in memory for the current page session.
-Clearing site data removes likes; browsers and devices do not share them.
+Likes now persist in the central catalog, associated with an anonymous HttpOnly
+browser cookie. The console displays totals and can sort by most hearts. See
+[storage and deployment notes](game-likes.md), including the required D1 worker update.
+
+`gameslash:likes:v1` in localStorage remains a cache:
+`{ "version": 1, "likedIds": ["game-id"], "synced": true }`.
+Old values without `synced` import once on the browser's next visit. The provider
+loads after hydration and synchronizes same-origin tabs. Hearts change only after
+the server confirms a write; failures display an error and preserve prior likes.
+Cookies suffice when local storage is blocked. Browsers and devices do not share likes.
 
 Recommendations exclude liked and unpublished games. A shared genre adds 3 points and each shared tag adds 1; generic AI labels do not affect the score. Editorial selection breaks ties, and unmatched games fill remaining positions when the catalog is small. Removing a like recomputes the list. The homepage defaults to recommendations after a visitor has liked games, while an explicitly selected tab remains selected. All-liked and no-likes states are handled explicitly.
 

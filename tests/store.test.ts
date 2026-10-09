@@ -16,6 +16,11 @@ test("durable storage, draft isolation and stale-edit protection", async () => {
   );
   try {
     const initial = await readDatabase();
+    const { changeGameLikes, gameLikeCounts } = await import("../src/lib/game-likes");
+    const visitor = "a".repeat(64);
+    await updateDatabase(db => changeGameLikes(db, visitor, { id: "ai-dungeon", liked: true }, "test"), undefined, false);
+    assert.equal((await readDatabase()).revision, initial.revision);
+    assert.equal(gameLikeCounts(await readDatabase())["ai-dungeon"], 1);
     await updateDatabase(db => { db.limits.upload = { count:1, reset:Date.now()+60000 }; }, undefined, false);
     assert.equal((await readDatabase()).revision, initial.revision);
     assert.equal((await readDatabase()).limits.upload.count, 1);
@@ -40,6 +45,7 @@ test("durable storage, draft isolation and stale-edit protection", async () => {
       await readFile(path.join(directory, "catalog.json"), "utf8"),
     );
     assert.equal(persisted.revision, 1);
+    assert.deepEqual(persisted.gameLikes[visitor], ["ai-dungeon"]);
     await updateDatabase((db) => {
       db.layout = structuredClone(db.draftLayout);
     }, 1);

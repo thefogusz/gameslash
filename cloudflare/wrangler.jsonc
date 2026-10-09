@@ -1,0 +1,15 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "gameslash-d1",
+  "main": "worker.ts",
+  "compatibility_date": "2026-10-09",
+  "compatibility_flags": ["nodejs_compat"],
+  "account_id": "db30981724e7eb7a4367bca251e6c36d",
+  "workers_dev": true,
+  "observability": { "enabled": true, "head_sampling_rate": 1 },
+  "d1_databases": [{
+    "binding": "DB",
+    "database_name": "gameslash-production",
+    "database_id": "4ff63a76-fe44-4dbd-8c55-f40cc323beb4"
+  }]
+}

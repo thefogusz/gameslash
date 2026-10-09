@@ -38,7 +38,7 @@ test("Console and MCP expose one canonical handbook without duplicate skill copi
   for (const source of [route, panel]) assert.match(source, /from ["']@\/lib\/editorial-skills["']/);
   assert.match(route, /text: editorialHandbook\(\)/);
   assert.deepEqual(editorialSkills.map(s => s.id), [
-    "global-news", "source-verification", "game-analysis", "audience-signals",
+    "mcp-operation", "global-news", "source-verification", "game-analysis", "audience-signals",
     "image-research", "thai-editorial", "draft-workflow",
   ]);
   for (const skill of editorialSkills) {

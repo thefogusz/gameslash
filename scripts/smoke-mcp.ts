@@ -50,8 +50,10 @@ try {
   assert.equal(iconMetadata.width, 512);
   assert.equal(iconMetadata.height, 512);
   const tools = (await rpc(token, "tools/list")).tools;
-  assert.equal(tools.length, 19);
-  assert.equal(tools.some((tool: { name: string }) => ["list_collections", "get_collection_posts"].includes(tool.name)), false);
+  assert.equal(tools.length, 21);
+  for (const name of ["list_collections", "get_collection_posts"]) assert.ok(tools.some((tool: { name: string }) => tool.name === name));
+  assert.equal((await call(reader, "list_collections")).isError, true);
+  assert.ok(Array.isArray((await call(token, "list_collections")).structuredContent.jobs));
   for (const method of ["GET", "POST"]) assert.equal((await fetch(origin + "/api/collections", { method })).status, 404);
   assert.equal((await call(token, "get_site_state")).isError, true);
   const site = (await call(manager, "get_site_state")).structuredContent;

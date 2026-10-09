@@ -9,3 +9,6 @@ artifacts/
 next-env.d.ts
 
 .vercel
+cloudflare/.types/
+cloudflare/.wrangler/
+cloudflare/.dev.vars

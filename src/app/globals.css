@@ -2635,6 +2635,20 @@ textarea {
 .spotlight-editor-actions { display:flex; gap:12px; align-items:center; }
 .preview-content .spotlight-grid { min-height:420px; height:440px; }
 @media (prefers-reduced-motion:no-preference) { .spotlight-main { animation:spotlight-in .3s ease-out; } @keyframes spotlight-in { from {opacity:.5} to {opacity:1} } }
+.spotlight-main:hover { transform:none; }
+.spotlight-progress { position:absolute; inset:auto 0 0; height:2px; background:var(--line); z-index:3; pointer-events:none; }
+.spotlight-progress-fill { display:block; height:100%; background:var(--accent); transform-origin:left; }
+@media (prefers-reduced-motion:no-preference) {
+  /* One animation clock keeps the countdown and slide change in sync when paused. */
+  .spotlight-progress-fill { animation:spotlight-progress 6s linear both; }
+  .spotlight-main .cover-image { animation:spotlight-zoom 6s linear both; }
+  .spotlight-carousel[data-running="false"] .spotlight-progress-fill,
+  .spotlight-carousel[data-running="false"] .spotlight-main .cover-image { animation-play-state:paused; }
+  .spotlight-grid.single .cover-image { animation:none; }
+  @keyframes spotlight-progress { from { transform:scaleX(0); } to { transform:scaleX(1); } }
+  @keyframes spotlight-zoom { from { transform:scale(1); } to { transform:scale(1.02); } }
+}
+@media (prefers-reduced-motion:reduce) { .spotlight-progress { display:none; } }
 @media(max-width:700px) { .spotlight-grid,.preview-content .spotlight-grid { display:block; height:auto; min-height:0; } .spotlight-main { display:block; height:320px; } .spotlight-main-wrap { height:320px; } .spotlight-thumbs { display:flex; overflow-x:auto; margin-top:10px; } .spotlight-thumbs .feature-tile { flex:0 0 260px; height:220px; } .spotlight .feature-tile:nth-child(n) { display:block; } .spotlight-main .feature-copy { left:20px; right:20px; bottom:20px; } }
 .review-signal { border-top:1px solid var(--line); margin-top:24px; padding-top:24px; }
 .review-signal h3 { margin:12px 0; }

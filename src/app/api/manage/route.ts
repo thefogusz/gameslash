@@ -2,9 +2,11 @@ import { checkOrigin, isAdmin, readBody } from "@/lib/auth";
 import { managementMutation, manageCatalog } from "@/lib/catalog-service";
 import { readDatabase, storageReady, updateDatabase } from "@/lib/store";
 import { errorResponse } from "@/lib/http";
+import { gameLikeCounts } from "@/lib/game-likes";
 const adminData = (db: Awaited<ReturnType<typeof readDatabase>>) => ({
   feedback: db.feedback,
   entries: db.entries,
+  likeCounts: gameLikeCounts(db),
   customTags: db.customTags,
   tagRequests: db.tagRequests,
   layout: db.layout,

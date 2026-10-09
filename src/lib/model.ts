@@ -149,6 +149,7 @@ export const databaseSchema = z.object({
     image: z.string().regex(/^$|^\/api\/feedback\/image\/[a-f0-9]{64}\.webp$/),
     status: z.enum(["open", "closed"]), createdAt: z.iso.datetime(),
   })).max(3000).default([]),
+  gameLikes: z.record(z.string().regex(/^[a-f0-9]{64}$/), z.array(z.string().regex(/^[a-z0-9-]{1,100}$/)).max(3000)).default({}),
   customTags: z.array(gameTagSchema).max(1000).default([]),
   tagRequests: z.array(tagRequestSchema).max(9000).default([]),
   sources: z.array(sourceSchema).max(20).default([]),

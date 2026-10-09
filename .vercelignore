@@ -4,3 +4,6 @@
 mockups
 artifacts
 tests
+cloudflare/.dev.vars
+cloudflare/.types
+cloudflare/.wrangler
