@@ -63,31 +63,56 @@ The Worker rejects catalog mutations over 16 MB and individual state/entry rows
 over 1.8 MB. Split entries remain individually addressable; writes update only changed
 entries. Catalog writes use an atomic version check, including OAuth/rate-limit updates
 that do not bump the user-visible revision. Notification polling reads indexed draft
-metadata only. Other existing catalog reads still fetch the full catalog.
+metadata only. Full catalog reads use the matching versioned entry snapshot below.
 
 Cloudflare Free query, row and CPU limits still apply. This migration removes Neon's
 egress dependency; it does not provide unlimited database usage.
 
 ## MCP reliability
 
-Catalog GET responses assemble validated stored JSON in SQLite below 1.8 MB;
-larger catalogs join split JSON rows without parsing and re-encoding every entry
-on the Worker. The app still validates the response schema.
-MCP read tools reuse the authentication snapshot within a single HTTP request;
-mutations still read fresh state and retain atomic revision checks. No catalog or
-authorization cache is shared between requests.
+Catalog GET reads state and a matching `gameslash_entry_snapshot` in a D1 transaction.
+The snapshot stores only the entry array, separately from private state, and is updated
+atomically with entries and the storage version. State-only writes reuse the array;
+changed entries rebuild it once. Arrays over 1.8 MB or stale snapshots from older
+writers fall back to split rows. Worker responses join validated stored JSON without
+parsing and re-encoding the entire catalog. The app still validates the response schema.
+
+Every MCP request checks current credentials through `/agent-auth`. Initialization,
+tool discovery and editorial guidance do not load catalog entries. Catalog tools load
+the full snapshot lazily at most once per request; `get_entry` selects one entry.
+Existing visitors read their own IDs through `/likes`; new visitors need no database
+read. All Worker endpoints require the server-only service token. Public filtering,
+draft ownership, review permissions and fresh checks before mutations remain in the app.
+No authorization cache is shared between requests.
 
 Clients receive operating instructions during MCP initialization and through
 `get_editorial_skills` (`mcp-operation`). Calls should be sequential. A 401 means
-stop and repair authorization; transient storage failures return 503 with
-`Retry-After`, `SERVICE_UNAVAILABLE`, and `retryable`. Failed writes can report
-`outcomeUnknown`: read back before retrying and retain draft request IDs.
-The server does not automatically replay uncertain writes.
+stop and repair authorization. Retry transient storage failures only when `retryable`
+is true, observing `Retry-After`. `QUOTA_EXHAUSTED` sets `retryable: false` and a
+`resetAt` at UTC midnight (07:00 Bangkok). Each app instance suppresses further D1
+calls until then and resumes automatically; this is not a shared account-wide gate.
+`OUTCOME_UNKNOWN` sets `retryable: false`: read back before deciding whether to replay
+a write, retaining draft request IDs. The server never automatically replays uncertain
+writes. Instructions cannot force a third-party agent to obey; enforce client call
+concurrency and retry limits when its settings permit.
 
-Deploy the Worker and Next.js app separately to activate both changes. Reconnect
-MCP clients so they receive the new initialization instructions. Local checks do
-not prove the production catalog stays below Workers Free's CPU limit; verify
-`exceededCpu` events after rollout.
+## Read-budget rollout on the existing D1 deployment
+
+1. After the daily reset, apply the additive `schema.sql` to the existing database.
+   It creates/backfills the snapshot and leaves entries and state intact. Do not run
+   `migrate-d1.ts` or initialize an already live catalog. Keep the existing service token.
+2. Deploy the Worker, then verify authorized `/agent-auth`, scoped `/catalog?entryId=...`,
+   and full `/catalog` reads privately. Do not publish response bodies or credentials.
+3. Deploy the Next.js app. Deploying it before the Worker would call unavailable endpoints.
+4. Once storage works, refresh the MCP connection once to obtain the new initialization
+   instructions. Do not reconnect repeatedly while quota is exhausted.
+5. Compare D1 `rows_read`, write counts, CPU failures and MCP error rates after real use.
+   Local checks do not prove production stays below Workers Free's CPU limit.
+
+Rollback the app before the Worker. Leave the additive table in place; older writers
+advance the state version, so a newer Worker detects the stale snapshot and falls back
+without serving stale entries. Waiting for reset alone restores the budget but does not
+fix repeated scans. See [the evidence and decision](../docs/decisions/001-d1-read-budget.md).
 
 ## Feedback rollout
 
