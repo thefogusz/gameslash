@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="150 150 954 954" role="img" aria-labelledby="title">
   <title id="title">Gameslash — balanced arcade sword silhouette</title>
-  <path fill="#fff" d="M150 150H1104V1104H150Z"/>
+  <path fill="#000" d="M150 150H1104V1104H150Z"/>
   <defs>
     <mask id="logo-shape" maskUnits="userSpaceOnUse" x="0" y="0" width="1254" height="1254">
       <path fill="#fff" d="M627 169 171 626 627 1082 1083 626 900 441 955 271 786 328Z"/>
@@ -9,5 +9,5 @@
       <path fill="#000" d="M915 309L832 531L563 755L547 747L536 760L603 859L557 903L462.62 811.97L395.45 879.15L405.35 889.05L360.09 934.3L351.61 934.3L300.7 883.39L300.7 874.91L345.95 829.65L355.85 839.55L423.03 772.38L328 674L375 629L463 689L476 676L467 662L716 381Z"/>
     </mask>
   </defs>
-  <path fill="#000" mask="url(#logo-shape)" d="M0 0H1254V1254H0Z"/>
+  <path fill="#fff" mask="url(#logo-shape)" d="M0 0H1254V1254H0Z"/>
 </svg>
