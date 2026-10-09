@@ -39,7 +39,7 @@ export const metadata: Metadata = {
       url: "/images/gameslash-social-v4.png",
       width: 1734,
       height: 907,
-      alt: "GameSlash รวมเกมที่สร้างด้วย AI — RPG ผจญภัย ปริศนา และจำลอง",
+      alt: "GameSlash แพลตฟอร์มรวมเกม AI — RPG ผจญภัย และจำลอง",
     }],
   },
   twitter: {

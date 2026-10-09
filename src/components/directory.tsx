@@ -434,7 +434,7 @@ export function Directory({
               <img className="brand-mark" src="/gameslash-symbol.svg" alt="" width={34} height={34} />
               GAMESLASH
             </Link>
-            <span className="brand-tagline">รวมเกมที่สร้างด้วย AI</span>
+            <span className="brand-tagline">แพลตฟอร์มรวมเกม AI</span>
           </div>
         </div>
         <label className="search-box">

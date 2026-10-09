@@ -20,7 +20,7 @@ export function Spotlight({ entries, layout }: { entries: Entry[]; layout: Layou
   const group = groups.find(g => g.id === groupId) || groups[0];
   if (!games.length) return null;
   const note = group.id === "liked" ? "ถูกใจเก็บเฉพาะเบราว์เซอร์นี้ ไม่ต้องสมัครสมาชิก หากล้างข้อมูลเว็บไซต์ รายการนี้จะหายไป"
-    : group.id === "auto-trending" ? "เกมที่ทีมงานคัดเลือกสำหรับชุดติดเทรนด์"
+    : group.id === "auto-trending" ? ""
     : /popular|trending|ยอดนิยม|มาแรง|เทรน/i.test(group.title) ? "ชุดเด่นที่ผู้ดูแลคัดเลือก ไม่ใช่อันดับจากยอดไลก์หรือจำนวนผู้เล่น" : "";
   const empty = group.id === "auto-trending"
     ? { title: "กำลังคัดเกมติดเทรนด์", description: "เมื่อทีมงานเพิ่มเกมในชุดนี้ คุณจะเห็นได้ที่นี่", icon: <TrendingUp size={36} className="empty-heart" aria-hidden="true" /> }
