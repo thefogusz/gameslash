@@ -17,7 +17,7 @@ export function Cover({
     return (
       <Image
         fill
-        unoptimized={!entry.image.startsWith("/")}
+        unoptimized
         src={entry.image}
         alt={entry.imageAlt || `ภาพประชาสัมพันธ์ ${entry.title}`}
         sizes={sizes}

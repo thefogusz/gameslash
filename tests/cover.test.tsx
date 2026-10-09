@@ -8,25 +8,24 @@ import { seedDatabase } from "../src/lib/seed";
 const coverSource = readFileSync(new URL("../src/components/cover.tsx", import.meta.url), "utf8");
 const entry = { ...seedDatabase().entries[0], image: `/api/media/${"a".repeat(64)}.webp` };
 
-test("cover retains card image sizing by default", () => {
-  assert.ok(coverSource.includes('sizes = "(max-width: 700px) 90vw, 40vw"'));
-  assert.ok(coverSource.includes("sizes={sizes}"));
-  const { props } = getImageProps({ src: entry.image, alt: entry.title, fill: true, sizes: "(max-width: 700px) 90vw, 40vw", loading: "lazy" });
-  const html = renderToStaticMarkup(<img {...props} />);
-  assert.match(html, /sizes="\(max-width: 700px\) 90vw, 40vw"/);
-  assert.match(html, /loading="lazy"/);
+test("card covers request stored and external images directly without recompression", () => {
+  assert.match(coverSource, /\n\s+unoptimized\n/);
+  for (const image of [entry.image, "/images/cover.webp", "https://example.com/cover.png"]) {
+    const { props } = getImageProps({ src:image, alt:entry.title, fill:true, unoptimized:true, loading:"lazy" });
+    const html = renderToStaticMarkup(<img {...props} />);
+    assert.ok(html.includes(`src="${image}"`));
+    assert.doesNotMatch(html, /srcSet=|_next\/image/);
+    assert.match(html, /loading="lazy"/);
+  }
 });
 
-test("detail covers advertise sufficient width without changing card sizing", () => {
+test("large detail covers use the same full image with eager loading", () => {
   for (const sizes of ["(max-width: 900px) 100vw, 850px", "(max-width: 800px) 100vw, 760px"]) {
-    const { props } = getImageProps({ src: entry.image, alt: entry.title, fill: true, sizes, loading: "eager" });
+    const { props } = getImageProps({ src:entry.image, alt:entry.title, fill:true, unoptimized:true, loading:"eager", sizes });
     const html = renderToStaticMarkup(<img {...props} />);
-    assert.ok(html.includes(`sizes="${sizes}"`));
-    assert.match(html, /1080w/);
+    assert.ok(html.includes(`src="${entry.image}"`));
+    assert.doesNotMatch(html, /srcSet=|_next\/image/);
     assert.match(html, /loading="eager"/);
-    assert.doesNotMatch(html, /40vw/);
   }
-  const source = readFileSync(new URL("../src/components/directory.tsx", import.meta.url), "utf8");
-  assert.ok(source.includes('<Cover entry={entry} priority sizes="(max-width: 900px) 100vw, 850px" />'));
-  assert.ok(source.includes('<Cover entry={entry} priority sizes="(max-width: 800px) 100vw, 760px" />'));
+  assert.ok(coverSource.includes("unoptimized"));
 });

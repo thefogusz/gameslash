@@ -15,7 +15,7 @@ export async function normalizeImage(bytes: Buffer) {
     const input = sharp(bytes, { limitInputPixels: 25_000_000, animated:false });
     const meta = await input.metadata();
     if (!["jpeg","png","webp"].includes(meta.format || "") || (meta.pages || 1) > 1) throw new Error();
-    return await input.rotate().resize({ width:2000, height:2000, fit:"inside", withoutEnlargement:true }).webp({ quality:85 }).toBuffer({ resolveWithObject:true });
+    return await input.rotate().keepIccProfile().webp({ lossless:true }).toBuffer({ resolveWithObject:true });
   } catch { throw new Error("ใช้ภาพ JPG, PNG หรือ WebP ที่เปิดอ่านได้ สูงสุด 25 ล้านพิกเซล"); }
 }
 export async function saveImage(bytes: Buffer, agentId?: string) {

@@ -32,9 +32,25 @@ test("article boundaries reject executable URLs, raw HTML, unsupported nesting a
   invalid.forEach(node=>assert.equal(articleDocumentSchema.safeParse({type:"doc",content:[node]}).success,false));
   assert.equal(articleDocumentSchema.safeParse({type:"doc",content:Array.from({length:10},()=>({type:"paragraph",content:[{type:"text",text:"a".repeat(15000)}]}))}).success,false);
 });
-test("uploads decode and normalize real pixels, reject SVG, corrupt and oversized images",async()=>{
-  const png=await sharp({create:{width:2400,height:1200,channels:3,background:"#79dfc4"}}).png().toBuffer();
+test("uploads preserve full resolution and decoded pixels, reject SVG, corrupt and oversized images",async()=>{
+  const pixels=Buffer.alloc(2400*1200*3);
+  for(let i=0;i<pixels.length;i++) pixels[i]=(i*37)%256;
+  const png=await sharp(pixels,{raw:{width:2400,height:1200,channels:3}}).png().toBuffer();
   const {data,info}=await normalizeImage(png);
-  assert.equal(info.width,2000); assert.equal(info.height,1000); assert.equal((await sharp(data).metadata()).format,"webp");
+  assert.equal(info.width,2400); assert.equal(info.height,1200); assert.equal((await sharp(data).metadata()).format,"webp");
+  assert.deepEqual(await sharp(data).raw().toBuffer(),pixels);
   for(const bytes of [Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"/>'),Buffer.from("not an image"),Buffer.alloc(maxImageBytes+1)]) await assert.rejects(normalizeImage(bytes));
+});
+test("lossless uploads retain orientation, alpha and color profiles without retaining EXIF",async()=>{
+  const pixels=Buffer.from([255,0,0,255, 0,255,0,128, 0,0,255,255, 100,150,200,64, 50,75,100,255, 200,150,100,255]);
+  for(const format of ["png","jpeg","webp"] as const){
+    const input=await sharp(pixels,{raw:{width:3,height:2,channels:4}}).toFormat(format).withMetadata({orientation:6}).toBuffer();
+    const {data,info}=await normalizeImage(input);
+    assert.equal(info.width,2); assert.equal(info.height,3);
+    const expected=await sharp(input).rotate().keepIccProfile().raw().toBuffer();
+    assert.deepEqual(await sharp(data).keepIccProfile().raw().toBuffer(),expected);
+    const metadata=await sharp(data).metadata();
+    assert.deepEqual(metadata.icc,(await sharp(input).metadata()).icc);
+    assert.equal(metadata.exif,undefined);
+  }
 });
