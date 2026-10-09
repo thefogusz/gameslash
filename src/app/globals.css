@@ -353,8 +353,8 @@ a:focus-visible {
 }
 .feature-copy {
   position: absolute;
-  left: 14px;
-  right: 14px;
+  left: 12px;
+  right: 12px;
   bottom: 14px;
   color: #fff;
 }
@@ -515,7 +515,7 @@ a:focus-visible {
   display: none;
 }
 .feature-copy h3 {
-  font-size: 18px;
+  font-size: 16px;
   line-height: 1.4;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -524,15 +524,16 @@ a:focus-visible {
 }
 .feature-copy p {
   margin-top: 6px;
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.6;
+  line-break: anywhere;
   color: #e0dfe8;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-.entries-game.template-shelf { grid-auto-columns: clamp(260px, 23vw, 320px); }
+.entries-game.template-shelf { grid-auto-columns: clamp(360px, 27vw, 380px); }
 .template-grid {
   grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
   gap: 25px 16px;
@@ -541,7 +542,7 @@ a:focus-visible {
   grid-template-columns: 1fr;
 }
 .entries-game.template-grid {
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
 }
 .game-card {
   position: relative;
@@ -2127,7 +2128,8 @@ textarea {
   .game-card-title h3 {
     font-size: 15px;
   }
-  .entries-game.template-shelf { grid-auto-columns: 82%; }
+  .entries-game.template-shelf { grid-auto-columns: 100%; }
+  .game-card-link .feature-copy p { font-size: 12px; }
   .game-card > p {
     font-size: 12px;
   }
