@@ -9,7 +9,7 @@ const coverSource = readFileSync(new URL("../src/components/cover.tsx", import.m
 const entry = { ...seedDatabase().entries[0], image: `/api/media/${"a".repeat(64)}.webp` };
 
 test("card covers request stored and external images directly without recompression", () => {
-  assert.match(coverSource, /\n\s+unoptimized\n/);
+  assert.match(coverSource, /\r?\n\s+unoptimized\r?\n/);
   for (const image of [entry.image, "/images/cover.webp", "https://example.com/cover.png"]) {
     const { props } = getImageProps({ src:image, alt:entry.title, fill:true, unoptimized:true, loading:"lazy" });
     const html = renderToStaticMarkup(<img {...props} />);
