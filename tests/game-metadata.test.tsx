@@ -37,3 +37,17 @@ test("compact metadata groups devices without losing full detail or guessing unk
   const full = renderToStaticMarkup(<GameMetadata tags={tags} />);
   for (const tag of tags) assert.ok(full.includes(tag));
 });
+
+test("phone-browser tag is canonical platform metadata with stable existing IDs", () => {
+  assert.equal(findGameTag(baseGameTags, "เว็บ")?.id, "gameslash:2");
+  assert.equal(findGameTag(baseGameTags, "PC")?.id, "gameslash:3");
+  assert.equal(findGameTag(baseGameTags, "เว็บบนมือถือ")?.id, "gameslash:13");
+  const db = seedDatabase();
+  const entry = { ...db.entries[0], tags: ["เว็บบนมือถือ", "RPG"] };
+  validateGameTags(db, entry);
+  const full = renderToStaticMarkup(<GameMetadata tags={entry.tags} />);
+  assert.match(full, /class="game-platform">เว็บบนมือถือ/);
+  const compact = renderToStaticMarkup(<GameMetadata tags={entry.tags} compact />);
+  assert.match(compact, /เล่นบนเว็บ/); assert.match(compact, /มือถือ/);
+  assert.doesNotMatch(compact, /Android|iOS|>PC</);
+});

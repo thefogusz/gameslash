@@ -8,7 +8,7 @@ import { FilterSelect } from "./filter-select";
 import Link from "next/link";
 import { useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { directorySorts, filterDirectory, gameMakingTools, rankedGameCategories, toolWorkflowCategories, visibleGameCategories } from "@/lib/directory-filters";
+import { directorySorts, filterDirectory, gameMakingTools, rankedGameCategories, toolWorkflowCategories, visibleGameCategories, gameGenreHref } from "@/lib/directory-filters";
 import { platformGroups, normalizeGamePlatform, matchesGamePlatform } from "@/lib/game-platforms";
 import {
   ArrowUpRight,
@@ -476,7 +476,7 @@ export function Directory({
               return (
                 <Link
                   key={c}
-                  href={`/games?category=${encodeURIComponent(c)}`}
+                  href={gameGenreHref(c, view === "games" ? params.toString() : "")}
                   className={`sidebar-link ${category === c ? "active" : ""}`}
                   onClick={() => setMenu(false)}
                 >

@@ -85,3 +85,27 @@ test("public game genres omit empty/news-only categories without modifying taxon
   assert.deepEqual(visibleGameCategories(categories, sample, "RPG"), ["RPG", "การศึกษา"]);
   assert.equal(categories.length, 4);
 });
+
+test("secondary sidebar genres preserve platform, query, tag, sort and likes", async () => {
+  const { gameGenreHref } = await import("../src/lib/directory-filters");
+  const href = gameGenreHref("RPG", "platform=mobile&q=cat&tag=iOS&sort=new&liked=1&category=Puzzle");
+  const params = new URL(href, "https://gameslash.vercel.app").searchParams;
+  assert.deepEqual(Object.fromEntries(params), { platform: "mobile", q: "cat", tag: "iOS", sort: "new", liked: "1", category: "RPG" });
+  assert.equal(params.getAll("category").length, 1);
+  assert.equal(gameGenreHref("RPG"), "/games?category=RPG");
+  assert.equal(gameGenreHref("", "platform=web&category=RPG"), "/games?platform=web");
+  const sample = [
+    { ...entries[0], id: "mobile-rpg", title: "Cat RPG", category: "RPG", tags: ["iOS"] },
+    { ...entries[0], id: "web-rpg", title: "Cat RPG", category: "RPG", tags: ["เว็บ"] },
+  ];
+  assert.deepEqual(filterDirectory(sample, { ...defaults, platform: params.get("platform")!, category: params.get("category")!, query: params.get("q")!, tag: params.get("tag")!, sort: params.get("sort")! }).map(e => e.id), ["mobile-rpg"]);
+});
+
+test("explicit mobile-browser support matches Web and Mobile without inventing OS or PC", async () => {
+  const { gamePlatformBadges } = await import("../src/lib/game-platforms");
+  const game = { ...entries[0], tags: ["เว็บบนมือถือ"] };
+  for (const platform of ["web", "mobile"]) assert.equal(filterDirectory([game], { ...defaults, platform }).length, 1);
+  assert.equal(filterDirectory([game], { ...defaults, platform: "pc" }).length, 0);
+  assert.deepEqual(gamePlatformBadges(game.tags).map(g => g.value), ["web", "mobile"]);
+  assert.deepEqual(game.tags, ["เว็บบนมือถือ"]);
+});

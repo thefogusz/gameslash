@@ -96,7 +96,7 @@ export async function POST(request: Request) {
         return { posts: job.candidates.slice(input.offset, input.offset + input.limit), total: job.candidates.length, nextOffset: input.offset + input.limit < job.candidates.length ? input.offset + input.limit : null, runId: job.runId };
       }));
       server.registerTool("get_game_tags", {
-        description: "Search the shared game tag registry in Thai or English before drafting. Use tag.name in entry.tags (maximum 20). Missing tags: create a draft using existing tags, then request_game_tag. Never invent an unregistered tag. Steam is a reference taxonomy, not evidence that a game has a feature.",
+        description: "Search the shared game tag registry in Thai or English before drafting. Use tag.name in entry.tags (maximum 20). Missing tags: create a draft using existing tags, then request_game_tag. Never invent an unregistered tag. Steam is a reference taxonomy, not evidence that a game has a feature. Platform tags require explicit source or testing evidence. เว็บบนมือถือ means playable in a phone browser and appears in both Web and Mobile; do not infer Android/iOS/native apps from it or infer mobile support from a URL. PC means computer compatibility, not necessarily a download.",
         inputSchema: z.object({ query: z.string().max(100).default(""), offset: z.number().int().min(0).default(0), limit: z.number().int().min(1).max(100).default(30) }), annotations: readAnnotations,
       }, input => result(async () => {
         const db = await readDatabase(); requireAgent(db, agent.id);

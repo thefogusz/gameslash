@@ -51,3 +51,11 @@ export function visibleGameCategories(categories: string[], entries: Entry[], se
   const populated = new Set(entries.filter(e => e.kind === "game").map(e => e.category));
   return [...new Set([...categories, ...populated])].filter(category => populated.has(category) || category === selected);
 }
+
+/** Secondary genre changes preserve the game directory's current URL filters. */
+export function gameGenreHref(category: string, currentQuery = "") {
+  const params = new URLSearchParams(currentQuery);
+  if (category) params.set("category", category);
+  else params.delete("category");
+  return `/games${params.size ? `?${params.toString()}` : ""}`;
+}

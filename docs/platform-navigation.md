@@ -7,14 +7,14 @@
 - URL parameter `platform=web|mobile|pc` composes with `q`, `category`, `tag`, `liked`, and `sort`. All/reset removes the platform filter. Invalid platform values act as All. Browser Back/Forward uses the existing Next.js native-history integration.
 
 ## Classification (no inference)
-- web: explicit `เว็บ` tag.
-- mobile: explicit `Android` or `iOS` tag.
+- web: explicit `เว็บ` or `เว็บบนมือถือ` tag.
+- mobile: explicit `Android`, `iOS`, or `เว็บบนมือถือ` tag.
 - pc: explicit `PC`, `macOS`, or `Linux` tag.
 - A game can match multiple groups. A URL, responsive landing page, touch icon, genre, or current device does not establish support. PC is compatibility, not a promise of a native/downloadable build. Android/iOS tags do not automatically prove an app-store release.
-- Unknown entries remain in All. No existing registry tag establishes mobile-browser support; do not use Android/iOS as a substitute for that missing evidence.
+- Unknown entries remain in All. `เว็บบนมือถือ` is the canonical phone-browser label and requires explicit source evidence or actual mobile-browser testing. It maps to Web and Mobile without inventing Android/iOS/native support.
 
 ## Storage and API
-No migration, changed write contract, new required field, tag rename, or automatic backfill. Existing `entry.tags` and approved Console/MCP editing paths remain the source. This change only adds client-side discovery filtering; MCP `search_entries` is unchanged. Future device/browser distinctions should use an explicitly reviewed schema, not URL heuristics.
+No migration, changed write contract, new required field, tag rename, or automatic backfill. The new `เว็บบนมือถือ` label is appended to the built-in registry without changing existing IDs. Existing `entry.tags` and approved Console/MCP editing paths remain the source. This change only adds client-side discovery filtering; MCP `search_entries` is unchanged. Future device/browser distinctions should use an explicitly reviewed schema, not URL heuristics.
 
 ## Backfill prerequisite
 At 2026-10-09 00:32 UTC, 37 published game records were read through `get_entry`; all lacked platform tags. Therefore exact-tag counts were All 37, Web 0, Mobile 0, PC 0. Catalog publication continued concurrently; these are snapshot counts, not fixed production totals.
@@ -31,3 +31,6 @@ Unit coverage checks platform overlap, unknowns, invalid query values, combined 
 
 ## Review fixture and verification
 The separately reviewed 39-game platform proposal was used only in an isolated local fixture: All 39, Web 25, Mobile 5, PC 10. These overlapping groups leave six games unknown; counts are not a claim that production backfill has run. Built-app SSR returned exactly those result/card counts for each URL filter. Existing publication receipts were likewise used for ten article records; all ten journal cards and the sampled detail emitted receipt-backed semantic publication times. Responsive CSS is included, but desktop/mobile interaction and pixel verification through CUA are still pending a reachable preview. Unit/type checks and the production webpack build passed; the build used a temporary experimental.cpus=2 resource cap that is not committed.
+
+## Incremental review fixes
+Sidebar genre links preserve the existing game-directory query parameters, including platform, search, tags, sorting and likes. From another view they open a fresh game category. The separately prepared 11 mobile-browser candidates must not be written until deployment exposes the new canonical tag through `get_game_tags`; source-reviewed support is distinct from a claim of playtesting.
