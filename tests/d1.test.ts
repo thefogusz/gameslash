@@ -5,6 +5,7 @@ import { readD1, readD1Notifications, initializeD1, updateD1 } from "../src/lib/
 import { draftNotifications } from "../src/lib/notifications";
 import { publicData } from "../src/lib/model";
 import { ConflictError } from "../src/lib/postgres-store";
+import { jobSchema } from "../src/lib/collection-model";
 
 test("D1 migration, concurrent CAS, rollback, ordering and private access", {
   skip: !process.env.GAMESLASH_TEST_D1_URL,
@@ -15,6 +16,7 @@ test("D1 migration, concurrent CAS, rollback, ordering and private access", {
   process.env.GAMESLASH_D1_TOKEN = process.env.GAMESLASH_TEST_D1_TOKEN;
   assert.equal((await fetch(new URL("/catalog", url))).status, 401);
   const seed = seedDatabase();
+  seed.collectionJobs.push(jobSchema.parse({ id: crypto.randomUUID(), source: { id: crypto.randomUUID(), name: "Stored posts", url: "https://www.facebook.com/groups/123" }, createdAt: new Date().toISOString(), status: "SUCCEEDED", runId: "fixtureRun", candidates: [{ url: "https://example.com/post", text: "Original source text", author: "Creator", time: "2026-10-09" }] }));
   await initializeD1(seed);
   assert.deepEqual(await readD1(), seed);
   await assert.rejects(initializeD1(seed), ConflictError);

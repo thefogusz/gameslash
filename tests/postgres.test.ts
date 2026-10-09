@@ -5,6 +5,7 @@ import { seedDatabase } from "../src/lib/seed";
 import { publicData } from "../src/lib/model";
 import { manageCatalog, createAgentDraft, editAgentDraft } from "../src/lib/catalog-service";
 import { createTables, initializePostgres, readPostgres, updatePostgres, ConflictError } from "../src/lib/postgres-store";
+import { jobSchema } from "../src/lib/collection-model";
 
 test("Postgres migration, concurrent writes, rollback and draft isolation", {
   skip: !process.env.GAMESLASH_TEST_DATABASE_URL,
@@ -24,6 +25,7 @@ test("Postgres migration, concurrent writes, rollback and draft isolation", {
     await createTables(sql);
     await assert.rejects(readPostgres(sql), /not been migrated/);
     const seed = seedDatabase();
+    seed.collectionJobs.push(jobSchema.parse({ id: crypto.randomUUID(), source: { id: crypto.randomUUID(), name: "Stored posts", url: "https://www.facebook.com/groups/123" }, createdAt: new Date().toISOString(), status: "SUCCEEDED", runId: "fixtureRun", candidates: [{ url: "https://example.com/post", text: "Original source text", author: "Creator", time: "2026-10-09" }] }));
     await initializePostgres(sql, seed);
     assert.deepEqual(await readPostgres(sql), seed);
     await assert.rejects(initializePostgres(sql, seed), /not empty/);
