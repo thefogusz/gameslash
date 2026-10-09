@@ -2,7 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { cookies } from "next/headers";
 import { checkOrigin, fingerprint, readBody } from "@/lib/auth";
 import { changeGameLikes, likeMutation } from "@/lib/game-likes";
-import { readDatabase, storageReady, updateDatabase } from "@/lib/store";
+import { readGameLikes, storageReady, updateDatabase } from "@/lib/store";
 import { errorResponse } from "@/lib/http";
 
 const cookieName = "gameslash-visitor";
@@ -18,8 +18,9 @@ export async function GET() {
     if (!validToken(token)) {
       token = randomBytes(32).toString("hex");
       jar.set(cookieName, token, { httpOnly: true, sameSite: "lax", secure: !!process.env.VERCEL, path: "/", maxAge: 365 * 24 * 60 * 60 });
+      return json([]);
     }
-    return json((await readDatabase()).gameLikes[visitorKey(token)] || []);
+    return json(await readGameLikes(visitorKey(token)));
   } catch (error) { return errorResponse(error); }
 }
 

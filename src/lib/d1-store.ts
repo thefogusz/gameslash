@@ -40,8 +40,15 @@ export async function readD1Notifications() {
     id, title, kind, status, updatedAt,
   })).max(50) }).parse(await requestD1("GET", undefined, "/notifications"));
 }
-export async function readD1() {
-  return (snapshotSchema.parse(await requestD1("GET"))).db;
+export async function readD1(entryId?: string) {
+  const path = entryId === undefined ? "/catalog" : `/catalog?${new URLSearchParams({ entryId })}`;
+  return (snapshotSchema.parse(await requestD1("GET", undefined, path))).db;
+}
+export async function readD1AgentAuth() {
+  return databaseSchema.pick({ agents: true, oauthGrants: true }).parse(await requestD1("GET", undefined, "/agent-auth"));
+}
+export async function readD1Likes(visitor: string) {
+  return z.array(entrySchema.shape.id).max(3000).parse(await requestD1("GET", undefined, `/likes?${new URLSearchParams({ visitor })}`));
 }
 export async function initializeD1(input: Database) {
   const db = databaseSchema.parse(input);

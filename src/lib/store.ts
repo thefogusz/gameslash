@@ -11,7 +11,7 @@ import path from "node:path";
 import { databaseSchema, type Database } from "./model";
 import { seedDatabase } from "./seed";
 import { databaseClient, readPostgres, updatePostgres, ConflictError } from "./postgres-store";
-import { d1Ready, readD1, readD1Notifications, updateD1 } from "./d1-store";
+import { d1Ready, readD1, readD1AgentAuth, readD1Likes, readD1Notifications, updateD1 } from "./d1-store";
 import { draftNotifications } from "./notifications";
 export { ConflictError } from "./postgres-store";
 
@@ -58,6 +58,17 @@ export async function readDatabase() {
   if (process.env.GAMESLASH_STORAGE === "d1") return readD1();
   if (usesPostgres()) return readPostgres(databaseClient());
   return (await readSnapshot()).db;
+}
+export async function readAgentAuth() {
+  if (process.env.GAMESLASH_STORAGE === "d1") return readD1AgentAuth();
+  const { agents, oauthGrants } = await readDatabase();
+  return { agents, oauthGrants };
+}
+export async function readEntryDatabase(id: string) {
+  return process.env.GAMESLASH_STORAGE === "d1" ? readD1(id) : readDatabase();
+}
+export async function readGameLikes(visitor: string) {
+  return process.env.GAMESLASH_STORAGE === "d1" ? readD1Likes(visitor) : (await readDatabase()).gameLikes[visitor] || [];
 }
 export async function readNotifications() {
   return process.env.GAMESLASH_STORAGE === "d1"

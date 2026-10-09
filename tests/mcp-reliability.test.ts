@@ -7,7 +7,7 @@ import { mcpError } from "../src/lib/mcp-errors";
 import { POST } from "../src/app/api/mcp/route";
 import { mcpOperatingGuidance } from "../src/lib/editorial-skills";
 
-test("MCP reads once per request, preserves isolation and tells clients how to recover", async () => {
+test("MCP discovery reads only current credentials, catalog tools load lazily and isolation is preserved", async () => {
   const originalFetch = globalThis.fetch;
   const keys = ["GAMESLASH_STORAGE", "GAMESLASH_D1_URL", "GAMESLASH_D1_TOKEN"] as const;
   const previous = keys.map(key => process.env[key]);
@@ -16,10 +16,13 @@ test("MCP reads once per request, preserves isolation and tells clients how to r
   process.env.GAMESLASH_D1_TOKEN = "fixture";
   const db = seedDatabase();
   const token = manageCatalog(db, { action: "create_agent", revision: db.revision, name: "Read fixture", canWriteDrafts: false })!;
-  let reads = 0, unavailable = false;
-  globalThis.fetch = async () => {
+  let reads = 0, catalogs = 0, unavailable = false;
+  globalThis.fetch = async url => {
     reads++;
-    return unavailable ? new Response("Unavailable", { status: 503 }) : Response.json({ version: 1, supportsGameLikes: true, supportsFeedback: true, db });
+    if (unavailable) return new Response("Unavailable", { status: 503 });
+    if (new URL(String(url)).pathname === "/agent-auth") return Response.json({ agents: db.agents, oauthGrants: db.oauthGrants });
+    catalogs++;
+    return Response.json({ version: 1, supportsGameLikes: true, supportsFeedback: true, db });
   };
   let id = 0;
   async function rpc(method: string, params: unknown = {}, authorization = token) {
@@ -35,12 +38,23 @@ test("MCP reads once per request, preserves isolation and tells clients how to r
     assert.equal(reads, 0, "Malformed credentials must not trigger a catalog read");
     const initialized = await rpc("initialize", { protocolVersion: "2025-03-26", capabilities: {}, clientInfo: { name: "fixture", version: "1" } });
     assert.equal(initialized.body.result.instructions, mcpOperatingGuidance);
+    assert.equal(catalogs, 0, "Connection setup must not load the catalog");
+    for (const name of ["get_editorial_skills", "get_article_format"]) {
+      reads = 0; catalogs = 0;
+      assert.equal((await rpc("tools/call", { name, arguments: {} })).response.status, 200);
+      assert.equal(reads, 1);
+      assert.equal(catalogs, 0);
+    }
+    const rejectedToken = "gs_" + "x".repeat(43);
+    assert.equal((await rpc("tools/list", {}, rejectedToken)).response.status, 401);
+    assert.equal(catalogs, 0, "A rejected well-formed token must not load catalog content");
     for (const name of ["get_categories", "search_entries", "get_editorial_skills"]) {
-      reads = 0;
+      reads = 0; catalogs = 0;
       const result = await rpc("tools/call", { name, arguments: {} });
       assert.equal(result.response.status, 200);
       assert.equal(result.body.result.isError, undefined);
-      assert.equal(reads, 1, `${name} must reuse its authentication snapshot`);
+      assert.equal(reads, name === "get_editorial_skills" ? 1 : 2);
+      assert.equal(catalogs, name === "get_editorial_skills" ? 0 : 1);
     }
     db.entries.push({ ...db.entries[0], id: "private-fixture", status: "draft" });
     const hidden = await rpc("tools/call", { name: "get_entry", arguments: { id: "private-fixture" } });
@@ -59,6 +73,7 @@ test("MCP reads once per request, preserves isolation and tells clients how to r
     let writes = 0;
     globalThis.fetch = async (_url, options) => {
       if (options?.method === "PUT") { writes++; throw new TypeError("lost write response"); }
+      if (new URL(String(_url)).pathname === "/agent-auth") return Response.json({ agents: db.agents, oauthGrants: db.oauthGrants });
       return Response.json({ version: 1, supportsGameLikes: true, supportsFeedback: true, db });
     };
     const uncertain = await rpc("tools/call", { name: "save_site_layout", arguments: { revision: db.revision, layout: db.layout, publish: false } }, writer);

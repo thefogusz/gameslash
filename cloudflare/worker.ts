@@ -19,9 +19,25 @@ export default {
     const expected = new TextEncoder().encode(`Bearer ${env.D1_SERVICE_TOKEN}`);
     if (!env.D1_SERVICE_TOKEN || supplied.length !== expected.length || !timingSafeEqual(supplied, expected))
       return json({ error: "Unauthorized" }, 401);
-    const path = new URL(request.url).pathname;
-    if (!["/catalog", "/notifications"].includes(path)) return json({ error: "Not found" }, 404);
+    const url = new URL(request.url);
+    const path = url.pathname;
+    if (!["/catalog", "/notifications", "/agent-auth", "/likes"].includes(path)) return json({ error: "Not found" }, 404);
     try {
+      if (path === "/agent-auth" || path === "/likes") {
+        if (request.method !== "GET") return json({ error: "Method not allowed" }, 405);
+        const visitor = url.searchParams.get("visitor");
+        if (path === "/likes" && (!visitor || !/^[a-f0-9]{64}$/.test(visitor)))
+          return json({ error: "Invalid visitor" }, 400);
+        const query = path === "/agent-auth"
+          ? env.DB.prepare(`SELECT json_object('agents', json(COALESCE(json_extract(data, '$.agents'), '[]')),
+              'oauthGrants', json(COALESCE(json_extract(data, '$.oauthGrants'), '[]'))) AS data
+              FROM gameslash_state WHERE id = 1 AND data != '{}'`)
+          : env.DB.prepare("SELECT COALESCE(json_extract(data, ?), '[]') AS data FROM gameslash_state WHERE id = 1 AND data != '{}'")
+              .bind(`$.gameLikes."${visitor}"`);
+        const row = await query.first<{ data: string }>();
+        if (!row) return json({ error: "D1 catalog has not been migrated" }, 503);
+        return new Response(row.data, { headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } });
+      }
       if (path === "/notifications") {
         if (request.method !== "GET") return json({ error: "Method not allowed" }, 405);
         const [count, items] = await env.DB.batch([
@@ -35,13 +51,18 @@ export default {
         return json({ total: (count.results[0] as { total: number }).total, items: items.results });
       }
       if (request.method === "GET") {
+        const entryId = url.searchParams.get("entryId");
+        if (entryId !== null && !entrySchema.shape.id.safeParse(entryId).success)
+          return json({ error: "Invalid entry ID" }, 400);
         // D1 batches are transactions: state and snapshot always describe the same version.
         let [state, entries] = await env.DB.batch([
           env.DB.prepare("SELECT version, data FROM gameslash_state WHERE id = 1"),
-          env.DB.prepare(`SELECT entries FROM gameslash_entry_snapshot WHERE id = 1 AND
+          entryId !== null ? env.DB.prepare("SELECT data FROM gameslash_entries WHERE id = ?").bind(entryId)
+            : env.DB.prepare(`SELECT entries FROM gameslash_entry_snapshot WHERE id = 1 AND
             version = (SELECT version FROM gameslash_state WHERE id = 1)`),
         ]);
-        let data = (entries.results[0] as { entries: string | null } | undefined)?.entries;
+        let data = entryId !== null ? `[${(entries.results as { data: string }[]).map(row => row.data).join(",")}]`
+          : (entries.results[0] as { entries: string | null } | undefined)?.entries;
         // shortcut: entry arrays above 1.8 MB or older writers use split rows; paginate if this becomes frequent.
         if (!data) {
           [state, entries] = await env.DB.batch([

@@ -125,7 +125,7 @@ export function manageCatalog(db: Database, input: z.infer<typeof managementMuta
     log(db, "ผู้ดูแล", "agent.revoked", agent.name);
   }
 }
-export function requireAgent(db: Database, id: string, write = false) {
+export function requireAgent(db: Pick<Database, "agents">, id: string, write = false) {
   const agent = db.agents.find(a => a.id === id && !a.revokedAt && Date.parse(a.expiresAt) > Date.now());
   if (!agent || (write && !agent.canWriteDrafts && !agent.canManageSite)) throw new Error("เอเจนต์ไม่มีสิทธิ์ทำรายการนี้");
   return agent;
@@ -145,7 +145,7 @@ export function saveSiteEntry(db: Database, agentId: string, id: Entry["id"], ex
   manageCatalog(db, { action: "entry", revision: db.revision, entry }, agent.name);
   return db.entries.find(e => e.id === id)!;
 }
-export function authenticateAgent(db: Database, token: string, resource?: string) {
+export function authenticateAgent(db: Pick<Database, "agents" | "oauthGrants">, token: string, resource?: string) {
   if (!/^gs_[A-Za-z0-9_-]{43}$/.test(token)) return null;
   const digest = Buffer.from(hash(token));
   return db.agents.find(a => !a.revokedAt && Date.parse(a.expiresAt) > Date.now() &&

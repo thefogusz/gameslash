@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { seedDatabase } from "../src/lib/seed";
-import { readD1, readD1Notifications, initializeD1, updateD1 } from "../src/lib/d1-store";
+import { readD1, readD1AgentAuth, readD1Likes, readD1Notifications, initializeD1, updateD1 } from "../src/lib/d1-store";
 import { draftNotifications } from "../src/lib/notifications";
 import { publicData } from "../src/lib/model";
 import { ConflictError } from "../src/lib/postgres-store";
@@ -21,10 +21,19 @@ test("D1 migration, concurrent CAS, rollback, ordering and private access", {
   seed.collectionJobs.push(jobSchema.parse({ id: crypto.randomUUID(), source: { id: crypto.randomUUID(), name: "Stored posts", url: "https://www.facebook.com/groups/123" }, createdAt: new Date().toISOString(), status: "SUCCEEDED", runId: "fixtureRun", candidates: [{ url: "https://example.com/post", text: "Original source text", author: "Creator", time: "2026-10-09" }] }));
   await initializeD1(seed);
   assert.deepEqual(await readD1(), seed);
+  assert.deepEqual(await readD1AgentAuth(), { agents: seed.agents, oauthGrants: seed.oauthGrants });
+  assert.deepEqual((await readD1(seed.entries[0].id)).entries, [seed.entries[0]]);
+  assert.deepEqual((await readD1("missing-entry")).entries, []);
+  for (const path of ["/agent-auth", "/likes?visitor=" + "a".repeat(64), "/catalog?entryId=ai-dungeon"])
+    assert.equal((await fetch(new URL(path, url))).status, 401);
   const visitor = "a".repeat(64);
   await updateD1(db => changeGameLikes(db, visitor, { id: "ai-dungeon", liked: true }, "test"), undefined, false);
   await updateD1(db => changeGameLikes(db, visitor, { id: "ai-dungeon", liked: true }, "test"), undefined, false);
   assert.equal(gameLikeCounts(await readD1())["ai-dungeon"], 1);
+  assert.deepEqual(await readD1Likes(visitor), ["ai-dungeon"]);
+  assert.deepEqual(await readD1Likes("b".repeat(64)), []);
+  const invalidVisitor = await fetch(new URL("/likes?visitor=x", url), { headers: { Authorization: `Bearer ${process.env.GAMESLASH_D1_TOKEN}` } });
+  assert.equal(invalidVisitor.status, 400);
   assert.equal((await readD1()).revision, seed.revision);
   await assert.rejects(initializeD1(seed), ConflictError);
   const concurrent = await Promise.allSettled(["first draft", "second draft"].map(tagline =>
