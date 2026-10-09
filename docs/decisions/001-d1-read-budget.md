@@ -2,7 +2,7 @@
 
 Date: 2026-10-10 (Bangkok)
 
-Status: Accepted; implemented and tested locally, not deployed.
+Status: Accepted; implemented and validated for production rollout.
 
 ## Evidence
 
@@ -80,9 +80,13 @@ passed, 2 opt-in database tests skipped; the local D1 integration was run separa
 The HTTP MCP workflow and visitor likes/undo checks passed against local D1, as did
 backfilling and rerunning the additive schema on an already populated fixture.
 
-A production read of a single state row through Wrangler was still rejected with
-Cloudflare error `7500` before reset. The snapshot cannot be backfilled while this
-account read gate is active; a Worker that expects the new table must not deploy first.
+A production read of a single state row through Wrangler was rejected with Cloudflare
+error `7500` before reset. A subsequent deployment check found that the schema-file
+import path still accepted the additive migration: 7 queries, 846 rows read and 1 row
+written. The snapshot was backfilled without replacing catalog entries or private
+state, and Worker version `13769f18-434b-446b-879a-6a253287ee01` deployed successfully.
+This does not reset the daily read allowance; ordinary reads may stay blocked until
+UTC midnight. Keep the schema-first order and verify actual serving after deployment.
 
 The entry snapshot is bounded to 1.8 MB to leave room under D1's 2 MB value limit;
 private state is separate. Larger arrays fall back to scans, so paginate before that
