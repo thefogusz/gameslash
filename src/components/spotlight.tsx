@@ -13,7 +13,6 @@ export function Spotlight({ entries, layout }: { entries: Entry[]; layout: Layou
   const liked = games.filter(e => likedIds.includes(e.id));
   const groups = [
     ...(manual.length ? manual : [{ id: "auto-curated", title: "คัดสรร", badge: "เกมแนะนำ", entries: games.slice(0, 5) }]),
-    { id: "auto-new", title: "มาใหม่", badge: "เพิ่มล่าสุดใน Gameslash", entries: [...games].sort((a,b) => b.createdAt.localeCompare(a.createdAt)).slice(0,5) },
     { id: "auto-trending", title: "ติดเทรนด์", badge: "ติดเทรนด์ · ทีมงานคัดเลือก", entries: trending?.entries || [] },
     // ponytail: connect a comparable player-count source before ranking; editorial picks cannot substitute for statistics.
     { id: "auto-most-played", title: "ผู้เล่นมากที่สุด", badge: "ผู้เล่นมากที่สุด", entries: [] as Entry[] },
@@ -23,7 +22,6 @@ export function Spotlight({ entries, layout }: { entries: Entry[]; layout: Layou
   const group = groups.find(g => g.id === groupId) || groups[0];
   if (!games.length) return null;
   const note = group.id === "liked" ? "ถูกใจเก็บเฉพาะเบราว์เซอร์นี้ ไม่ต้องสมัครสมาชิก หากล้างข้อมูลเว็บไซต์ รายการนี้จะหายไป"
-    : group.id === "auto-new" ? "เรียงตามวันที่เพิ่มเข้าคลัง Gameslash ล่าสุด ไม่ใช่วันเปิดตัวเกม"
     : group.id === "auto-trending" ? "เกมที่ทีมงานคัดเลือกสำหรับชุดติดเทรนด์"
     : group.id === "auto-most-played" ? "อันดับนี้จะใช้ข้อมูลจำนวนผู้เล่นที่มีแหล่งอ้างอิงและช่วงเวลาตรงกัน"
     : /popular|trending|ยอดนิยม|มาแรง|เทรน/i.test(group.title) ? "ชุดเด่นที่ผู้ดูแลคัดเลือก ไม่ใช่อันดับจากยอดไลก์หรือจำนวนผู้เล่น" : "";
