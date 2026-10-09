@@ -49,7 +49,10 @@ try {
   const iconMetadata = await sharp(Buffer.from(await icon.arrayBuffer())).metadata();
   assert.equal(iconMetadata.width, 512);
   assert.equal(iconMetadata.height, 512);
-  assert.equal((await rpc(token, "tools/list")).tools.length, 21);
+  const tools = (await rpc(token, "tools/list")).tools;
+  assert.equal(tools.length, 19);
+  assert.equal(tools.some((tool: { name: string }) => ["list_collections", "get_collection_posts"].includes(tool.name)), false);
+  for (const method of ["GET", "POST"]) assert.equal((await fetch(origin + "/api/collections", { method })).status, 404);
   assert.equal((await call(token, "get_site_state")).isError, true);
   const site = (await call(manager, "get_site_state")).structuredContent;
   const siteEntry = { kind: "tool", title: "MCP site verification", description: "Temporary tool for site management integration testing.", author: "Smoke test", category: "สไปรต์และภาพ 2D", url: "https://example.com/mcp-site-test", sourceUrl: "https://example.com/mcp-site-test" };
@@ -68,8 +71,6 @@ try {
   assert.equal(restored.structuredContent.entry.status, "published");
   const siteCurrent = (await call(manager, "get_site_state")).structuredContent;
   assert.equal((await call(manager, "save_site_layout", { revision: siteCurrent.revision, layout: siteCurrent.draftLayout, publish: false })).isError, undefined);
-  assert.equal((await call(reader, "list_collections")).isError, true);
-  assert.ok(Array.isArray((await call(token, "list_collections")).structuredContent.jobs));
   assert.ok((await call(token, "get_categories")).structuredContent.categories.length);
   assert.equal((await fetch(`${origin}/api/media`,{method:"POST",body:"bad"})).status,401);
   const png=await sharp({create:{width:80,height:40,channels:3,background:"#79dfc4"}}).png().toBuffer();
@@ -164,4 +165,3 @@ try {
   for (const id of agentIds) await manage({ action: "revoke_agent", id });
   await fetch(`${origin}/api/session`, { method: "DELETE", headers });
 }
-

@@ -33,7 +33,7 @@ Visit `/admin`. The studio supports:
 
 ## Connect Dots or another MCP client
 
-See [agent collection design](docs/agent-collection-design.md) for the public Facebook/Apify workflow, official sources, setup instructions, and the distinction between implemented review features and future managed collection jobs.
+See [agent submission workflow](docs/agent-collection-design.md) for MCP setup and human review.
 
 Open `/admin` → **เอเจนต์**, name the agent and create a key. The raw key appears once, expires after 90 days, and can be revoked from this page. Only a SHA-256 hash is stored. Keep the key in the client's secret configuration, never in a prompt or source control.
 

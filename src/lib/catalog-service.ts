@@ -9,7 +9,6 @@ export const managementMutation = z.discriminatedUnion("action", [
   z.object({ action: z.literal("resolve_tag"), revision: z.number().int(), resolution: tagResolutionSchema }),
   z.object({ action: z.literal("agent_tag_permission"), revision: z.number().int(), id: z.string().uuid(), enabled: z.boolean() }),
   z.object({ action: z.literal("agent_site_permission"), revision: z.number().int(), id: z.string().uuid(), enabled: z.boolean() }),
-  z.object({ action: z.literal("collection_draft"), revision: z.number().int(), jobId: z.string().uuid(), sourceUrl: z.string().url(), entry: entryInput, tagSuggestions: tagSuggestionsSchema.optional() }),
   z.object({ action: z.literal("review"), revision: z.number().int(), id: entrySchema.shape.id, expectedUpdatedAt: z.iso.datetime(), decision: z.enum(["publish", "return", "reject"]), note: z.string().trim().max(1000).default("") }),
   z.object({ action: z.literal("trash_entry"), revision: z.number().int(), id: entrySchema.shape.id, expectedUpdatedAt: z.iso.datetime() }),
   z.object({ action: z.literal("restore_entry"), revision: z.number().int(), id: entrySchema.shape.id, expectedUpdatedAt: z.iso.datetime() }),
@@ -67,16 +66,6 @@ export function manageCatalog(db: Database, input: z.infer<typeof managementMuta
     if (!agent) throw new Error("ไม่พบเอเจนต์ที่ใช้งานได้");
     agent.canManageSite = input.enabled;
     log(db, "ผู้ดูแล", "agent.site_permission", agent.name);
-  } else if (input.action === "collection_draft") {
-    const job = db.collectionJobs.find(j => j.id === input.jobId);
-    const candidate = job?.candidates.find(c => c.url === input.sourceUrl);
-    if (!job || !candidate) throw new Error("ไม่พบโพสต์ต้นทางในงานนี้");
-    const id = "collected-" + hash(candidate.url).slice(0, 40);
-    if (db.entries.some(e => e.id === id || (e.sourceUrl === candidate.url && e.status !== "archived"))) throw new Error("โพสต์นี้มีฉบับร่างในคลังแล้ว กรุณาแก้รายการเดิม");
-    const item = saveEntry(db, { ...newDraft(input.entry, id), sourceUrl: candidate.url, status: "pending" });
-    requestGameTags(db, item, input.tagSuggestions || []);
-    db.provenance[id] = { provider: "Apify", runId: job.runId, reason: `ผู้ดูแลคัดจาก ${job.source.name} และเขียนสรุปเพื่อส่งตรวจ` };
-    log(db, "ผู้ดูแล", "entry.collection_draft", item.title, item.id);
   } else if (input.action === "entry") {
     const item = saveEntry(db, input.entry);
     requestGameTags(db, item, input.tagSuggestions || []);

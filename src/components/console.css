@@ -96,10 +96,10 @@
 .admin-app .review-body { padding:24px 0; }
 .admin-app .review-body p { font-size:17px; line-height:1.9; }
 .admin-app .review-decision { padding:20px; background:var(--bg); }
-.admin-app :is(.review-detail,.collection-panel,.import-panel,.layout-inspector,.connection-cards,.connection-notes) h3 { font-size:18px; }
-.admin-app :is(.collection-panel,.import-guide,.connection-cards,.connection-notes,.layout-inspector,.agent-panel)>h2 { font-size:22px; }
-.admin-app :is(.entry-form,.import-panel,.layout-inspector,.collection-panel,.connection-cards,.review-decision) label { font-size:15px; line-height:1.6; }
-.admin-app :is(.entry-form,.import-panel,.layout-inspector,.collection-panel,.connection-cards,.review-decision) :is(input:not([type=checkbox]),textarea,select) { font-size:16px; min-height:44px; padding:11px 13px; background:var(--bg); border:1px solid var(--line); border-radius:8px; min-width:0; }
+.admin-app :is(.review-detail,.import-panel,.layout-inspector,.connection-cards,.connection-notes) h3 { font-size:18px; }
+.admin-app :is(.import-guide,.connection-cards,.connection-notes,.layout-inspector,.agent-panel)>h2 { font-size:22px; }
+.admin-app :is(.entry-form,.import-panel,.layout-inspector,.connection-cards,.review-decision) label { font-size:15px; line-height:1.6; }
+.admin-app :is(.entry-form,.import-panel,.layout-inspector,.connection-cards,.review-decision) :is(input:not([type=checkbox]),textarea,select) { font-size:16px; min-height:44px; padding:11px 13px; background:var(--bg); border:1px solid var(--line); border-radius:8px; min-width:0; }
 .admin-app :is(.import-panel,.connections-panel) { max-width:none; }
 .admin-app .import-columns { gap:24px; }
 .admin-app .import-columns>form,.admin-app .import-guide { padding:24px; border-radius:12px; }
@@ -108,13 +108,6 @@
 .admin-app .agent-row { padding:16px 0; gap:12px; }
 .admin-app .agent-row p,.admin-app .agent-row time { font-size:14px; }
 .admin-app .activity-list { font-size:15px; }
-.admin-app .collection-panel { margin-top:0; padding:24px; border-radius:12px; }
-.admin-app .collection-title h2 { font-size:22px; }
-.admin-app .collection-sources { gap:24px; }
-.admin-app .collection-posts { gap:16px; }
-.admin-app .collection-posts article { padding:20px; }
-.admin-app .collection-source { padding:16px; }
-.admin-app .collection-job { font-size:15px; }
 .admin-app .connection-cards section { padding:24px; }
 .admin-app .connection-cards h2 { font-size:22px; }
 .admin-app .connection-flow span { font-size:14px; }
@@ -192,7 +185,7 @@
   .admin-app .review-workspace { grid-template-columns:1fr; }
   .admin-app .review-list { position:static; max-height:260px; border-right:0; border-bottom:1px solid var(--line); }
   .admin-app .import-columns { grid-template-columns:1fr; }
-  .admin-app .collection-sources,.admin-app .collection-posts,.admin-app .connection-cards { grid-template-columns:1fr; }
+  .admin-app .admin-app .admin-app .connection-cards { grid-template-columns:1fr; }
   .admin-app .studio-breadcrumb>span,.admin-app .studio-breadcrumb>svg { display:none; }
 }
 @media (max-width:760px) {
@@ -232,7 +225,7 @@
   .admin-app .review-detail h2 { font-size:22px; }
   .admin-app .review-facts { grid-template-columns:1fr; }
   .admin-app .review-decision { padding:16px; }
-  .admin-app .collection-panel,.admin-app .connection-cards section,.admin-app .import-columns>form,.admin-app .import-guide { padding:18px; }
+  .admin-app .admin-app .connection-cards section,.admin-app .import-columns>form,.admin-app .import-guide { padding:18px; }
   .admin-app .entry-drawer { inset:0; width:100%; max-width:100%; height:100dvh; max-height:100dvh; border:0; border-radius:0; }
   .admin-app .drawer-heading { padding:16px 20px; }
   .admin-app .drawer-heading h2 { font-size:20px; }
@@ -255,7 +248,7 @@
 .tag-request-list a { overflow-wrap:anywhere; }
 
 /* Shared fields must shrink inside narrow inspectors and retain readable Thai lines. */
-.admin-app :is(.form-pair,.collection-sources,.collection-posts,.connection-cards,.import-columns) > * { min-width:0; }
+.admin-app :is(.form-pair,.connection-cards,.import-columns) > * { min-width:0; }
 .admin-app :is(label,.review-facts dd,.agent-row p,.activity-list,.drawer-heading h2) { overflow-wrap:anywhere; }
 .admin-app label:not(.checkbox):not(.search-box):not(.library-kind):not(.console-mobile-navigation) { display:grid; gap:8px; color:var(--ink); min-width:0; }
 .admin-app .form-pair { align-items:start; }
@@ -275,8 +268,7 @@
 .admin-app .entry-form .form-end .button { margin-left:auto; }
 .admin-app .spotlight-editor-group { display:grid; gap:14px; padding:16px; }
 .admin-app .spotlight-editor-group legend { padding:0 6px; color:var(--muted); }
-.admin-app :is(.spotlight-editor-actions,.collection-actions,.agent-row) { flex-wrap:wrap; }
-.admin-app .collection-title > .console-field { flex:1; max-width:440px; }
+.admin-app :is(.spotlight-editor-actions,.agent-row) { flex-wrap:wrap; }
 .admin-app .review-facts dd { margin:0; }
 .admin-app .review-context summary { cursor:pointer; color:var(--muted); }
 .admin-app .review-context p,.admin-app .review-feedback p { margin:12px 0; }
@@ -288,7 +280,6 @@
  .admin-app .admin-header .wordmark { font-size:18px; }
  .admin-app .admin-header .brand-mark { width:28px; height:28px; }
  .admin-app .console-mobile-navigation .filter-select { padding:0; border:0; }
- .admin-app .collection-title > .console-field { max-width:none; width:100%; }
  .admin-app .form-pair { grid-template-columns:1fr; }
 }
 .admin-app .console-field { display:grid; gap:8px; font-size:15px; min-width:0; color:var(--ink); }

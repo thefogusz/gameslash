@@ -316,7 +316,7 @@ export function Admin() {
             {tab === "inbox" && <ReviewPanel key={reviewVersion} initialTarget={reviewTarget} entries={data.entries} submissions={data.submissions} agents={data.agents} reviews={data.reviews} busy={busy} edit={setEditing} connect={() => setTab("connections")} decide={async (entry, decision, note) => {
               await mutate({ action: "review", id: entry.id, expectedUpdatedAt: entry.updatedAt, decision, note }, { publish: "เผยแพร่แล้ว รายการแสดงบนเว็บทันที", return: "ส่งกลับเป็นฉบับร่างแล้ว เอเจนต์อ่านหมายเหตุและแก้ไขต่อได้", reject: "ย้ายเข้าถังขยะแล้ว สามารถกู้คืนได้" }[decision]);
             }} />}
-            {tab === "connections" && <ConnectionsPanel refreshCatalog={async()=>{await reload();}} openAgents={() => setTab("agents")} openInbox={() => setTab("inbox")} entries={data.entries} categories={data.layout.categories} createDraft={async (jobId, sourceUrl, entry, tagSuggestions) => { await mutate({ action: "collection_draft", jobId, sourceUrl, entry, tagSuggestions }, "ส่งเข้ากล่องรอตรวจแล้ว"); }} />}
+            {tab === "connections" && <ConnectionsPanel openAgents={() => setTab("agents")} />}
             {tab === "layout" && (
               <LayoutEditor
                 key={data.revision}
