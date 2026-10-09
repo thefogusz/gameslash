@@ -63,6 +63,8 @@ export const entrySchema = entryInput.safeExtend({
   restoreStatus: z.enum(["draft", "pending", "published"]).optional(),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
+  // null records a previous publication whose original timestamp is unknown.
+  publishedAt: z.iso.datetime().nullable().optional(),
 });
 export type Entry = z.infer<typeof entrySchema>;
 export type EntryInput = z.infer<typeof entryInput>;
@@ -225,3 +227,4 @@ export function publicData(db: Database) {
   };
 }
 export type Catalog = ReturnType<typeof publicData>;
+

@@ -1,4 +1,5 @@
 import type { Entry } from "./model";
+import { matchesGamePlatform } from "./game-platforms";
 
 export function rankedGameCategories(categories: string[], entries: Entry[]) {
   return categories.map((category, index) => ({
@@ -24,12 +25,13 @@ export const directorySorts = {
 } as const;
 
 export function filterDirectory(entries: Entry[], filters: {
-  kind: Entry["kind"]; query: string; category: string; tag: string; sort: string;
+  kind: Entry["kind"]; query: string; category: string; tag: string; sort: string; platform?: string;
 }, featuredIds: string[] = []) {
   const query = filters.query.trim().toLocaleLowerCase();
   const tools = filters.kind === "tool";
   const category = tools && filters.category === "เผยแพร่" ? "" : filters.category;
   return (tools ? gameMakingTools(entries) : entries).filter(e => e.kind === filters.kind
+    && (filters.kind !== "game" || matchesGamePlatform(e.tags, filters.platform || ""))
     && (!category || e.category === category)
     && (tools || !filters.tag || e.tags.includes(filters.tag))
     && (!query || `${e.title} ${e.description} ${e.author} ${e.tags.join(" ")} ${e.category}`.toLocaleLowerCase().includes(query)))
@@ -41,4 +43,11 @@ export function filterDirectory(entries: Entry[], filters: {
       const rank = (id: string) => { const index = featuredIds.indexOf(id); return index < 0 ? featuredIds.length : index; };
       return rank(a.id) - rank(b.id);
     });
+}
+
+
+/** Only populated game genres belong in public genre controls; metadata stays untouched. */
+export function visibleGameCategories(categories: string[], entries: Entry[], selected = "") {
+  const populated = new Set(entries.filter(e => e.kind === "game").map(e => e.category));
+  return [...new Set([...categories, ...populated])].filter(category => populated.has(category) || category === selected);
 }

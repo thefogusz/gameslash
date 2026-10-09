@@ -23,5 +23,17 @@ test("metadata separates release stage, platform and genres without guessing abs
   const unknown = renderToStaticMarkup(<GameMetadata tags={["RPG"]} />);
   assert.doesNotMatch(unknown, /game-status|Released|CBT/);
   const compact = renderToStaticMarkup(<GameMetadata tags={["OBT", "PC", "RPG"]} compact />);
-  assert.match(compact, /OBT/); assert.match(compact, /PC/); assert.doesNotMatch(compact, /RPG/);
+  assert.doesNotMatch(compact, /OBT|RPG/); assert.match(compact, /PC/);
+});
+
+
+test("compact metadata groups devices without losing full detail or guessing unknown platforms", () => {
+  const tags = ["CBT", "เว็บ", "PC", "macOS", "Linux", "Android", "iOS", "RPG"];
+  const compact = renderToStaticMarkup(<GameMetadata tags={tags} compact />);
+  assert.match(compact, /เล่นบนเว็บ/); assert.match(compact, /มือถือ/);
+  assert.equal((compact.match(/>PC</g) || []).length, 1);
+  assert.doesNotMatch(compact, />macOS<|>Android<|>CBT<|>RPG</);
+  assert.equal(renderToStaticMarkup(<GameMetadata tags={["RPG", "สร้างด้วย AI"]} compact />), "");
+  const full = renderToStaticMarkup(<GameMetadata tags={tags} />);
+  for (const tag of tags) assert.ok(full.includes(tag));
 });
