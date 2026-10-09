@@ -3,6 +3,16 @@ import { createContext, useContext, useEffect, useRef, useState, type ReactNode 
 import { Heart } from "lucide-react";
 import { likesStorageKey, readLikedIds } from "@/lib/game-preferences";
 
+async function requestLikes(body?: unknown, signal?: AbortSignal): Promise<string[]> {
+  const response = await fetch("/api/likes", {
+    method: body ? "POST" : "GET", cache: "no-store", signal,
+    ...(body ? { headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {}),
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || "บันทึกหัวใจไม่สำเร็จ กรุณาลองอีกครั้ง");
+  return data.likedIds;
+}
+
 const PreferencesContext = createContext<{
   likedIds: string[]; ready: boolean; error: string; notice: string;
   toggle: (id: string, title: string) => void;
@@ -14,45 +24,70 @@ export function GamePreferencesProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const current = useRef<string[]>([]);
+  const saving = useRef(false);
+  const [busy, setBusy] = useState(false);
+  function accept(ids: string[]) {
+    current.current = ids;
+    setLikedIds(ids);
+    try { localStorage.setItem(likesStorageKey, JSON.stringify({ version: 1, likedIds: ids, synced: true })); }
+    catch { /* Server storage remains available without local storage. */ }
+  }
+  async function load(signal?: AbortSignal) {
+    setError("");
+    try {
+      let raw: string | null = null;
+      try { raw = localStorage.getItem(likesStorageKey); } catch { /* Cookies suffice. */ }
+      if (signal?.aborted) return;
+      current.current = readLikedIds(raw);
+      setLikedIds(current.current);
+      let ids = await requestLikes(undefined, signal);
+      const legacy = readLikedIds(raw);
+      if (legacy.length && JSON.parse(raw!).synced !== true)
+        ids = await requestLikes({ importIds: legacy }, signal);
+      if (signal?.aborted) return;
+      accept(ids);
+      setReady(true);
+    } catch (error) {
+      if (!signal?.aborted) setError((error as Error).message);
+    }
+  }
   useEffect(() => {
-    try { current.current = readLikedIds(localStorage.getItem(likesStorageKey)); setLikedIds(current.current); }
-    catch { setError("เบราว์เซอร์ไม่อนุญาตให้เก็บข้อมูล ถูกใจจะจำไว้ได้เฉพาะหน้านี้"); }
-    setReady(true);
+    const controller = new AbortController();
+    void load(controller.signal);
     const sync = (event: StorageEvent) => {
-      if (event.key === likesStorageKey || event.key === null) {
+      if (event.key === likesStorageKey && event.newValue) {
         current.current = readLikedIds(event.newValue);
         setLikedIds(current.current);
       }
     };
     window.addEventListener("storage", sync);
-    return () => window.removeEventListener("storage", sync);
+    return () => { controller.abort(); window.removeEventListener("storage", sync); };
   }, []);
-  function toggle(id: string, title: string) {
+  async function toggle(id: string, title: string) {
+    if (saving.current || !ready) return;
     const wasLiked = current.current.includes(id);
     if (!wasLiked && current.current.length >= 3000) {
       setError("เก็บถูกใจได้สูงสุด 3,000 เกม กรุณานำบางเกมออกก่อน");
       return;
     }
-    const next = wasLiked ? current.current.filter(value => value !== id) : [...current.current, id];
-    current.current = next;
-    setLikedIds(next);
+    saving.current = true;
+    setBusy(true);
+    setError("");
+    setNotice("");
     try {
-      localStorage.setItem(likesStorageKey, JSON.stringify({ version: 1, likedIds: next }));
-      setError("");
-      setNotice(wasLiked ? `นำ ${title} ออกจากถูกใจแล้ว` : `ถูกใจ ${title} แล้ว บันทึกในเบราว์เซอร์นี้`);
-    } catch {
-      setError("บันทึกลงเครื่องไม่ได้ ถูกใจครั้งนี้จะจำไว้เฉพาะหน้านี้");
-      setNotice("บันทึกถูกใจลงเครื่องไม่ได้");
-    }
+      accept(await requestLikes({ id, liked: !wasLiked }));
+      setNotice(wasLiked ? `นำ ${title} ออกจากถูกใจแล้ว` : `ถูกใจ ${title} แล้ว`);
+    } catch (error) { setError((error as Error).message); }
+    finally { saving.current = false; setBusy(false); }
   }
   useEffect(() => {
     if (!notice) return;
     const timer = setTimeout(() => setNotice(""), 4000);
     return () => clearTimeout(timer);
   }, [notice]);
-  return <PreferencesContext.Provider value={{ likedIds, ready, error, notice, toggle }}>
+  return <PreferencesContext.Provider value={{ likedIds, ready: ready && !busy, error, notice, toggle }}>
     {children}
-    <div className="likes-notice" role="status" aria-live="polite">{notice || error}</div>
+    <div className="likes-notice" role="status" aria-live="polite">{notice || error}{!ready && error && <button type="button" className="text-link" onClick={() => void load()}>ลองอีกครั้ง</button>}</div>
   </PreferencesContext.Provider>;
 }
 

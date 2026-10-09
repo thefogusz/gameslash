@@ -16,7 +16,7 @@ async function requestD1(method: "GET" | "PUT", body?: unknown, path = "/catalog
   if (!response.ok) throw new Error(`D1 catalog request failed (${response.status})`);
   return response.json();
 }
-const snapshotSchema = z.object({ version: z.number().int().nonnegative(), db: databaseSchema });
+const snapshotSchema = z.object({ version: z.number().int().nonnegative(), supportsGameLikes: z.boolean().default(false), db: databaseSchema });
 export async function readD1Notifications() {
   const { id, title, kind, status, updatedAt } = entrySchema.shape;
   return z.object({ total: z.number().int().nonnegative(), items: z.array(z.object({
@@ -35,10 +35,13 @@ export async function initializeD1(input: Database) {
 }
 export async function updateD1(change: (db: Database) => void, revision?: number, bumpRevision = true) {
   for (let attempt = 0; attempt < 4; attempt++) {
-    const { db, version } = snapshotSchema.parse(await requestD1("GET"));
+    const { db, version, supportsGameLikes } = snapshotSchema.parse(await requestD1("GET"));
+    const previousLikes = JSON.stringify(db.gameLikes);
     if (revision !== undefined && revision !== db.revision) throw new ConflictError("ข้อมูลเปลี่ยนแล้ว กรุณาโหลดข้อมูลล่าสุดก่อนบันทึก");
     const previous = new Map(db.entries.map((data, position) => [data.id, { position, json: JSON.stringify(data) }]));
     change(db);
+    if (!supportsGameLikes && (Object.keys(db.gameLikes).length || JSON.stringify(db.gameLikes) !== previousLikes))
+      throw new Error("ระบบบันทึกหัวใจยังไม่พร้อม กรุณาอัปเดต D1 Worker ก่อน");
     if (bumpRevision) db.revision++;
     const validated = databaseSchema.parse(db);
     if (new Set(validated.entries.map(entry => entry.id)).size !== validated.entries.length) throw new Error("Duplicate entry IDs");

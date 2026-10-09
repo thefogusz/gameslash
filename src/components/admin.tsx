@@ -47,7 +47,7 @@ import {
 type Snapshot = Pick<
   Database,
   "entries" | "layout" | "draftLayout" | "revision" | "activity" | "reviews" | "customTags" | "tagRequests"
-> & { storageReady: boolean; agents: Omit<Database["agents"][number], "tokenHash">[]; issuedToken?: string; submissions: SubmissionInfo };
+> & { likeCounts: Record<string, number>; storageReady: boolean; agents: Omit<Database["agents"][number], "tokenHash">[]; issuedToken?: string; submissions: SubmissionInfo };
 async function request(
   url: string,
   body?: unknown,
@@ -312,7 +312,7 @@ export function Admin() {
                 ระบบบันทึกข้อมูลยังไม่พร้อมใช้งาน กรุณาลองใหม่ภายหลัง
               </div>
             )}
-            {tab === "entries" && <ContentLibrary entries={data.entries} busy={busy} edit={setEditing} create={newEntry} review={entry=>{setReviewTarget(entry);setReviewVersion(v=>v+1);setTab("inbox");}} trash={entry=>{void mutate({action:"trash_entry",id:entry.id,expectedUpdatedAt:entry.updatedAt},"ย้ายเข้าถังขยะแล้ว กู้คืนได้ในคลังเนื้อหา").catch(()=>{});}} restore={entry=>{void mutate({action:"restore_entry",id:entry.id,expectedUpdatedAt:entry.updatedAt},"กู้คืนรายการแล้ว").catch(()=>{});}} />}
+            {tab === "entries" && <ContentLibrary entries={data.entries} likeCounts={data.likeCounts} busy={busy} edit={setEditing} create={newEntry} review={entry=>{setReviewTarget(entry);setReviewVersion(v=>v+1);setTab("inbox");}} trash={entry=>{void mutate({action:"trash_entry",id:entry.id,expectedUpdatedAt:entry.updatedAt},"ย้ายเข้าถังขยะแล้ว กู้คืนได้ในคลังเนื้อหา").catch(()=>{});}} restore={entry=>{void mutate({action:"restore_entry",id:entry.id,expectedUpdatedAt:entry.updatedAt},"กู้คืนรายการแล้ว").catch(()=>{});}} />}
             {tab === "inbox" && <ReviewPanel key={reviewVersion} initialTarget={reviewTarget} entries={data.entries} submissions={data.submissions} agents={data.agents} reviews={data.reviews} busy={busy} edit={setEditing} connect={() => setTab("connections")} decide={async (entry, decision, note) => {
               await mutate({ action: "review", id: entry.id, expectedUpdatedAt: entry.updatedAt, decision, note }, { publish: "เผยแพร่แล้ว รายการแสดงบนเว็บทันที", return: "ส่งกลับเป็นฉบับร่างแล้ว เอเจนต์อ่านหมายเหตุและแก้ไขต่อได้", reject: "ย้ายเข้าถังขยะแล้ว สามารถกู้คืนได้" }[decision]);
             }} />}

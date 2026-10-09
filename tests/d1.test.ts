@@ -6,6 +6,7 @@ import { draftNotifications } from "../src/lib/notifications";
 import { publicData } from "../src/lib/model";
 import { ConflictError } from "../src/lib/postgres-store";
 import { jobSchema } from "../src/lib/collection-model";
+import { changeGameLikes, gameLikeCounts } from "../src/lib/game-likes";
 
 test("D1 migration, concurrent CAS, rollback, ordering and private access", {
   skip: !process.env.GAMESLASH_TEST_D1_URL,
@@ -19,6 +20,11 @@ test("D1 migration, concurrent CAS, rollback, ordering and private access", {
   seed.collectionJobs.push(jobSchema.parse({ id: crypto.randomUUID(), source: { id: crypto.randomUUID(), name: "Stored posts", url: "https://www.facebook.com/groups/123" }, createdAt: new Date().toISOString(), status: "SUCCEEDED", runId: "fixtureRun", candidates: [{ url: "https://example.com/post", text: "Original source text", author: "Creator", time: "2026-10-09" }] }));
   await initializeD1(seed);
   assert.deepEqual(await readD1(), seed);
+  const visitor = "a".repeat(64);
+  await updateD1(db => changeGameLikes(db, visitor, { id: "ai-dungeon", liked: true }, "test"), undefined, false);
+  await updateD1(db => changeGameLikes(db, visitor, { id: "ai-dungeon", liked: true }, "test"), undefined, false);
+  assert.equal(gameLikeCounts(await readD1())["ai-dungeon"], 1);
+  assert.equal((await readD1()).revision, seed.revision);
   await assert.rejects(initializeD1(seed), ConflictError);
   const concurrent = await Promise.allSettled(["first draft", "second draft"].map(tagline =>
     updateD1(db => { db.draftLayout.tagline = tagline; }, seed.revision)));

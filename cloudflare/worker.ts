@@ -41,7 +41,7 @@ export default {
         ]);
         const row = state.results[0] as { version: number; data: string } | undefined;
         if (!row || row.data === "{}") return json({ error: "D1 catalog has not been migrated" }, 503);
-        return json({ version: row.version, db: {
+        return json({ version: row.version, supportsGameLikes: true, db: {
           ...JSON.parse(row.data), entries: (entries.results as { data: string }[]).map(row => JSON.parse(row.data)),
         } });
       }
