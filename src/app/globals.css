@@ -846,6 +846,8 @@ a:focus-visible {
 .catalog-section.section-article {
   max-width: 960px;
   margin-inline: auto;
+  border-top: 1px solid var(--line);
+  padding-top: 32px;
 }
 .template-home-news .article-card {
   grid-template-columns: minmax(200px, 36%) minmax(0, 1fr);
