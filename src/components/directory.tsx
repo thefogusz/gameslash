@@ -483,7 +483,7 @@ export function Directory({
               className={view === "games" && !category ? "sidebar-link active" : "sidebar-link"}
               onClick={() => setMenu(false)}
             >
-              ค้นพบเกม
+              เกมทั้งหมด
             </Link>
           </div>
           <div className="sidebar-group">
