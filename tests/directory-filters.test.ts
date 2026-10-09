@@ -109,3 +109,22 @@ test("explicit mobile-browser support matches Web and Mobile without inventing O
   assert.deepEqual(gamePlatformBadges(game.tags).map(g => g.value), ["web", "mobile"]);
   assert.deepEqual(game.tags, ["เว็บบนมือถือ"]);
 });
+
+
+test("tool stars sort descending with unrated last, stable ties, category filtering and no mutation", () => {
+  const base = { ...entries.find(e => e.kind === "tool")!, category: "เขียนโค้ด" };
+  const popularity = (score: number) => ({ score, reason: "Evidence from documented adoption", sources: ["https://example.com"], checkedAt: "2026-10-10" });
+  const sample = [
+    { ...base, id: "unrated", popularity: null },
+    { ...base, id: "three", popularity: popularity(3) },
+    { ...base, id: "five-a", popularity: popularity(5) },
+    { ...base, id: "missing", popularity: undefined },
+    { ...base, id: "five-b", popularity: popularity(5) },
+    { ...base, id: "one", popularity: popularity(1) },
+    { ...base, id: "other", category: "เสียงและเพลง", popularity: popularity(5) },
+  ];
+  const before = JSON.stringify(sample);
+  assert.deepEqual(filterDirectory(sample, { ...defaults, kind: "tool", category: base.category, sort: "popularity" }).map(e => e.id), ["five-a", "five-b", "three", "one", "unrated", "missing"]);
+  assert.deepEqual(filterDirectory(sample, { ...defaults, kind: "tool" }).map(e => e.id), sample.map(e => e.id));
+  assert.equal(JSON.stringify(sample), before);
+});

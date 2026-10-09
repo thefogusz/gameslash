@@ -20,6 +20,7 @@ import {
   Search,
   Plus,
   Sparkles,
+  Star,
   Gamepad2,
   BookOpen,
   Wrench,
@@ -374,14 +375,14 @@ export function Directory({
   const category = view === "tools" && params.get("category") === "เผยแพร่" ? "" : params.get("category") || "";
   const platform = normalizeGamePlatform(params.get("platform") || "");
   const tag = view === "tools" ? "" : params.get("tag") || "";
-  const requestedSort = view === "tools" ? "curated" : params.get("sort") || "curated";
-  const sort = Object.hasOwn(directorySorts, requestedSort) ? requestedSort : "curated";
+  const requestedSort = view === "tools" ? (params.get("sort") === "popularity" ? "popularity" : "curated") : params.get("sort") || "curated";
+  const sort = (view === "tools" && requestedSort === "popularity") || Object.hasOwn(directorySorts, requestedSort) ? requestedSort : "curated";
   function updateFilters(values: Record<string, string>, replace = false) {
     const url = new URL(window.location.href);
     if (view === "tools") {
       url.searchParams.delete("group");
       url.searchParams.delete("tag");
-      url.searchParams.delete("sort");
+      if (url.searchParams.get("sort") !== "popularity") url.searchParams.delete("sort");
       if (url.searchParams.get("category") === "เผยแพร่") url.searchParams.delete("category");
     }
     for (const [key, value] of Object.entries(values)) {
@@ -561,6 +562,7 @@ export function Directory({
                 <FilterSelect label="หมวดเครื่องมือ" compact value={category}
                   options={[{ value: "", label: "ทุกหมวด" }, ...categories.map(c => ({ value: c, label: c }))]}
                   onChange={category => updateFilters({ category, q: "" })} />
+                <button type="button" className="tool-star-sort" aria-pressed={sort === "popularity"} title="เรียงตามดาวความนิยมจากมากไปน้อย กดซ้ำเพื่อกลับลำดับเดิม" onClick={() => updateFilters({ sort: sort === "popularity" ? "" : "popularity" })}><Star size={15} aria-hidden="true" />ดาวมากก่อน</button>
                 <span role="status" aria-live="polite">{results.length} เครื่องมือ</span>
               </div>}
               {kind !== "tool" && <div className={`directory-filters${compactFilters ? " compact-filters" : ""}${kind === "game" ? " game-directory-filters" : ""}`} role="group" aria-label="ตัวกรองรายการ">
