@@ -524,7 +524,7 @@ export function Directory({
             </Link>
             <Link className="sidebar-link" href="/journal">
               <BookOpen size={16} />
-              ข่าวสร้างเกมด้วย AI
+              ข่าว AI Game
             </Link>
           </div>
         </aside>
