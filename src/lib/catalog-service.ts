@@ -6,6 +6,7 @@ import { checkDuplicate, collectionContextSchema, consumeLimit, entryInput, entr
 import { ConflictError } from "./postgres-store";
 
 export const managementMutation = z.discriminatedUnion("action", [
+  z.object({ action: z.literal("feedback_status"), revision: z.number().int(), id: z.string().uuid(), status: z.enum(["open", "closed"]) }),
   z.object({ action: z.literal("resolve_tag"), revision: z.number().int(), resolution: tagResolutionSchema }),
   z.object({ action: z.literal("agent_tag_permission"), revision: z.number().int(), id: z.string().uuid(), enabled: z.boolean() }),
   z.object({ action: z.literal("agent_site_permission"), revision: z.number().int(), id: z.string().uuid(), enabled: z.boolean() }),
@@ -54,7 +55,11 @@ function newDraft(input: EntryInput, id = crypto.randomUUID()): Entry {
   return { ...input, id, status: "draft", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
 }
 export function manageCatalog(db: Database, input: z.infer<typeof managementMutation>, actor = "ผู้ดูแล"): string | undefined {
-  if (input.action === "resolve_tag") {
+  if (input.action === "feedback_status") {
+    const ticket = db.feedback.find(ticket => ticket.id === input.id);
+    if (!ticket) throw new Error("ไม่พบ ticket นี้");
+    ticket.status = input.status;
+  } else if (input.action === "resolve_tag") {
     resolveGameTag(db, input.resolution, "ผู้ดูแล");
   } else if (input.action === "agent_tag_permission") {
     const agent = db.agents.find(a => a.id === input.id && !a.revokedAt);

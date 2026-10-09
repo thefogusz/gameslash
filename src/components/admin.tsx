@@ -1,4 +1,5 @@
 "use client";
+import { FeedbackTickets } from "./feedback";
 import { ConsoleSelect } from "./console-select";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
@@ -46,7 +47,7 @@ import {
 } from "@/lib/model";
 type Snapshot = Pick<
   Database,
-  "entries" | "layout" | "draftLayout" | "revision" | "activity" | "reviews" | "customTags" | "tagRequests"
+  "feedback" | "entries" | "layout" | "draftLayout" | "revision" | "activity" | "reviews" | "customTags" | "tagRequests"
 > & { storageReady: boolean; agents: Omit<Database["agents"][number], "tokenHash">[]; issuedToken?: string; submissions: SubmissionInfo };
 async function request(
   url: string,
@@ -137,7 +138,7 @@ export function Login({ configured }: { configured: boolean }) {
 export function Admin() {
   const router = useRouter();
   const [data, setData] = useState<Snapshot | null>(null),
-    [tab, setTab] = useState<"inbox" | "entries" | "layout" | "import" | "agents" | "activity" | "connections" | "tags">("inbox");
+    [tab, setTab] = useState<"feedback" | "inbox" | "entries" | "layout" | "import" | "agents" | "activity" | "connections" | "tags">("inbox");
   const [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
     [busy, setBusy] = useState(false);
@@ -162,7 +163,7 @@ export function Admin() {
   useEffect(()=>{if(!notice)return;const timer=setTimeout(()=>setNotice(""),5000);return()=>clearTimeout(timer);},[notice]);
   useEffect(()=>{const warn=(e:BeforeUnloadEvent)=>{if(unsaved.current)e.preventDefault();};window.addEventListener("beforeunload",warn);return()=>window.removeEventListener("beforeunload",warn);},[]);
   function canLeave(){if(unsaved.current&&!window.confirm("มีการแก้ไขที่ยังไม่ได้บันทึก ต้องการออกจากหน้านี้หรือไม่?"))return false;unsaved.current=false;return true;}
-  function navigate(next:typeof tab){if(next===tab||!canLeave())return;if(next==="inbox"){setReviewTarget(null);setReviewVersion(v=>v+1);}setTab(next);setError("");}
+  function navigate(next:typeof tab){if(next===tab||!canLeave())return;if(next==="inbox"){setReviewTarget(null);setReviewVersion(v=>v+1);}setTab(next);setError("");if(next === "feedback")void reload();}
   async function openNotification(item:DraftNotification){
     if(!canLeave())return false;
     const next=await reload();if(!next)return false;
@@ -211,7 +212,7 @@ export function Admin() {
       updatedAt: new Date().toISOString(),
     });
   }
-  const tabNames={tags:"คลังแท็กเกม",inbox:"กล่องรอตรวจ",entries:"คลังเนื้อหา",layout:"จัดหน้าเว็บไซต์",import:"นำเข้า / ส่งออก",connections:"แหล่งข้อมูล",agents:"เอเจนต์และการเชื่อมต่อ",activity:"ประวัติล่าสุด"};
+  const tabNames={feedback:"ฟีดแบค",tags:"คลังแท็กเกม",inbox:"กล่องรอตรวจ",entries:"คลังเนื้อหา",layout:"จัดหน้าเว็บไซต์",import:"นำเข้า / ส่งออก",connections:"แหล่งข้อมูล",agents:"เอเจนต์และการเชื่อมต่อ",activity:"ประวัติล่าสุด"};
   return (
     <div className="admin-app">
       <a href="#studio-main" className="console-skip">ข้ามไปเนื้อหา</a>
@@ -246,6 +247,7 @@ export function Admin() {
       <div className="console-mobile-navigation">เมนูจัดการ<ConsoleSelect label="เมนูจัดการ" value={tab} onChange={value =>navigate(value as typeof tab)}>{Object.entries(tabNames).map(([value,label])=><option key={value} value={value}>{label}</option>)}</ConsoleSelect></div>
       <nav className="studio-nav" aria-label="เมนูจัดการเว็บไซต์">
         <p className="nav-section-label">จัดการเนื้อหา</p>
+        <button aria-current={tab === "feedback" ? "page" : undefined} className={tab === "feedback" ? "active" : ""} onClick={() => navigate("feedback")}><Inbox size={16} />ฟีดแบค <span>{data?.feedback.filter(t => t.status === "open").length || 0}</span></button>
         <button aria-current={tab==="inbox"?"page":undefined} className={tab === "inbox" ? "active" : ""} onClick={() => navigate("inbox")}>
           <Inbox size={16} />กล่องรอตรวจ <span>{data?.entries.filter(e => e.status === "pending").length || 0}</span>
         </button>
@@ -312,6 +314,7 @@ export function Admin() {
                 ระบบบันทึกข้อมูลยังไม่พร้อมใช้งาน กรุณาลองใหม่ภายหลัง
               </div>
             )}
+            {tab === "feedback" && <FeedbackTickets tickets={data.feedback} busy={busy} update={(id, status) => mutate({ action: "feedback_status", id, status }, status === "closed" ? "ปิด ticket แล้ว" : "เปิด ticket แล้ว")} />}
             {tab === "entries" && <ContentLibrary entries={data.entries} busy={busy} edit={setEditing} create={newEntry} review={entry=>{setReviewTarget(entry);setReviewVersion(v=>v+1);setTab("inbox");}} trash={entry=>{void mutate({action:"trash_entry",id:entry.id,expectedUpdatedAt:entry.updatedAt},"ย้ายเข้าถังขยะแล้ว กู้คืนได้ในคลังเนื้อหา").catch(()=>{});}} restore={entry=>{void mutate({action:"restore_entry",id:entry.id,expectedUpdatedAt:entry.updatedAt},"กู้คืนรายการแล้ว").catch(()=>{});}} />}
             {tab === "inbox" && <ReviewPanel key={reviewVersion} initialTarget={reviewTarget} entries={data.entries} submissions={data.submissions} agents={data.agents} reviews={data.reviews} busy={busy} edit={setEditing} connect={() => setTab("connections")} decide={async (entry, decision, note) => {
               await mutate({ action: "review", id: entry.id, expectedUpdatedAt: entry.updatedAt, decision, note }, { publish: "เผยแพร่แล้ว รายการแสดงบนเว็บทันที", return: "ส่งกลับเป็นฉบับร่างแล้ว เอเจนต์อ่านหมายเหตุและแก้ไขต่อได้", reject: "ย้ายเข้าถังขยะแล้ว สามารถกู้คืนได้" }[decision]);

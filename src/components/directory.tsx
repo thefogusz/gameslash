@@ -1,4 +1,5 @@
 "use client";
+import { Feedback } from "./feedback";
 import { ArticleContent, legacyGuideDocument } from "./article-content";
 import { ToolDirectoryCard } from "./tool-directory-card";
 import { GameMetadata } from "./game-metadata";
@@ -528,6 +529,7 @@ export function Directory({
               ข่าวสร้างเกมด้วย AI
             </Link>
           </div>
+          <Feedback />
         </aside>
         {menu && (
           <button

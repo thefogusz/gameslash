@@ -2741,3 +2741,37 @@ textarea {
 .game-platform-badges > span { color:#cbc9d7; background:#ffffff07; border:1px solid var(--line); border-radius:6px; padding:2px 7px; font-size:11px; line-height:1.6; }
 .news-publication-time { display:block; margin:7px 0 10px; color:var(--muted); font-size:12px; line-height:1.7; font-weight:400; }
 .detail .news-publication-time { margin-top:12px; font-size:13px; }
+
+.feedback-card { display: flex; align-items: center; gap: 10px; width: 100%; margin-top: 28px; padding: 13px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); text-align: left; color: var(--ink); }
+.feedback-card:hover { border-color: var(--accent); }
+.feedback-card > svg:first-child { color: var(--accent); flex: none; }
+.feedback-card > svg:last-child { margin-left: auto; color: var(--muted); flex: none; }
+.feedback-card strong { display: block; font-size: 13px; }
+.feedback-card small { display: block; margin-top: 3px; font-size: 11px; color: var(--muted); }
+.feedback-dialog { width: min(480px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); padding: 24px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); color: var(--ink); }
+.feedback-dialog::backdrop { background: #000a; }
+.feedback-heading { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.feedback-heading h2 { font-size: 21px; margin: 0; }
+.feedback-dialog form { display: grid; gap: 12px; }
+.feedback-dialog form > p { margin: 0; color: var(--muted); font-size: 13px; }
+.feedback-dialog textarea { width: 100%; resize: vertical; min-height: 120px; padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink); font: inherit; }
+.feedback-upload { position: relative; display: flex; gap: 10px; align-items: center; padding: 16px 12px; border: 1px dashed var(--line); border-radius: 8px; font-size: 13px; cursor: pointer; }
+.feedback-upload:focus-within { outline: 2px solid var(--accent); }
+.feedback-upload small { display: block; margin-top: 4px; color: var(--muted); font-size: 11px; }
+.feedback-upload input { position: absolute; inset: 0; opacity: 0; width: 100%; cursor: pointer; }
+.feedback-preview { position: relative; }
+.feedback-preview img { max-height: 180px; width: 100%; object-fit: contain; border-radius: 8px; background: var(--bg); }
+.feedback-preview button { position: absolute; right: 6px; top: 6px; background: var(--surface); }
+.feedback-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.feedback-actions small { color: var(--muted); font-size: 11px; }
+.feedback-success { display: grid; justify-items: center; gap: 16px; text-align: center; padding: 20px 0; }
+.feedback-success > svg { color: var(--accent); }
+.feedback-success p, .feedback-success h3 { margin: 0; }
+.feedback-success small { color: var(--muted); }
+.feedback-tickets { display: grid; gap: 16px; }
+.feedback-ticket { padding: 20px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); display: grid; gap: 14px; }
+.feedback-ticket header { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; }
+.feedback-ticket time, .feedback-ticket small { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+.feedback-ticket p { white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; }
+.feedback-ticket img { display: block; max-width: 100%; max-height: 260px; border-radius: 6px; }
+.feedback-ticket .button { justify-self: start; }

@@ -233,6 +233,7 @@ const layout: Layout = {
 export function seedDatabase(): Database {
   return structuredClone({
     version: 1,
+    feedback: [],
     customTags: [],
     tagRequests: [],
     revision: 0,

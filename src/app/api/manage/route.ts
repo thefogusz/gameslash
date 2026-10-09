@@ -3,6 +3,7 @@ import { managementMutation, manageCatalog } from "@/lib/catalog-service";
 import { readDatabase, storageReady, updateDatabase } from "@/lib/store";
 import { errorResponse } from "@/lib/http";
 const adminData = (db: Awaited<ReturnType<typeof readDatabase>>) => ({
+  feedback: db.feedback,
   entries: db.entries,
   customTags: db.customTags,
   tagRequests: db.tagRequests,
