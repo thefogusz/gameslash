@@ -562,7 +562,7 @@ export function Directory({
                 <FilterSelect label="หมวดเครื่องมือ" compact value={category}
                   options={[{ value: "", label: "ทุกหมวด" }, ...categories.map(c => ({ value: c, label: c }))]}
                   onChange={category => updateFilters({ category, q: "" })} />
-                <button type="button" className="tool-star-sort" aria-pressed={sort === "popularity"} title="เรียงตามดาวความนิยมจากมากไปน้อย กดซ้ำเพื่อกลับลำดับเดิม" onClick={() => updateFilters({ sort: sort === "popularity" ? "" : "popularity" })}><Star size={15} aria-hidden="true" />ดาวมากก่อน</button>
+                <button type="button" className="tool-star-sort" aria-pressed={sort === "popularity"} title="เรียงตามดาวความนิยมจากมากไปน้อย กดซ้ำเพื่อกลับลำดับเดิม" onClick={() => updateFilters({ sort: sort === "popularity" ? "" : "popularity" })}><Star size={15} aria-hidden="true" />เรียงตามความนิยม</button>
                 <span role="status" aria-live="polite">{results.length} เครื่องมือ</span>
               </div>}
               {kind !== "tool" && <div className={`directory-filters${compactFilters ? " compact-filters" : ""}${kind === "game" ? " game-directory-filters" : ""}`} role="group" aria-label="ตัวกรองรายการ">
