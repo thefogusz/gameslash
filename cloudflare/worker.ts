@@ -41,9 +41,11 @@ export default {
         ]);
         const row = state.results[0] as { version: number; data: string } | undefined;
         if (!row || row.data === "{}") return json({ error: "D1 catalog has not been migrated" }, 503);
-        return json({ version: row.version, supportsGameLikes: true, db: {
-          ...JSON.parse(row.data), entries: (entries.results as { data: string }[]).map(row => JSON.parse(row.data)),
-        } });
+        // Stored JSON is validated on writes; avoid parsing and re-encoding the entire catalog on the Worker.
+        const data = (entries.results as { data: string }[]).map(row => row.data).join(",");
+        return new Response(`{"version":${row.version},"supportsGameLikes":true,"db":{${row.data.trim().slice(1, -1)},"entries":[${data}]}}`, {
+          headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+        });
       }
       if (request.method !== "PUT") return json({ error: "Method not allowed" }, 405);
       // shortcut: bounded catalog requests up to 16 MB; use paginated operations for larger catalogs.

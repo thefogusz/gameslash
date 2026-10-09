@@ -67,3 +67,23 @@ metadata only. Other existing catalog reads still fetch the full catalog.
 
 Cloudflare Free query, row and CPU limits still apply. This migration removes Neon's
 egress dependency; it does not provide unlimited database usage.
+
+## MCP reliability
+
+Catalog GET responses join already validated stored JSON instead of parsing and
+re-encoding every entry on the Worker. The app still validates the response schema.
+MCP read tools reuse the authentication snapshot within a single HTTP request;
+mutations still read fresh state and retain atomic revision checks. No catalog or
+authorization cache is shared between requests.
+
+Clients receive operating instructions during MCP initialization and through
+`get_editorial_skills` (`mcp-operation`). Calls should be sequential. A 401 means
+stop and repair authorization; transient storage failures return 503 with
+`Retry-After`, `SERVICE_UNAVAILABLE`, and `retryable`. Failed writes can report
+`outcomeUnknown`: read back before retrying and retain draft request IDs.
+The server does not automatically replay uncertain writes.
+
+Deploy the Worker and Next.js app separately to activate both changes. Reconnect
+MCP clients so they receive the new initialization instructions. Local checks do
+not prove the production catalog stays below Workers Free's CPU limit; verify
+`exceededCpu` events after rollout.
