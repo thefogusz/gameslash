@@ -57,7 +57,6 @@ export function GameCard({ entry }: { entry: Entry }) {
     <div className="game-card">
     <Link href={`/item/${entry.id}`} className="feature-tile game-card-link">
       <Cover entry={entry} />
-      <div className="feature-shade" />
       <div className="feature-copy">
         <span className="feature-category">{entry.category}</span>
         <h3>{entry.title}</h3>
@@ -526,7 +525,7 @@ export function Directory({
             </Link>
             <Link className="sidebar-link" href="/journal">
               <BookOpen size={16} />
-              ข่าวสร้างเกมด้วย AI
+              ข่าว AI Game
             </Link>
           </div>
           <Feedback />
