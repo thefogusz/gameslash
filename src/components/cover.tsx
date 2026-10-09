@@ -6,9 +6,11 @@ import type { Entry } from "@/lib/model";
 export function Cover({
   entry,
   priority = false,
+  sizes = "(max-width: 700px) 90vw, 40vw",
 }: {
   entry: Entry;
   priority?: boolean;
+  sizes?: string;
 }) {
   const [failed, setFailed] = useState(false);
   if (entry.image && !failed)
@@ -18,7 +20,7 @@ export function Cover({
         unoptimized={!entry.image.startsWith("/")}
         src={entry.image}
         alt={entry.imageAlt || `ภาพประชาสัมพันธ์ ${entry.title}`}
-        sizes="(max-width: 700px) 90vw, 40vw"
+        sizes={sizes}
         loading={priority ? "eager" : "lazy"}
         fetchPriority={priority ? "high" : "auto"}
         onError={() => setFailed(true)}
