@@ -35,27 +35,25 @@ export default {
         return json({ total: (count.results[0] as { total: number }).total, items: items.results });
       }
       if (request.method === "GET") {
-        // Assemble bounded catalogs in SQLite so Worker CPU does not grow with the number of entries.
-        const compact = await env.DB.prepare(`SELECT CASE WHEN data != '{}' AND
-          length(CAST(data AS BLOB)) + (SELECT COALESCE(sum(length(CAST(data AS BLOB)) + 1), 0)
-            FROM gameslash_entries) < 1800000 THEN
-          json_object('version', version, 'supportsGameLikes', json('true'), 'supportsFeedback', json('true'), 'db',
-            json_set(data, '$.entries', json((SELECT json_group_array(json(data))
-              FROM (SELECT data FROM gameslash_entries ORDER BY position, id)))))
-          ELSE NULL END AS catalog FROM gameslash_state WHERE id = 1`).first<{ catalog: string | null }>();
-        if (compact?.catalog) return new Response(compact.catalog, {
-          headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
-        });
-        // shortcut: catalogs above 1.8 MB use split rows; add paginated reads if these hit Worker CPU limits.
-        const [state, entries] = await env.DB.batch([
+        // D1 batches are transactions: state and snapshot always describe the same version.
+        let [state, entries] = await env.DB.batch([
           env.DB.prepare("SELECT version, data FROM gameslash_state WHERE id = 1"),
-          env.DB.prepare("SELECT data FROM gameslash_entries ORDER BY position, id"),
+          env.DB.prepare(`SELECT entries FROM gameslash_entry_snapshot WHERE id = 1 AND
+            version = (SELECT version FROM gameslash_state WHERE id = 1)`),
         ]);
+        let data = (entries.results[0] as { entries: string | null } | undefined)?.entries;
+        // shortcut: entry arrays above 1.8 MB or older writers use split rows; paginate if this becomes frequent.
+        if (!data) {
+          [state, entries] = await env.DB.batch([
+            env.DB.prepare("SELECT version, data FROM gameslash_state WHERE id = 1"),
+            env.DB.prepare("SELECT data FROM gameslash_entries ORDER BY position, id"),
+          ]);
+          data = `[${(entries.results as { data: string }[]).map(row => row.data).join(",")}]`;
+        }
         const row = state.results[0] as { version: number; data: string } | undefined;
         if (!row || row.data === "{}") return json({ error: "D1 catalog has not been migrated" }, 503);
         // Stored JSON is validated on writes; avoid parsing and re-encoding the entire catalog on the Worker.
-        const data = (entries.results as { data: string }[]).map(row => row.data).join(",");
-        return new Response(`{"version":${row.version},"supportsGameLikes":true,"supportsFeedback":true,"db":{${row.data.trim().slice(1, -1)},"entries":[${data}]}}`, {
+        return new Response(`{"version":${row.version},"supportsGameLikes":true,"supportsFeedback":true,"db":{${row.data.trim().slice(1, -1)},"entries":${data}}}`, {
           headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
         });
       }
@@ -111,6 +109,12 @@ export default {
           stateExpression = `json_set(${stateExpression}, '$.${key}', json(COALESCE(json_extract(data, '$.${key}'), '${fallback}')))`;
       }
       queries.push(env.DB.prepare(`UPDATE gameslash_state SET version = version + 1, data = ${stateExpression} WHERE id = 1`).bind(stateJson));
+      // Rebuild once per committed write, including likes and old-schema compatibility writes.
+      queries.push(env.DB.prepare(`INSERT OR REPLACE INTO gameslash_entry_snapshot (id, version, entries)
+        SELECT 1, version, CASE WHEN (SELECT COALESCE(sum(length(CAST(data AS BLOB)) + 1), 0)
+          FROM gameslash_entries) < 1800000 THEN
+          (SELECT json_group_array(json(data)) FROM (SELECT data FROM gameslash_entries ORDER BY position, id))
+          ELSE NULL END FROM gameslash_state WHERE id = 1`));
       await env.DB.batch(queries);
       return json({ version: expectedVersion + 1 });
     } catch (error) {

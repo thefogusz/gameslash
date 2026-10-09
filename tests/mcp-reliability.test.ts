@@ -114,8 +114,8 @@ test("Worker catalog preserves JSON, ordering and authorization without re-parsi
   db.entries[0].body = 'Quotes " and braces {} and newline\nทดสอบ';
   const { entries, ...state } = db;
   const env = { D1_SERVICE_TOKEN: "fixture", DB: {
-    prepare: (sql: string) => ({ sql, first: async () => ({ catalog: null as string | null }) }),
-    batch: async () => [
+    prepare: (sql: string) => ({ sql }),
+    batch: async (_queries: { sql: string }[]): Promise<{ results: Record<string, unknown>[] }[]> => [
       { results: [{ version: 7, data: JSON.stringify(state) }] },
       { results: entries.map(data => ({ data: JSON.stringify(data) })) },
     ],
@@ -130,10 +130,14 @@ test("Worker catalog preserves JSON, ordering and authorization without re-parsi
   assert.equal(parses, 0);
   assert.equal(response!.headers.get("Cache-Control"), "no-store");
   assert.deepEqual(await response!.json(), { version: 7, supportsGameLikes: true, supportsFeedback: true, db });
-  env.DB.prepare = sql => ({ sql, first: async () => ({ catalog: JSON.stringify({ version: 7, supportsGameLikes: true, supportsFeedback: true, db }) }) });
-  env.DB.batch = async () => { throw new Error("Compact reads must not load split rows again"); };
+  env.DB.batch = async (queries: { sql: string }[]) => {
+    assert.equal(queries.length, 2);
+    assert.ok(queries[1].sql.includes("gameslash_entry_snapshot"));
+    assert.ok(queries[1].sql.includes("SELECT version FROM gameslash_state"));
+    assert.ok(queries.every(query => !query.sql.includes("FROM gameslash_entries")), "A matching snapshot must not scan the entry table");
+    return [{ results: [{ version: 7, data: JSON.stringify(state) }] }, { results: [{ entries: JSON.stringify(entries) }] }];
+  };
   assert.deepEqual(await (await worker.fetch(request("fixture"), env)).json(), { version: 7, supportsGameLikes: true, supportsFeedback: true, db });
-  env.DB.prepare = sql => ({ sql, first: async () => ({ catalog: null }) });
   env.DB.batch = async () => [{ results: [{ version: 0, data: "{}" }] }, { results: [] }];
   assert.equal((await worker.fetch(request("fixture"), env)).status, 503);
 });
