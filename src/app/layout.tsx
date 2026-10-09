@@ -22,7 +22,7 @@ const chakra = Chakra_Petch({
 export const metadata: Metadata = {
   metadataBase: new URL(siteOrigin()),
   title: {
-    default: "GameSlash รวมเกมที่สร้างด้วย AI",
+    default: "GameSlash แพลตฟอร์มรวมเกม AI",
     template: "%s · gameslash",
   },
   description:
