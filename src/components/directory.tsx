@@ -571,19 +571,14 @@ export function Directory({
                   ))}
                 </div>
               )}
-              {kind !== "tool" && <div className={`directory-filters${compactFilters ? " compact-filters" : ""}`} role="group" aria-label="ตัวกรองรายการ">
-                <FilterSelect label={kind === "game" ? "แนวเกม" : "หมวดหมู่"} compact={compactFilters} value={category}
+              {kind !== "tool" && <div className={`directory-filters${compactFilters ? " compact-filters" : ""}${kind === "game" ? " game-directory-filters" : ""}`} role="group" aria-label="ตัวกรองรายการ">
+                <FilterSelect label={kind === "game" ? "แนวเกม" : "หมวดหมู่"} compact={compactFilters && kind !== "game"} value={category}
                   options={[{ value: "", label: `${kind === "game" ? "ทุกแนวเกม" : "ทุกหมวดหมู่"} (${entries.length})` }, ...categories.map(c => ({ value: c, label: `${c} (${entries.filter(e => e.category === c).length})` }))]}
                   onChange={category => updateFilters({ category })} />
-                {kind === "game" ? <details className="advanced-tag-filter" key={tag} open={!!tag}>
-                  <summary>{tag ? `แท็ก: ${tag}` : "แท็กเพิ่มเติม"}</summary>
-                  <FilterSelect label="แท็ก" compact={compactFilters} value={tag}
-                    options={[{ value: "", label: "ทุกแท็ก" }, ...tags.map(t => ({ value: t, label: `${t} (${entries.filter(e => e.tags.includes(t)).length})` }))]}
-                    onChange={tag => updateFilters({ tag })} />
-                </details> : <FilterSelect label="แท็ก" compact={compactFilters} value={tag}
+                <FilterSelect label="แท็ก" compact={compactFilters && kind !== "game"} value={tag}
                   options={[{ value: "", label: "ทุกแท็ก" }, ...tags.map(t => ({ value: t, label: `${t} (${entries.filter(e => e.tags.includes(t)).length})` }))]}
-                  onChange={tag => updateFilters({ tag })} />}
-                <FilterSelect label="เรียงลำดับ" compact={compactFilters} value={sort}
+                  onChange={tag => updateFilters({ tag })} />
+                <FilterSelect label="เรียงลำดับ" compact={compactFilters && kind !== "game"} value={sort}
                   options={Object.entries(directorySorts).map(([value, label]) => ({ value, label }))}
                   onChange={sort => updateFilters({ sort: sort === "curated" ? "" : sort })} />
                 {(!compactFilters || filtered) && <button className="button secondary filter-reset" onClick={reset} disabled={!filtered}><X size={16} />ล้างตัวกรอง</button>}
