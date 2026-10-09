@@ -27,7 +27,7 @@ export function Spotlight({ entries, layout }: { entries: Entry[]; layout: Layou
     : group.id === "auto-new" ? "เรียงตามวันที่เพิ่มเข้าคลัง Gameslash ล่าสุด ไม่ใช่วันเปิดตัวเกม"
     : group.id === "auto-trending" ? "เกมที่ทีมงานคัดเลือกสำหรับชุดติดเทรนด์"
     : group.id === "auto-most-played" ? "อันดับนี้จะใช้ข้อมูลจำนวนผู้เล่นที่มีแหล่งอ้างอิงและช่วงเวลาตรงกัน"
-    : /popular|trending|ยอดนิยม|มาแรง|เทรน/i.test(group.title) ? "ชุดเด่นที่ผู้ดูแลคัดเลือก ไม่ใช่อันดับจากยอดไลก์หรือจำนวนผู้เล่น" : "เกมเด่นที่คัดสรรให้ลองค้นพบ · กดหัวใจเพื่อเก็บเกมไว้ดูภายหลัง";
+    : /popular|trending|ยอดนิยม|มาแรง|เทรน/i.test(group.title) ? "ชุดเด่นที่ผู้ดูแลคัดเลือก ไม่ใช่อันดับจากยอดไลก์หรือจำนวนผู้เล่น" : "";
   const empty = group.id === "auto-trending"
     ? { title: "กำลังคัดเกมติดเทรนด์", description: "เมื่อทีมงานเพิ่มเกมในชุดนี้ คุณจะเห็นได้ที่นี่", icon: <TrendingUp size={36} className="empty-heart" aria-hidden="true" /> }
     : group.id === "auto-most-played"
@@ -37,7 +37,7 @@ export function Spotlight({ entries, layout }: { entries: Entry[]; layout: Layou
     : { title: "ยังไม่มีเกมในชุดนี้", description: "ลองเลือกชุดอื่นหรือค้นหาเกมทั้งหมด", icon: <HeartEmpty /> };
   return <section className="spotlight" aria-label="ชุดเกมเด่น">
     <div className="spotlight-tabs" aria-label="เลือกชุดเกมเด่น">{groups.map(g => <button key={g.id} aria-pressed={g.id === group.id} onClick={() => setGroupId(g.id)}>{g.title}</button>)}</div>
-    <div className="spotlight-note"><p>{note}</p>{group.id === "liked" && liked.length > 0 && <Link href="/games?liked=1">ดูถูกใจทั้งหมด ({liked.length})</Link>}</div>
+    {note && <div className="spotlight-note"><p>{note}</p>{group.id === "liked" && liked.length > 0 && <Link href="/games?liked=1">ดูถูกใจทั้งหมด ({liked.length})</Link>}</div>}
     {error && <p className="form-error" role="alert">{error}</p>}
     {group.entries.length > 0 ? <Slides key={`${group.id}:${group.entries.map(e => e.id).join()}`} entries={group.entries} badge={group.badge} />
       : <div className="spotlight-empty">{empty.icon}<h2>{empty.title}</h2><p>{empty.description}</p><Link className="button" href="/games">ค้นหาเกม</Link></div>}

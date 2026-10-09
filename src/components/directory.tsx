@@ -170,7 +170,7 @@ export function CatalogSection({
           >
             ดูทั้งหมด <ArrowUpRight size={14} />
           </Link>
-          {section.template === "shelf" && (
+          {section.template === "shelf" && section.kind !== "article" && (
             <div className="rail-controls">
               <button
                 aria-label={`เลื่อน ${section.title} ไปทางซ้าย`}
@@ -194,9 +194,9 @@ export function CatalogSection({
       </div>
       <div
         ref={rail}
-        className={`entries entries-${section.kind} template-${section.template}`}
+        className={`entries entries-${section.kind} template-${section.kind === "article" ? "home-news" : section.template}`}
       >
-        {items.map((entry) =>
+        {(section.kind === "article" ? items.slice(0, 5) : items).map((entry) =>
           section.kind === "game" ? (
             <GameCard entry={entry} key={entry.id} />
           ) : section.kind === "article" ? (
