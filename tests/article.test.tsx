@@ -6,6 +6,17 @@ import sharp from "sharp";
 import { articleDocumentSchema, imageUrl, textDocument } from "../src/lib/article";
 import { normalizeImage, maxImageBytes } from "../src/lib/media";
 import { ArticleContent, legacyGuideDocument } from "../src/components/article-content";
+import { GameMetadata } from "../src/components/game-metadata";
+test("game reading overview groups metadata and working section links before the article",()=>{
+  const doc=legacyGuideDocument("เล่นยังไง\n\nเริ่มเล่น\n\nสำรับ\n\nเลือกการ์ด");
+  const html=renderToStaticMarkup(<ArticleContent content={doc} metadata={<GameMetadata tags={["เว็บ","Roguelike","RPG"]}/>}/>);
+  assert.equal((html.match(/class="game-article-overview"/g)||[]).length,1);
+  assert.match(html,/แพลตฟอร์ม/);
+  assert.match(html,/Roguelike/);
+  assert.match(html,/href="#section-2"/);
+  assert.ok(html.indexOf("game-article-overview") < html.indexOf("article-prose"));
+  assert.equal((html.match(/สารบัญบทความ/g)||[]).length,1);
+});
 test("legacy guides gain real headings and a linked table of contents without losing text",()=>{
   const body="หัวข้อแรก\n\nคำอธิบายแรก\n\nหัวข้อสอง\n\nคำอธิบายสอง";
   const doc=legacyGuideDocument(body);

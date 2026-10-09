@@ -316,13 +316,13 @@ function Detail({ entry }: { entry: Entry }) {
         </div>
       </div>
       <p className="detail-description">{entry.description}</p>
-      {entry.kind === "game" ? <GameMetadata tags={entry.tags} /> : <div className="tags">
+      {entry.kind !== "game" && <div className="tags">
         {entry.tags.map((t) => (
           <span key={t}>{t}</span>
         ))}
       </div>}
       {entry.kind === "article" && entry.image && <div className="detail-cover"><Cover entry={entry} priority sizes="(max-width: 800px) 100vw, 760px" /></div>}
-      <ArticleContent content={guideContent} body={entry.body}/>
+      <ArticleContent content={guideContent} body={entry.body} metadata={entry.kind === "game" && entry.tags.length > 0 ? <GameMetadata tags={entry.tags} /> : undefined}/>
       {entry.kind === "game" && (
         <p className="game-source-note">
           เกมนี้อยู่บนเว็บไซต์ของผู้สร้าง · gameslash รวบรวมข้อมูลและลิงก์เพื่อช่วยให้คุณค้นพบเกม
