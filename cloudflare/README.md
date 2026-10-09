@@ -7,9 +7,14 @@ Media stays in the existing Vercel Blob store. Postgres remains available for ro
 ## Status
 
 - Account: `db30981724e7eb7a4367bca251e6c36d`
-- Empty database: `gameslash-production` (`4ff63a76-fe44-4dbd-8c55-f40cc323beb4`)
-- Production source: Neon `gameslash-recovery`; currently rejects export with quota error `53000`.
-- No production data imported, no Worker deployed, no Vercel cutover performed.
+- Database: `gameslash-production` (`4ff63a76-fe44-4dbd-8c55-f40cc323beb4`)
+- Worker: `https://gameslash-d1.gameslash.workers.dev`
+- Neon rejects export with quota error `53000`. The owner explicitly authorized
+  proceeding without its latest export on 2026-10-09.
+- Restored `before-news-layout-1791512609715.json`: revision 251, 121 entries
+  (118 published, 2 pending, 1 archived). Complete D1 readback matched the validated
+  backup, including private state. A private copy is retained in ignored `.data`.
+- Vercel production is configured for D1. Changes made after this backup may be absent.
 
 ## Deployment and cutover
 
