@@ -32,6 +32,15 @@ function saveEntry(db: Database, input: Entry) {
     createdAt: old?.createdAt || new Date().toISOString(),
     updatedAt: new Date(Math.max(Date.now(), old ? Date.parse(old.updatedAt) + 1 : 0)).toISOString(),
   };
+  // Publication is server-owned. Never accept client dates or substitute a draft's
+  // creation / latest edit time for an unknown original publication time.
+  const previouslyPublished = old && (old.status === "published" || old.restoreStatus === "published" ||
+    db.reviews[old.id]?.decision === "publish" || db.activity.some(event => event.entryId === old.id &&
+      (event.action === "entry.published" || event.action === "review.publish")));
+  if (old?.publishedAt !== undefined) item.publishedAt = old.publishedAt;
+  else if (previouslyPublished) item.publishedAt = null;
+  else if (item.status === "published") item.publishedAt = item.updatedAt;
+  else delete item.publishedAt;
   if (item.status === "archived") item.restoreStatus = old?.status === "archived" ? old.restoreStatus ?? "draft" : old?.status ?? "draft";
   else delete item.restoreStatus;
   // Older clients omit popularity; null explicitly clears an assessment.
@@ -183,3 +192,4 @@ export function editAgentDraft(db: Database, agentId: string, id: string, expect
   log(db, agent.name, data ? "entry.agent_draft" : "entry.pending", item.title, item.id);
   return item;
 }
+
