@@ -835,8 +835,8 @@ a:focus-visible {
   color: var(--bg);
   border-color: var(--ink);
 }
-.tool-categories { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 24px; scroll-margin-top: 100px; }
-.tool-categories > button { min-height: 44px; padding: 8px 12px; border: 1px solid #ffffff20; border-radius: 999px; font-size: 14px; font-weight: 600; line-height: 1.5; }
+.tool-categories { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 20px; scroll-margin-top: 100px; }
+.tool-categories > button { min-height: 40px; max-width: 100%; padding: 7px 14px; border: 1px solid #ffffff20; border-radius: 999px; font-size: 14px; font-weight: 600; line-height: 1.5; }
 .tool-categories > button:hover { border-color: var(--accent); background: var(--surface); }
 .tool-categories > button[aria-pressed="true"] { border-color: var(--accent); background: var(--accent); color: var(--accent-ink); }
 .tools-page { width: 100%; max-width: 1080px; margin-inline: auto; }
@@ -847,8 +847,7 @@ header.topbar.tools-topbar { grid-template-columns: minmax(0, 1fr) auto; grid-te
 header.topbar.tools-topbar .topbar-start { grid-column: 1; grid-row: 1; }
 header.topbar.tools-topbar .topbar-end { grid-column: 2; grid-row: 1; }
 @media (max-width: 760px) {
-  .tool-categories { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .tool-categories > button { padding: 8px 10px; font-size: 13px; }
+  .tool-categories > button { min-height: 44px; padding: 7px 12px; font-size: 13px; }
 }
 .tool-directory-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: 12px; }
 .tool-directory-card { display: flex; flex-direction: column; gap: 8px; padding: 18px; border-radius: 14px; background: var(--surface); scroll-margin-top: 100px; }
