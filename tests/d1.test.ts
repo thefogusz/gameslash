@@ -67,4 +67,11 @@ test("D1 migration, concurrent CAS, rollback, ordering and private access", {
   });
   assert.equal(legacyWrite.status, 200);
   assert.deepEqual(await readD1(), changed, "An older app must not wipe existing game likes");
+  const large = await updateD1(db => {
+    db.entries = Array.from({ length: 160 }, (_, i) => ({
+      ...db.entries[0], id: `large-fixture-${i}`, body: "x".repeat(15_000),
+    }));
+  });
+  assert.ok(Buffer.byteLength(JSON.stringify(large)) > 1_800_000);
+  assert.deepEqual(await readD1(), large, "Large catalogs must retain split-row reads rather than exceed D1's single-value limit");
 });

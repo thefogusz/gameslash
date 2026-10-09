@@ -35,6 +35,18 @@ export default {
         return json({ total: (count.results[0] as { total: number }).total, items: items.results });
       }
       if (request.method === "GET") {
+        // Assemble bounded catalogs in SQLite so Worker CPU does not grow with the number of entries.
+        const compact = await env.DB.prepare(`SELECT CASE WHEN data != '{}' AND
+          length(CAST(data AS BLOB)) + (SELECT COALESCE(sum(length(CAST(data AS BLOB)) + 1), 0)
+            FROM gameslash_entries) < 1800000 THEN
+          json_object('version', version, 'supportsGameLikes', json('true'), 'db',
+            json_set(data, '$.entries', json((SELECT json_group_array(json(data))
+              FROM (SELECT data FROM gameslash_entries ORDER BY position, id)))))
+          ELSE NULL END AS catalog FROM gameslash_state WHERE id = 1`).first<{ catalog: string | null }>();
+        if (compact?.catalog) return new Response(compact.catalog, {
+          headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+        });
+        // shortcut: catalogs above 1.8 MB use split rows; add paginated reads if these hit Worker CPU limits.
         const [state, entries] = await env.DB.batch([
           env.DB.prepare("SELECT version, data FROM gameslash_state WHERE id = 1"),
           env.DB.prepare("SELECT data FROM gameslash_entries ORDER BY position, id"),

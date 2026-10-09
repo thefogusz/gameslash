@@ -70,8 +70,9 @@ egress dependency; it does not provide unlimited database usage.
 
 ## MCP reliability
 
-Catalog GET responses join already validated stored JSON instead of parsing and
-re-encoding every entry on the Worker. The app still validates the response schema.
+Catalog GET responses assemble validated stored JSON in SQLite below 1.8 MB;
+larger catalogs join split JSON rows without parsing and re-encoding every entry
+on the Worker. The app still validates the response schema.
 MCP read tools reuse the authentication snapshot within a single HTTP request;
 mutations still read fresh state and retain atomic revision checks. No catalog or
 authorization cache is shared between requests.

@@ -114,7 +114,7 @@ test("Worker catalog preserves JSON, ordering and authorization without re-parsi
   db.entries[0].body = 'Quotes " and braces {} and newline\nทดสอบ';
   const { entries, ...state } = db;
   const env = { D1_SERVICE_TOKEN: "fixture", DB: {
-    prepare: (sql: string) => sql,
+    prepare: (sql: string) => ({ sql, first: async () => ({ catalog: null as string | null }) }),
     batch: async () => [
       { results: [{ version: 7, data: JSON.stringify(state) }] },
       { results: entries.map(data => ({ data: JSON.stringify(data) })) },
@@ -130,6 +130,10 @@ test("Worker catalog preserves JSON, ordering and authorization without re-parsi
   assert.equal(parses, 0);
   assert.equal(response!.headers.get("Cache-Control"), "no-store");
   assert.deepEqual(await response!.json(), { version: 7, supportsGameLikes: true, db });
+  env.DB.prepare = sql => ({ sql, first: async () => ({ catalog: JSON.stringify({ version: 7, supportsGameLikes: true, db }) }) });
+  env.DB.batch = async () => { throw new Error("Compact reads must not load split rows again"); };
+  assert.deepEqual(await (await worker.fetch(request("fixture"), env)).json(), { version: 7, supportsGameLikes: true, db });
+  env.DB.prepare = sql => ({ sql, first: async () => ({ catalog: null }) });
   env.DB.batch = async () => [{ results: [{ version: 0, data: "{}" }] }, { results: [] }];
   assert.equal((await worker.fetch(request("fixture"), env)).status, 503);
 });
