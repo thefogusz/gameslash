@@ -349,15 +349,14 @@ a:focus-visible {
   right: 12px;
   bottom: 14px;
   color: #fff;
-  isolation: isolate;
+  text-shadow: 0 1px 2px #000, 0 0 4px #000, 0 0 8px #000;
 }
-.feature-copy::before {
-  content: "";
-  position: absolute;
-  inset: -28px -28px -28px;
-  z-index: -1;
-  pointer-events: none;
-  background: linear-gradient(180deg, transparent, #080a12e8 28px, #080a12);
+.feature-copy h2,
+.feature-copy h3 {
+  width: fit-content;
+  max-width: 100%;
+  background: #080a1270;
+  box-shadow: 0 0 8px 3px #080a1270;
 }
 .feature-main .feature-copy {
   left: 28px;
@@ -373,6 +372,8 @@ a:focus-visible {
   background: var(--accent);
   color: var(--accent-ink);
   margin-bottom: 6px;
+  text-shadow: none;
+  box-shadow: 0 2px 4px #0005;
 }
 .feature-copy h2 {
   font-size: 16px;
