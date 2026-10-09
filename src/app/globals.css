@@ -357,7 +357,7 @@ a:focus-visible {
   inset: -4px -28px -28px;
   z-index: -1;
   pointer-events: none;
-  background: linear-gradient(0deg, #080a12 0%, #080a12f0 40%, #080a12c7 65%, #080a1233 85%, transparent 100%);
+  background: linear-gradient(0deg, #080a12 0%, #080a12f0 40%, #080a12b3 65%, #080a120d 85%, transparent 100%);
 }
 .feature-copy h2,
 .feature-copy h3 {
