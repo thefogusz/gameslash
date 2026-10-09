@@ -835,11 +835,38 @@ a:focus-visible {
   color: var(--bg);
   border-color: var(--ink);
 }
-.tool-categories { gap: 8px; margin-bottom: 20px; }
-.filter-chips.tool-categories button { min-height: 44px; padding: 9px 18px; border-radius: 999px; color: var(--ink); font-size: 15px; font-weight: 600; }
-.tool-categories button:hover { border-color: var(--accent); }
-.tool-categories button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
-.tool-categories button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.tool-finder { margin: 20px 0 24px; padding: 20px; border: 1px solid var(--line); border-radius: 16px; }
+.tool-finder-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.tool-finder-heading h3 { font-size: 18px; }
+.tool-all { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 8px 14px; border: 1px solid var(--line); border-radius: 8px; }
+.tool-groups { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.tool-groups > button { text-align: left; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+.tool-group-name { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-weight: 600; }
+.tool-group-count { color: var(--muted); font-size: 13px; font-weight: 400; }
+.tool-group-hint { display: block; margin-top: 4px; color: var(--muted); font-size: 12px; }
+.tool-groups > button:hover, .tool-all:hover { border-color: var(--accent); }
+.tool-groups > button[aria-pressed="true"], .tool-all[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-light); color: var(--accent); }
+.tool-refine { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 280px) auto; align-items: end; gap: 12px; margin-top: 20px; }
+.tool-search { display: block; min-width: 0; }
+.tool-search > span { display: block; margin-bottom: 6px; color: var(--muted); font-size: 12px; }
+.tool-search > div { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--muted); }
+.tool-search > div:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+.tool-search input { width: 100%; min-width: 0; border: 0; background: transparent; outline: none; color: var(--ink); }
+.tool-reset { min-height: 44px; }
+.tool-filter-summary { margin-top: 16px; font-size: 13px; color: var(--muted); }
+@media (max-width: 760px) {
+  .tool-finder { padding: 14px; }
+  .tool-groups { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .tool-groups > button { padding: 10px; }
+  .tool-group-name { flex-wrap: wrap; gap: 2px 8px; font-size: 14px; }
+  .tool-group-hint { font-size: 11px; }
+  .tool-refine { grid-template-columns: minmax(0, 1fr) auto; }
+  .tool-search { grid-column: 1 / -1; }
+}
+@media (max-width: 480px) {
+  .tool-groups > button { min-height: 72px; }
+  .tool-group-hint { display: none; }
+}
 .tools-page { width: 100%; max-width: 1080px; margin-inline: auto; }
 .tool-directory-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; margin-bottom: 12px; scroll-margin-top: 100px; }
 .tool-directory-heading h2 { font-size: 24px; }

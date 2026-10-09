@@ -11,6 +11,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { directorySorts, filterDirectory, gameMakingTools, rankedGameCategories, toolWorkflowCategories, visibleGameCategories, gameGenreHref } from "@/lib/directory-filters";
 import { normalizeGamePlatform } from "@/lib/game-platforms";
+import { toolGroups, toolGroupForCategory } from "@/lib/tool-groups";
 import {
   ArrowUpRight,
   ArrowRight,
@@ -400,10 +401,13 @@ export function Directory({
           ? "post"
           : "game";
   const entries = kind === "tool" ? gameMakingTools(catalog.entries) : catalog.entries.filter(e => e.kind === kind);
+  const toolGroup = kind === "tool" ? (category ? toolGroupForCategory(category).id : toolGroups.find(group => group.id === params.get("group"))?.id || "") : "";
+  const groupedEntries = toolGroup ? entries.filter(e => toolGroupForCategory(e.category).id === toolGroup) : entries;
+  const toolCategories = [...new Set([...groupedEntries.map(e => e.category), ...(category ? [category] : [])])].sort((a, b) => a.localeCompare(b, "th"));
   const categories = [...new Set([...(kind === "tool" ? toolWorkflowCategories : kind === "game" ? visibleGameCategories(catalog.layout.categories, catalog.entries, category) : []), ...entries.map(e => e.category), ...(category ? [category] : [])])];
   const tags = [...new Set([...entries.flatMap(e => e.tags), ...(tag ? [tag] : [])])].sort((a,b) => a.localeCompare(b,"th"));
-  const results = filterDirectory(likedOnly ? entries.filter(e => likedIds.includes(e.id)) : entries, { kind, query, category, tag, sort, platform }, kind === "game" ? catalog.layout.featuredIds : []);
-  const filtered = !!(query || category || tag || (kind === "game" && platform) || likedOnly || sort !== "curated");
+  const results = filterDirectory(likedOnly ? groupedEntries.filter(e => likedIds.includes(e.id)) : groupedEntries, { kind, query, category, tag, sort, platform }, kind === "game" ? catalog.layout.featuredIds : []);
+  const filtered = !!(query || category || toolGroup || tag || (kind === "game" && platform) || likedOnly || sort !== "curated");
   const compactFilters = kind === "game" || kind === "article";
   const titles = {
     game: ["ค้นพบเกม", "ค้นหาเกมตามชื่อ ผู้สร้าง หรือหมวดหมู่"],
@@ -412,7 +416,7 @@ export function Directory({
     post: ["คอมมูนิตี้", "แชร์ผลงาน ถามคำถาม และขอฟีดแบ็ก"],
   };
   function reset() {
-    updateFilters({ q: "", category: "", tag: "", liked: "", sort: "", platform: "" });
+    updateFilters({ q: "", category: "", group: "", tag: "", liked: "", sort: "", platform: "" });
   }
   return (
     <>
@@ -565,12 +569,27 @@ export function Directory({
                 <p>5 ดาว: แพร่หลายและมีหลักฐานเด่นครบทั้งสามด้าน · 4 ดาว: เป็นที่ยอมรับ มีหลักฐานหลายด้าน · 3 ดาว: มีชุมชนหรือผลงานชัดเจนในกลุ่มเฉพาะ · 2 ดาว: เริ่มมีการนำไปใช้ในกลุ่มเล็ก · 1 ดาว: มีหลักฐานว่ายังมีผู้ใช้น้อยมาก · หากหลักฐานไม่เพียงพอจะยังไม่ให้ดาว</p>
               </details>}
               {kind === "tool" && (
-                <div className="filter-chips tool-categories" role="group" aria-label="ประเภทเครื่องมือ">
-                  <button type="button" aria-pressed={!category} onClick={() => updateFilters({ category: "" })}>ทั้งหมด</button>
-                  {categories.map(c => (
-                    <button type="button" key={c} aria-pressed={category === c} onClick={() => updateFilters({ category: c })}>{c}</button>
-                  ))}
-                </div>
+                <section className="tool-finder" aria-labelledby="tool-finder-title">
+                  <div className="tool-finder-heading">
+                    <h3 id="tool-finder-title">อยากทำอะไร?</h3>
+                    <button type="button" className="tool-all" aria-pressed={!toolGroup} onClick={() => updateFilters({ group: "", category: "" })}>ทั้งหมด <span>{entries.length}</span></button>
+                  </div>
+                  <div className="tool-groups" role="group" aria-label="เลือกงานที่อยากทำ">
+                    {toolGroups.map(group => {
+                      const count = entries.filter(e => toolGroupForCategory(e.category).id === group.id).length;
+                      return count > 0 && <button type="button" key={group.id} aria-pressed={toolGroup === group.id} onClick={() => updateFilters({ group: group.id, category: "" })}>
+                        <span className="tool-group-name">{group.label}<span className="tool-group-count">{count}</span></span>
+                        <span className="tool-group-hint">{group.hint}</span>
+                      </button>;
+                    })}
+                  </div>
+                  <div className="tool-refine">
+                    <label className="tool-search"><span>ค้นหาเครื่องมือ</span><div><Search size={18} aria-hidden="true" /><input type="search" aria-label="ค้นหาเครื่องมือในรายการ" placeholder="ชื่อเครื่องมือ หรือสิ่งที่อยากทำ…" value={query} onChange={e => updateFilters({ q: e.target.value }, true)} /></div></label>
+                    <FilterSelect label="หมวดละเอียด" value={category} options={[{ value: "", label: toolGroup ? "ทุกหมวดในกลุ่มนี้" : "ทุกหมวด" }, ...toolCategories.map(c => ({ value: c, label: `${c} (${entries.filter(e => e.category === c).length})` }))]} onChange={category => updateFilters({ category, group: category ? toolGroupForCategory(category).id : toolGroup })} />
+                    <button type="button" className="button secondary tool-reset" onClick={reset} disabled={!filtered}><X size={16} aria-hidden="true" />ล้างตัวกรอง</button>
+                  </div>
+                  <p className="tool-filter-summary" role="status" aria-live="polite">{toolGroups.find(group => group.id === toolGroup)?.label || "เครื่องมือทั้งหมด"}{category && ` / ${category}`} · พบ {results.length} จาก {entries.length} เครื่องมือ</p>
+                </section>
               )}
               {kind !== "tool" && <div className={`directory-filters${compactFilters ? " compact-filters" : ""}${kind === "game" ? " game-directory-filters" : ""}`} role="group" aria-label="ตัวกรองรายการ">
                 <FilterSelect label={kind === "game" ? "แนวเกม" : "หมวดหมู่"} compact={compactFilters && kind !== "game"} value={category}
