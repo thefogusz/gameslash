@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { renderToStaticMarkup } from "react-dom/server";
-import { CatalogSection } from "../src/components/directory";
+import { CatalogSection, GameCard } from "../src/components/directory";
 import { Spotlight } from "../src/components/spotlight";
 import { GamePreferencesProvider } from "../src/components/game-preferences";
 import { seedDatabase } from "../src/lib/seed";
@@ -24,4 +24,15 @@ test("curated games render directly below the tabs without the removed note", ()
   const markup = renderToStaticMarkup(<GamePreferencesProvider><Spotlight entries={db.entries.map(e => ({ ...e, image: "" }))} layout={db.layout} /></GamePreferencesProvider>);
   assert.match(markup, /spotlight-tabs/);
   assert.doesNotMatch(markup, /spotlight-note|เกมเด่นที่คัดสรรให้ลองค้นพบ/);
+});
+
+test("game cards place the description below the title over the image", () => {
+  const game = { ...seedDatabase().entries.find(e => e.kind === "game")!, image: "" };
+  const markup = renderToStaticMarkup(<GamePreferencesProvider><GameCard entry={game} /></GamePreferencesProvider>);
+  assert.match(markup, /feature-tile game-card-link/);
+  assert.match(markup, /feature-shade/);
+  assert.match(markup, /<h3>.*?<\/h3><p>.*?<\/p>/);
+  assert.match(markup, /href="\/item\//);
+  assert.match(markup, /game-like/);
+  assert.doesNotMatch(markup, /game-card-author|game-metadata/);
 });

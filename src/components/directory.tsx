@@ -51,18 +51,14 @@ const paths = {
 export function GameCard({ entry }: { entry: Entry }) {
   return (
     <div className="game-card">
-    <Link href={`/item/${entry.id}`} className="game-card-link">
-      <div className="game-cover">
-        <Cover entry={entry} />
-        <span className="cover-tag">{entry.category}</span>
-      </div>
-      <div className="game-card-title">
+    <Link href={`/item/${entry.id}`} className="feature-tile game-card-link">
+      <Cover entry={entry} />
+      <div className="feature-shade" />
+      <div className="feature-copy">
+        <span className="feature-category">{entry.category}</span>
         <h3>{entry.title}</h3>
-        <ArrowUpRight size={15} />
+        <p>{entry.description}</p>
       </div>
-      <p className="game-card-description">{entry.description}</p>
-      <GameMetadata tags={entry.tags} compact />
-      <p className="game-card-author">โดย {entry.author}</p>
     </Link>
     <LikeButton id={entry.id} title={entry.title} compact />
     </div>

@@ -5,7 +5,6 @@ import { ArrowLeft, ArrowRight, Pause, Play, Sparkles, TrendingUp, Users } from 
 import type { Entry, Layout } from "@/lib/model";
 import { discoveryCollections } from "@/lib/spotlights";
 import { Cover } from "./cover";
-import { GameMetadata } from "./game-metadata";
 import { LikeButton, useGamePreferences } from "./game-preferences";
 export function Spotlight({ entries, layout }: { entries: Entry[]; layout: Layout }) {
   const { likedIds, ready, error } = useGamePreferences();
@@ -65,12 +64,12 @@ function Slides({ entries, badge }: { entries: Entry[]; badge: string }) {
       <Link href={`/item/${active.id}`} className="feature-tile spotlight-main" key={active.id}>
         <Cover entry={active} priority /><div className="feature-shade" />
         <span className="feature-badge"><Sparkles size={12} />{badge}</span>
-        <div className="feature-copy"><span className="feature-category">{active.category}</span><h2>{active.title}</h2><p>{active.description}</p><GameMetadata tags={active.tags} compact /><span className="feature-cta">รู้จักเกมนี้ <ArrowRight size={16} /></span></div>
+        <div className="feature-copy"><span className="feature-category">{active.category}</span><h2>{active.title}</h2><p>{active.description}</p></div>
       </Link>
       <LikeButton id={active.id} title={active.title} compact />
       </div>
       <div className="spotlight-thumbs">{entries.map((entry, i) => i === index ? null : <button key={entry.id} className="feature-tile" aria-label={`แสดง ${entry.title}`} onClick={() => { setIndex(i); setPlaying(false); }}>
-        <Cover entry={entry} /><div className="feature-shade" /><div className="feature-copy"><span className="feature-category">{entry.category}</span><h3>{entry.title}</h3></div>
+        <Cover entry={entry} /><div className="feature-shade" /><div className="feature-copy"><span className="feature-category">{entry.category}</span><h3>{entry.title}</h3><p>{entry.description}</p></div>
       </button>)}</div>
     </div>
     {entries.length > 1 && <div className="spotlight-controls"><span aria-live={playing ? "off" : "polite"}>{index + 1} / {entries.length} · {active.title}</span><div>
