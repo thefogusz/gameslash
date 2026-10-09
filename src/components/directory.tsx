@@ -420,7 +420,7 @@ export function Directory({
       <a href="#main" className="skip-link">
         ข้ามไปยังเนื้อหา
       </a>
-      <header className="topbar">
+      <header className={`topbar${view === "tools" ? " tools-topbar" : ""}`}>
         <div className="topbar-start">
           <button
             className="icon-button mobile-menu"
@@ -438,7 +438,7 @@ export function Directory({
             <span className="brand-tagline">แพลตฟอร์มรวมเกม AI</span>
           </div>
         </div>
-        <label className="search-box">
+        {view !== "tools" && <label className="search-box">
           <Search size={16} />
           <input
             aria-label={`ค้นหา${kindLabels[kind]}`}
@@ -448,7 +448,7 @@ export function Directory({
             }}
             placeholder={`ค้นหา${kindLabels[kind]}`}
           />
-        </label>
+        </label>}
         <div className="topbar-end">
           {admin && (
             <Link
@@ -557,35 +557,16 @@ export function Directory({
                   )}
                 </div>
               </div>
-              {kind === "tool" && <div className="tool-directory-heading" id="tool-directory">
-                <h2>รวมเครื่องมือ</h2><span role="status" aria-live="polite">{results.length} เครื่องมือ</span>
-              </div>}
-              {kind === "tool" && <details className="popularity-method">
+              {kind === "tool" && <div className="tool-directory-meta"><details className="popularity-method">
                 <summary>ดาวความนิยมคิดจากอะไร?</summary>
                 <p>Gameslash ประเมินจากหลักฐานฐานผู้ใช้ ผลงานและระบบนิเวศ และการเป็นที่รู้จักในวงการทำเกม คลิกดาวของแต่ละเครื่องมือเพื่อดูเหตุผล แหล่งข้อมูล และวันที่ตรวจ เป็นการประเมินเชิงเปรียบเทียบ ไม่ใช่ยอดผู้ใช้แบบเรียลไทม์หรือคะแนนคุณภาพ</p>
                 <p>5 ดาว: แพร่หลายและมีหลักฐานเด่นครบทั้งสามด้าน · 4 ดาว: เป็นที่ยอมรับ มีหลักฐานหลายด้าน · 3 ดาว: มีชุมชนหรือผลงานชัดเจนในกลุ่มเฉพาะ · 2 ดาว: เริ่มมีการนำไปใช้ในกลุ่มเล็ก · 1 ดาว: มีหลักฐานว่ายังมีผู้ใช้น้อยมาก · หากหลักฐานไม่เพียงพอจะยังไม่ให้ดาว</p>
-              </details>}
+              </details><span role="status" aria-live="polite">{results.length} เครื่องมือ</span></div>}
               {kind === "tool" && (
-                <section className="tool-finder" aria-labelledby="tool-finder-title">
-                  <div className="tool-finder-heading">
-                    <h3 id="tool-finder-title">หมวดเครื่องมือ</h3>
-                    <button type="button" className="tool-all" aria-pressed={!category} onClick={() => updateFilters({ category: "" })}>ทั้งหมด <span>{entries.length}</span></button>
-                  </div>
-                  <div className="tool-refine">
-                    <label className="tool-search"><span>ค้นหาเครื่องมือ</span><div><Search size={18} aria-hidden="true" /><input type="search" aria-label="ค้นหาเครื่องมือในรายการ" placeholder="ชื่อเครื่องมือ หรือสิ่งที่อยากทำ…" value={query} onChange={e => updateFilters({ q: e.target.value }, true)} /></div></label>
-                    <button type="button" className="button secondary tool-reset" onClick={reset} disabled={!filtered}><X size={16} aria-hidden="true" />ล้างตัวกรอง</button>
-                  </div>
-                  <div className="tool-categories" role="group" aria-label="หมวดเครื่องมือหลัก">
-                    {categories.slice(0, 12).map(c => <button type="button" key={c} aria-pressed={category === c} onClick={() => updateFilters({ category: c })}><span>{c}</span><span className="tool-category-count">{entries.filter(e => e.category === c).length}</span></button>)}
-                  </div>
-                  {categories.length > 12 && <details className="tool-category-more" open={categories.slice(12).includes(category)}>
-                    <summary>ดูทุกหมวด <span>อีก {categories.length - 12} หมวด</span></summary>
-                    <div className="tool-categories" role="group" aria-label="หมวดเครื่องมือเพิ่มเติม">
-                      {categories.slice(12).map(c => <button type="button" key={c} aria-pressed={category === c} onClick={() => updateFilters({ category: c })}><span>{c}</span><span className="tool-category-count">{entries.filter(e => e.category === c).length}</span></button>)}
-                    </div>
-                  </details>}
-                  <p className="tool-filter-summary" role="status" aria-live="polite">{category || "เครื่องมือทั้งหมด"} · พบ {results.length} จาก {entries.length} เครื่องมือ</p>
-                </section>
+                <div className="tool-categories" id="tool-directory" role="group" aria-label="หมวดเครื่องมือ">
+                  <button type="button" aria-pressed={!category} onClick={() => updateFilters({ category: "", q: "" })}>ทั้งหมด</button>
+                  {categories.map(c => <button type="button" key={c} aria-pressed={category === c} onClick={() => updateFilters({ category: c })}>{c}</button>)}
+                </div>
               )}
               {kind !== "tool" && <div className={`directory-filters${compactFilters ? " compact-filters" : ""}${kind === "game" ? " game-directory-filters" : ""}`} role="group" aria-label="ตัวกรองรายการ">
                 <FilterSelect label={kind === "game" ? "แนวเกม" : "หมวดหมู่"} compact={compactFilters && kind !== "game"} value={category}

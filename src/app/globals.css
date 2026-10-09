@@ -835,40 +835,21 @@ a:focus-visible {
   color: var(--bg);
   border-color: var(--ink);
 }
-.tool-finder { margin: 20px 0 24px; padding: 20px; border: 1px solid var(--line); border-radius: 16px; }
-.tool-finder-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
-.tool-finder-heading h3 { font-size: 18px; }
-.tool-all { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 8px 14px; border: 1px solid var(--line); border-radius: 8px; }
-.tool-categories { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
-.tool-categories > button { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 48px; text-align: left; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); font-size: 14px; }
-.tool-category-count { flex-shrink: 0; color: var(--muted); font-size: 12px; }
-.tool-categories > button:hover, .tool-all:hover { border-color: var(--accent); }
-.tool-categories > button[aria-pressed="true"], .tool-all[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-light); color: var(--accent); }
-.tool-category-more { margin-top: 12px; }
-.tool-category-more summary { width: fit-content; min-height: 44px; padding-block: 10px; cursor: pointer; color: var(--accent); }
-.tool-category-more summary span { margin-left: 8px; color: var(--muted); font-size: 12px; }
-.tool-category-more[open] summary { margin-bottom: 4px; }
-.tool-refine { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 12px; margin: 0 0 20px; }
-.tool-search { display: block; min-width: 0; }
-.tool-search > span { display: block; margin-bottom: 6px; color: var(--muted); font-size: 12px; }
-.tool-search > div { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--muted); }
-.tool-search > div:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
-.tool-search input { width: 100%; min-width: 0; border: 0; background: transparent; outline: none; color: var(--ink); }
-.tool-reset { min-height: 44px; }
-.tool-filter-summary { margin-top: 16px; font-size: 13px; color: var(--muted); }
-@media (max-width: 760px) {
-  .tool-finder { padding: 14px; }
-  .tool-categories { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .tool-categories > button { padding: 10px; }
-}
-@media (max-width: 480px) {
-  .tool-refine { grid-template-columns: minmax(0, 1fr); }
-  .tool-reset { justify-self: end; }
-}
+.tool-categories { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 24px; scroll-margin-top: 100px; }
+.tool-categories > button { min-height: 44px; padding: 8px 12px; border: 1px solid #ffffff20; border-radius: 999px; font-size: 14px; font-weight: 600; line-height: 1.5; }
+.tool-categories > button:hover { border-color: var(--accent); background: var(--surface); }
+.tool-categories > button[aria-pressed="true"] { border-color: var(--accent); background: var(--accent); color: var(--accent-ink); }
 .tools-page { width: 100%; max-width: 1080px; margin-inline: auto; }
-.tool-directory-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; margin-bottom: 12px; scroll-margin-top: 100px; }
-.tool-directory-heading h2 { font-size: 24px; }
-.tool-directory-heading > span { font-size: 14px; color: var(--muted); }
+.tool-directory-meta { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin: 0 0 20px; }
+.tool-directory-meta > span { flex-shrink: 0; color: var(--muted); font-size: 14px; }
+.tool-directory-meta .popularity-method { margin: 0; }
+header.topbar.tools-topbar { grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto; height: 76px; }
+header.topbar.tools-topbar .topbar-start { grid-column: 1; grid-row: 1; }
+header.topbar.tools-topbar .topbar-end { grid-column: 2; grid-row: 1; }
+@media (max-width: 760px) {
+  .tool-categories { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .tool-categories > button { padding: 8px 10px; font-size: 13px; }
+}
 .tool-directory-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: 12px; }
 .tool-directory-card { display: flex; flex-direction: column; gap: 8px; padding: 18px; border-radius: 14px; background: var(--surface); scroll-margin-top: 100px; }
 .tool-directory-card:target { outline: 2px solid var(--accent); outline-offset: 3px; }
