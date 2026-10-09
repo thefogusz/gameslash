@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Anuphan, Chakra_Petch } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { GamePreferencesProvider } from "@/components/game-preferences";
 import { absoluteUrl, indexable, jsonLd, seoDescription, seoKeywords, siteOrigin } from "@/lib/seo";
@@ -61,6 +62,7 @@ export default function RootLayout({
       <body>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd({ "@context": "https://schema.org", "@type": "WebSite", "@id": absoluteUrl("/#website"), name: "GameSlash", alternateName: ["GameSlash รวมเกมที่สร้างด้วย AI", "GameSlash Games Made with AI"], url: absoluteUrl("/"), description: seoDescription, inLanguage: "th" }) }} />
         <GamePreferencesProvider>{children}</GamePreferencesProvider>
+        <Analytics />
       </body>
     </html>
   );
