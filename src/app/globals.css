@@ -772,9 +772,9 @@ a:focus-visible {
 .game-like.compact svg { filter: drop-shadow(0 1px 2px #0006); }
 .game-like.compact:hover { background: #0b0c1466; }
 .game-card > .game-like, .spotlight-main-wrap > .game-like { position: absolute; top: 10px; right: 10px; z-index: 2; }
-.game-like[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); }
-.game-like:hover { border-color: var(--accent); }
-.game-like:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.game-like[aria-pressed="true"] { color: #fb7185; border-color: #fb7185; }
+.game-like:hover { border-color: #fb7185; }
+.game-like:focus-visible { outline: 2px solid #fb7185; outline-offset: 3px; }
 .game-like:disabled { opacity: .5; cursor: wait; }
 .detail-actions { display: flex; gap: 12px; flex-wrap: wrap; }
 .likes-notice { position: fixed; bottom: max(20px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); z-index: 90; max-width: min(520px, calc(100% - 32px)); padding: 12px 18px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink); box-shadow: 0 8px 30px #0005; font-size: 14px; }

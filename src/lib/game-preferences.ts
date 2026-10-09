@@ -1,6 +1,23 @@
 import type { Entry } from "./model";
 
 export const likesStorageKey = "gameslash:likes:v1";
+export async function requestLikes(body?: unknown, signal?: AbortSignal): Promise<string[]> {
+  const timeout = AbortSignal.timeout(10_000);
+  try {
+    const response = await fetch("/api/likes", {
+      method: body ? "POST" : "GET", cache: "no-store",
+      signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
+      ...(body ? { headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {}),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "บันทึกหัวใจไม่สำเร็จ กรุณาลองอีกครั้ง");
+    return data.likedIds;
+  } catch (error) {
+    if (timeout.aborted) throw new Error("ระบบหัวใจตอบกลับช้า กรุณาลองอีกครั้ง");
+    throw error;
+  }
+}
+
 export function readLikedIds(raw: string | null): string[] {
   try {
     const data = JSON.parse(raw || "null");

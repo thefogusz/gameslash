@@ -1,20 +1,10 @@
 "use client";
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { Heart } from "lucide-react";
-import { likesStorageKey, readLikedIds } from "@/lib/game-preferences";
-
-async function requestLikes(body?: unknown, signal?: AbortSignal): Promise<string[]> {
-  const response = await fetch("/api/likes", {
-    method: body ? "POST" : "GET", cache: "no-store", signal,
-    ...(body ? { headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {}),
-  });
-  const data = await response.json();
-  if (!response.ok) throw new Error(data.error || "บันทึกหัวใจไม่สำเร็จ กรุณาลองอีกครั้ง");
-  return data.likedIds;
-}
+import { likesStorageKey, readLikedIds, requestLikes } from "@/lib/game-preferences";
 
 const PreferencesContext = createContext<{
-  likedIds: string[]; ready: boolean; error: string; notice: string;
+  likedIds: string[]; ready: boolean; busy: boolean; error: string; notice: string;
   toggle: (id: string, title: string) => void;
 } | null>(null);
 
@@ -74,10 +64,12 @@ export function GamePreferencesProvider({ children }: { children: ReactNode }) {
     setBusy(true);
     setError("");
     setNotice("");
+    const previous = current.current;
+    setLikedIds(wasLiked ? previous.filter(likedId => likedId !== id) : [...previous, id]);
     try {
       accept(await requestLikes({ id, liked: !wasLiked }));
       setNotice(wasLiked ? `นำ ${title} ออกจากถูกใจแล้ว` : `ถูกใจ ${title} แล้ว`);
-    } catch (error) { setError((error as Error).message); }
+    } catch (error) { setLikedIds(current.current); setError((error as Error).message); }
     finally { saving.current = false; setBusy(false); }
   }
   useEffect(() => {
@@ -85,7 +77,7 @@ export function GamePreferencesProvider({ children }: { children: ReactNode }) {
     const timer = setTimeout(() => setNotice(""), 4000);
     return () => clearTimeout(timer);
   }, [notice]);
-  return <PreferencesContext.Provider value={{ likedIds, ready: ready && !busy, error, notice, toggle }}>
+  return <PreferencesContext.Provider value={{ likedIds, ready, busy, error, notice, toggle }}>
     {children}
     <div className="likes-notice" role="status" aria-live="polite">{notice || error}{!ready && error && <button type="button" className="text-link" onClick={() => void load()}>ลองอีกครั้ง</button>}</div>
   </PreferencesContext.Provider>;
@@ -98,9 +90,9 @@ export function useGamePreferences() {
 }
 
 export function LikeButton({ id, title, compact = false }: { id: string; title: string; compact?: boolean }) {
-  const { likedIds, ready, toggle } = useGamePreferences();
+  const { likedIds, ready, busy, toggle } = useGamePreferences();
   const liked = likedIds.includes(id);
-  return <button type="button" className={`game-like${compact ? " compact" : ""}`} disabled={!ready}
+  return <button type="button" className={`game-like${compact ? " compact" : ""}`} disabled={!ready || busy}
     aria-pressed={liked} aria-label={`${liked ? "เลิกถูกใจ" : "ถูกใจ"} ${title}`}
     title={liked ? "นำออกจากถูกใจ" : "เก็บเกมไว้ในถูกใจ"} onClick={() => toggle(id, title)}>
     <Heart size={20} strokeWidth={1.5} fill={liked ? "currentColor" : "none"} aria-hidden="true" />

@@ -1,8 +1,41 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readLikedIds, recommendGames } from "../src/lib/game-preferences";
+import { readLikedIds, recommendGames, requestLikes } from "../src/lib/game-preferences";
 import { spotlightGroups } from "../src/lib/spotlights";
 import { seedDatabase } from "../src/lib/seed";
+
+test("likes requests return saved IDs and preserve API errors", async t => {
+  const fetch = t.mock.method(globalThis, "fetch", async (_url: unknown, init?: RequestInit) => {
+    assert.equal(init?.method, "POST");
+    assert.deepEqual(JSON.parse(init?.body as string), { id: "game", liked: true });
+    assert.ok(init?.signal);
+    return Response.json({ likedIds: ["game"] });
+  });
+  assert.deepEqual(await requestLikes({ id: "game", liked: true }), ["game"]);
+  fetch.mock.mockImplementation(async () => Response.json({ error: "บันทึกไม่สำเร็จ" }, { status: 503 }));
+  await assert.rejects(requestLikes(), /บันทึกไม่สำเร็จ/);
+});
+
+test("stalled likes requests time out and caller cancellation still works", async t => {
+  const timeout = AbortSignal.timeout.bind(AbortSignal);
+  t.mock.method(AbortSignal, "timeout", (ms: number) => {
+    assert.equal(ms, 10_000);
+    return timeout(10);
+  });
+  t.mock.method(globalThis, "fetch", async (_url: unknown, init?: RequestInit) => new Promise<Response>((_resolve, reject) => {
+    const signal = init!.signal!;
+    if (signal.aborted) reject(signal.reason);
+    else signal.addEventListener("abort", () => reject(signal.reason), { once: true });
+  }));
+  const keepAlive = setTimeout(() => {}, 1000);
+  try {
+    await assert.rejects(requestLikes(), /ระบบหัวใจตอบกลับช้า/);
+    const controller = new AbortController();
+    const request = requestLikes(undefined, controller.signal);
+    controller.abort();
+    await assert.rejects(request, { name: "AbortError" });
+  } finally { clearTimeout(keepAlive); }
+});
 
 test("liked IDs tolerate corrupted, old and untrusted local storage", () => {
   assert.deepEqual(readLikedIds(null), []);
