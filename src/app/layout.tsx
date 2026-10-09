@@ -55,6 +55,7 @@ export default function RootLayout({
   return (
     <html
       lang="th"
+      data-scroll-behavior="smooth"
       className={`${geist.variable} ${anuphan.variable} ${chakra.variable}`}
     >
       <body>
