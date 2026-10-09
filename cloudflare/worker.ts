@@ -130,19 +130,29 @@ export default {
           stateExpression = `json_set(${stateExpression}, '$.${key}', json(COALESCE(json_extract(data, '$.${key}'), '${fallback}')))`;
       }
       queries.push(env.DB.prepare(`UPDATE gameslash_state SET version = version + 1, data = ${stateExpression} WHERE id = 1`).bind(stateJson));
-      // Rebuild once per committed write, including likes and old-schema compatibility writes.
+      // State-only writes reuse matching entries; stale snapshots from older writers are rebuilt.
       queries.push(env.DB.prepare(`INSERT OR REPLACE INTO gameslash_entry_snapshot (id, version, entries)
-        SELECT 1, version, CASE WHEN (SELECT COALESCE(sum(length(CAST(data AS BLOB)) + 1), 0)
+        SELECT 1, version, CASE WHEN ? = 0 AND EXISTS (SELECT 1 FROM gameslash_entry_snapshot WHERE id = 1 AND version = ?)
+          THEN (SELECT entries FROM gameslash_entry_snapshot WHERE id = 1)
+          WHEN (SELECT COALESCE(sum(length(CAST(data AS BLOB)) + 1), 0)
           FROM gameslash_entries) < 1800000 THEN
           (SELECT json_group_array(json(data)) FROM (SELECT data FROM gameslash_entries ORDER BY position, id))
-          ELSE NULL END FROM gameslash_state WHERE id = 1`));
+          ELSE NULL END FROM gameslash_state WHERE id = 1`).bind(Number(changed.length > 0 || deleted.length > 0), expectedVersion));
       await env.DB.batch(queries);
       return json({ version: expectedVersion + 1 });
     } catch (error) {
       if (error instanceof Error && error.message.includes("CHECK constraint failed: valid = 1"))
         return json({ error: "Catalog changed or target is not empty" }, 409);
       if (error instanceof SyntaxError) return json({ error: "Invalid JSON" }, 400);
-      console.error(JSON.stringify({ error: "D1 catalog operation failed" }));
+      const message = error instanceof Error ? error.message : "";
+      if (/D1's free tier daily row (?:read|write) limit/.test(message)) {
+        const reset = (Math.floor(Date.now() / 86400000) + 1) * 86400000;
+        console.error(JSON.stringify({ error: "D1_QUOTA_EXHAUSTED", path, method: request.method }));
+        const response = json({ error: "Daily D1 quota exhausted", code: "D1_QUOTA_EXHAUSTED", resetAt: new Date(reset).toISOString() }, 503);
+        response.headers.set("Retry-After", String(Math.ceil((reset - Date.now()) / 1000)));
+        return response;
+      }
+      console.error(JSON.stringify({ error: "D1 catalog operation failed", path, method: request.method }));
       return json({ error: "D1 catalog operation failed" }, 503);
     }
   },

@@ -168,9 +168,10 @@ export async function POST(request: Request) {
         inputSchema: z.object({ id: reference.id }), outputSchema: z.object({ entry: entrySchema, review: reviewSchema.nullable() }), annotations: readAnnotations,
       }, input => result(async () => {
         const db = await readEntryDatabase(input.id);
+        const current = requireAgent(db, agent.id);
         const entry = agentEntries(db, agent.id).find(e => e.id === input.id);
         if (!entry) throw new Error("ไม่พบรายการ หรือไม่มีสิทธิ์เข้าถึง");
-        return { entry, review: db.ingestions[entry.id]?.agentId === agent.id || agent.canManageSite ? db.reviews[entry.id] ?? null : null };
+        return { entry, review: db.ingestions[entry.id]?.agentId === agent.id || current.canManageSite ? db.reviews[entry.id] ?? null : null };
       }));
       server.registerTool("create_draft", {
         description: "Create a draft for human review; never publishes. Tool popularity is an optional editorial 1-5 score with a factual reason, 1-5 official HTTPS sources and checkedAt date. Assess adoption, released works/ecosystem and recognition; 5 requires strong evidence across all three, 4 multiple strong signals, 3 a clear active niche, 2 observed emerging adoption, 1 verifiably very small adoption. Omit popularity if evidence is insufficient; lack of evidence does not imply low popularity. It is not quality or user reviews; never invent usage metrics. Preserve creator credit and sourceUrl. Optional context.signal groups community questions with distinct evidenceUrls and researched solutions (official docs, papers or original repositories); distinguish source-reviewed from actually tested and include citations in article body. Never infer frequency from one post. Optional context records the collection provider, runId and relevance reason; it stays private and is agent-reported, not verified. Reuse requestId only when retrying identical entry and context.",
@@ -260,8 +261,8 @@ export async function POST(request: Request) {
   } catch (error) {
     const failure = mcpError(error);
     return Response.json({ error: failure.message, ...failure }, {
-      status: error instanceof D1RequestError ? failure.retryable ? 503 : 500 : 400,
-      headers: { "Cache-Control": "no-store", ...(failure.retryable ? { "Retry-After": String(failure.retryAfterSeconds) } : {}) },
+      status: error instanceof D1RequestError ? error.status === 429 || error.status >= 500 ? 503 : 500 : 400,
+      headers: { "Cache-Control": "no-store", ...(failure.retryAfterSeconds !== undefined ? { "Retry-After": String(failure.retryAfterSeconds) } : {}) },
     });
   }
 }

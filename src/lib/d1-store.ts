@@ -6,13 +6,18 @@ export function d1Ready() {
   return !!(process.env.GAMESLASH_D1_URL && process.env.GAMESLASH_D1_TOKEN);
 }
 export class D1RequestError extends Error {
-  constructor(public status: number, public outcomeUnknown = false, public retryAfterSeconds = 5) {
+  constructor(public status: number, public outcomeUnknown = false, public retryAfterSeconds = 5, public resetAt?: string) {
     super(`D1 catalog request failed (${status})`);
     this.name = "D1RequestError";
   }
 }
+const quotaSchema = z.object({ code: z.literal("D1_QUOTA_EXHAUSTED"), resetAt: z.iso.datetime() });
+// shortcut: quota suppression is per server instance; use a shared gate if cold-instance retries become significant.
+let quota: { url: string; reset: number } | undefined;
 async function requestD1(method: "GET" | "PUT", body?: unknown, path = "/catalog") {
   if (!d1Ready()) throw new Error("D1 URL and token are required");
+  if (quota && quota.url === process.env.GAMESLASH_D1_URL && quota.reset > Date.now())
+    throw new D1RequestError(503, false, Math.ceil((quota.reset - Date.now()) / 1000), new Date(quota.reset).toISOString());
   try {
     const response = await fetch(new URL(path, process.env.GAMESLASH_D1_URL), {
       method, cache: "no-store", redirect: "error", signal: AbortSignal.timeout(30_000),
@@ -21,6 +26,14 @@ async function requestD1(method: "GET" | "PUT", body?: unknown, path = "/catalog
     });
     if (response.status === 409) throw new ConflictError("ข้อมูลเปลี่ยนแล้ว กรุณาโหลดข้อมูลล่าสุดก่อนบันทึก");
     if (!response.ok) {
+      const failure = response.status === 503 ? quotaSchema.safeParse(await response.json().catch(() => null)) : undefined;
+      if (failure?.success) {
+        const reset = Date.parse(failure.data.resetAt);
+        if (reset > Date.now() && reset - Date.now() <= 86400000) {
+          quota = { url: process.env.GAMESLASH_D1_URL!, reset };
+          throw new D1RequestError(503, false, Math.ceil((reset - Date.now()) / 1000), failure.data.resetAt);
+        }
+      }
       const retryAfter = response.headers.get("Retry-After");
       const seconds = retryAfter && /^\d+$/.test(retryAfter) ? Number(retryAfter) :
         retryAfter ? Math.ceil((Date.parse(retryAfter) - Date.now()) / 1000) : 5;

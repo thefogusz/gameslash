@@ -1,6 +1,14 @@
 import { ZodError } from "zod";
 import { ConflictError } from "./store";
+import { D1RequestError } from "./d1-store";
+import { mcpError } from "./mcp-errors";
 export function errorResponse(error: unknown) {
+  if (error instanceof D1RequestError) {
+    const failure = mcpError(error);
+    return Response.json({ error: failure.message, ...failure }, {
+      status: 503, headers: { "Cache-Control": "no-store", ...(failure.retryAfterSeconds !== undefined ? { "Retry-After": String(failure.retryAfterSeconds) } : {}) },
+    });
+  }
   if (error instanceof ZodError)
     return Response.json(
       {

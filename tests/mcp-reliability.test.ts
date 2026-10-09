@@ -6,6 +6,74 @@ import { readD1, updateD1, D1RequestError } from "../src/lib/d1-store";
 import { mcpError } from "../src/lib/mcp-errors";
 import { POST } from "../src/app/api/mcp/route";
 import { mcpOperatingGuidance } from "../src/lib/editorial-skills";
+import { errorResponse } from "../src/lib/http";
+
+test("daily quota errors stop repeated storage calls until UTC midnight and resume afterwards", async context => {
+  context.mock.timers.enable({ apis: ["Date"], now: Date.UTC(2026, 9, 9, 23, 0) });
+  const originalFetch = globalThis.fetch;
+  const keys = ["GAMESLASH_STORAGE", "GAMESLASH_D1_URL", "GAMESLASH_D1_TOKEN"] as const;
+  const previous = keys.map(key => process.env[key]);
+  process.env.GAMESLASH_STORAGE = "d1";
+  process.env.GAMESLASH_D1_URL = "http://127.0.0.1:8799";
+  process.env.GAMESLASH_D1_TOKEN = "fixture";
+  let requests = 0;
+  globalThis.fetch = async () => {
+    requests++;
+    return requests === 1 ? Response.json({ code: "D1_QUOTA_EXHAUSTED", resetAt: "2026-10-10T00:00:00.000Z" }, { status: 503 })
+      : Response.json({ version: 1, db: seedDatabase() });
+  };
+  try {
+    await assert.rejects(readD1(), error => {
+      assert.ok(error instanceof D1RequestError);
+      const failure = mcpError(error);
+      assert.equal(failure.code, "QUOTA_EXHAUSTED");
+      assert.equal(failure.retryable, false);
+      assert.equal(failure.outcomeUnknown, false);
+      assert.equal(failure.resetAt, "2026-10-10T00:00:00.000Z");
+      assert.equal(errorResponse(error).status, 503);
+      return true;
+    });
+    context.mock.timers.tick(30_000);
+    const response = await POST(new Request("http://localhost/api/mcp", {
+      method: "POST", headers: { Authorization: `Bearer gs_${"x".repeat(43)}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list" }),
+    }));
+    assert.equal(response.status, 503);
+    assert.equal(response.headers.get("Retry-After"), "3570");
+    assert.equal((await response.json()).retryable, false);
+    assert.equal(requests, 1, "Even MCP discovery must not repeatedly hit an exhausted D1");
+    context.mock.timers.tick(3_570_001);
+    assert.deepEqual(await readD1(), seedDatabase());
+    assert.equal(requests, 2, "Storage reads must resume after the reset without a process restart");
+  } finally {
+    globalThis.fetch = originalFetch;
+    context.mock.timers.reset();
+    keys.forEach((key, i) => { if (previous[i] === undefined) delete process.env[key]; else process.env[key] = previous[i]; });
+  }
+});
+
+test("Worker classifies read and write daily quotas without exposing raw database errors", async () => {
+  const workerPath = "../cloudflare/worker.ts";
+  const { default: worker } = await import(workerPath);
+  const originalLog = console.error;
+  const logs: string[] = [];
+  console.error = message => { logs.push(String(message)); };
+  try {
+    for (const limit of ["read", "write"]) {
+      const env = { D1_SERVICE_TOKEN: "fixture", DB: {
+        prepare: () => { throw new Error(`D1_ERROR: Your account has exceeded D1's free tier daily row ${limit} limit. private SQL payload`); },
+      } };
+      const response = await worker.fetch(new Request("https://fixture/agent-auth", { headers: { Authorization: "Bearer fixture" } }), env);
+      assert.equal(response.status, 503);
+      const failure = await response.json();
+      assert.equal(failure.code, "D1_QUOTA_EXHAUSTED");
+      assert.equal(new Date(failure.resetAt).getUTCHours(), 0);
+      assert.ok(Date.parse(failure.resetAt) > Date.now());
+      assert.ok(!JSON.stringify(failure).includes("private SQL"));
+    }
+    assert.ok(logs.every(log => !log.includes("private SQL")));
+  } finally { console.error = originalLog; }
+});
 
 test("MCP discovery reads only current credentials, catalog tools load lazily and isolation is preserved", async () => {
   const originalFetch = globalThis.fetch;
@@ -17,10 +85,15 @@ test("MCP discovery reads only current credentials, catalog tools load lazily an
   const db = seedDatabase();
   const token = manageCatalog(db, { action: "create_agent", revision: db.revision, name: "Read fixture", canWriteDrafts: false })!;
   let reads = 0, catalogs = 0, unavailable = false;
+  let downgradeAgent: string | undefined;
   globalThis.fetch = async url => {
     reads++;
     if (unavailable) return new Response("Unavailable", { status: 503 });
-    if (new URL(String(url)).pathname === "/agent-auth") return Response.json({ agents: db.agents, oauthGrants: db.oauthGrants });
+    if (new URL(String(url)).pathname === "/agent-auth") {
+      const response = Response.json({ agents: db.agents, oauthGrants: db.oauthGrants });
+      if (downgradeAgent) db.agents.find(a => a.id === downgradeAgent)!.canManageSite = false;
+      return response;
+    }
     catalogs++;
     return Response.json({ version: 1, supportsGameLikes: true, supportsFeedback: true, db });
   };
@@ -61,7 +134,13 @@ test("MCP discovery reads only current credentials, catalog tools load lazily an
     assert.equal(hidden.body.result.isError, true);
     const denied = await rpc("tools/call", { name: "get_site_state", arguments: {} });
     assert.equal(denied.body.result.isError, true);
-    db.agents[0].revokedAt = new Date().toISOString();
+    const manager = manageCatalog(db, { action: "create_agent", revision: db.revision, name: "Downgrade fixture", canWriteDrafts: true, canManageSite: true })!;
+    downgradeAgent = db.agents.find(a => a.name === "Downgrade fixture")!.id;
+    db.reviews[db.entries[0].id] = { decision: "publish", note: "Private review", at: new Date().toISOString() };
+    const downgraded = await rpc("tools/call", { name: "get_entry", arguments: { id: db.entries[0].id } }, manager);
+    assert.equal(downgraded.body.result.structuredContent.review, null, "Permissions changed after authentication must not expose private reviews");
+    downgradeAgent = undefined;
+    db.agents.find(a => a.name === "Read fixture")!.revokedAt = new Date().toISOString();
     assert.equal((await rpc("tools/list")).response.status, 401, "Revocation must be checked on the next request");
     unavailable = true;
     const failed = await rpc("tools/list");
@@ -79,8 +158,9 @@ test("MCP discovery reads only current credentials, catalog tools load lazily an
     const uncertain = await rpc("tools/call", { name: "save_site_layout", arguments: { revision: db.revision, layout: db.layout, publish: false } }, writer);
     assert.equal(uncertain.body.result.isError, true);
     const failure = JSON.parse(uncertain.body.result.content[0].text);
-    assert.equal(failure.code, "SERVICE_UNAVAILABLE");
+    assert.equal(failure.code, "OUTCOME_UNKNOWN");
     assert.equal(failure.outcomeUnknown, true);
+    assert.equal(failure.retryable, false);
     assert.equal(writes, 1);
   } finally {
     globalThis.fetch = originalFetch;
@@ -109,7 +189,7 @@ test("D1 failures distinguish read retries, failed writes and uncertain writes w
     await assert.rejects(updateD1(db => { db.draftLayout.tagline = "Changed"; }), error => {
       assert.ok(error instanceof D1RequestError);
       assert.equal(mcpError(error).outcomeUnknown, true);
-      assert.equal(mcpError(error).retryable, true);
+      assert.equal(mcpError(error).retryable, false);
       return true;
     });
     assert.equal(writes, 1, "An uncertain write must never be automatically replayed");

@@ -4,6 +4,14 @@ import { D1RequestError } from "./d1-store";
 
 export function mcpError(error: unknown) {
   if (error instanceof D1RequestError) {
+    if (error.resetAt) return {
+      code: "QUOTA_EXHAUSTED", message: "โควต้าฐานข้อมูลวันนี้หมด กรุณารอเวลารีเซ็ตก่อนทำงานต่อ",
+      retryable: false, resetAt: error.resetAt, retryAfterSeconds: error.retryAfterSeconds, outcomeUnknown: false,
+    };
+    if (error.outcomeUnknown) return {
+      code: "OUTCOME_UNKNOWN", message: "ยังยืนยันผลบันทึกไม่ได้ กรุณาอ่านตรวจผลก่อนส่งคำขอเขียนซ้ำ",
+      retryable: false, outcomeUnknown: true,
+    };
     const retryable = error.status === 429 || error.status >= 500;
     return {
       code: retryable ? "SERVICE_UNAVAILABLE" : "STORAGE_ERROR",

@@ -97,7 +97,7 @@ try {
   }
   const skills = (await call(reader, "get_editorial_skills")).structuredContent;
   assert.equal(skills.permissions.canWriteDrafts, false);
-  assert.equal(skills.skills.length, 7);
+  assert.equal(skills.skills.length, 8);
   assert.ok((await call(token, "get_editorial_skills", { skillId: "global-news" })).structuredContent.skill.instructions.length);
   assert.equal((await call(token, "get_editorial_skills", { skillId: "missing" })).isError, true);
   const resources = await rpc(reader, "resources/list");
