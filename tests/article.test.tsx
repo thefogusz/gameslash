@@ -12,9 +12,15 @@ test("legacy guides gain real headings and a linked table of contents without lo
   assert.equal(articleDocumentSchema.safeParse(doc).success,true);
   const html=renderToStaticMarkup(<ArticleContent content={doc}/>);
   assert.match(html,/<nav[^>]+aria-label="สารบัญบทความ"/);
+  assert.match(html,/<details class="article-toc"><summary>ในบทความนี้ <span>2 หัวข้อ<\/span><\/summary>/);
   assert.match(html,/<h2 id="section-0">หัวข้อแรก<\/h2>/);
   assert.match(html,/href="#section-2"/);
   for(const part of body.split("\n\n"))assert.ok(html.includes(part));
+});
+test("articles with fewer than two headings do not render a table of contents",()=>{
+  const doc=articleDocumentSchema.parse({type:"doc",content:[{type:"heading",attrs:{level:2},content:[{type:"text",text:"หัวข้อเดียว"}]}]});
+  assert.doesNotMatch(renderToStaticMarkup(<ArticleContent content={doc}/>), /article-toc/);
+  assert.doesNotMatch(renderToStaticMarkup(<ArticleContent body="ข้อความทั่วไป"/>), /article-toc/);
 });
 test("illustrated article roundtrip preserves formatting, image caption and legacy text",()=>{
   const doc=articleDocumentSchema.parse({type:"doc",content:[{type:"paragraph",content:[{type:"text",text:"<script>alert(1)</script>",marks:[{type:"bold"}]}]},{type:"image",attrs:{src:"https://example.com/scene.png",alt:"ฉากตัวอย่าง",title:"เครดิตผู้สร้าง"}}]});

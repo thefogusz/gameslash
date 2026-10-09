@@ -16,7 +16,7 @@ function render(node:Node, key:number):ReactNode {
 export function ArticleContent({content,body=""}:{content?:ArticleDocument;body?:string}) {
   const headings=content?.content.flatMap((node,i)=>node.type === "heading" && node.attrs?.level === 2 ? [{id:`section-${i}`,text:node.content?.map(n=>n.type === "text" ? n.text : " ").join("") || ""}] : []) || [];
   return <>
-    {headings.length > 1 && <nav className="article-toc" aria-label="สารบัญบทความ"><span>ในบทความนี้</span><ol>{headings.map(h=><li key={h.id}><a href={`#${h.id}`}>{h.text}</a></li>)}</ol></nav>}
+    {headings.length > 1 && <nav aria-label="สารบัญบทความ"><details className="article-toc"><summary>ในบทความนี้ <span>{headings.length} หัวข้อ</span></summary><ol>{headings.map(h=><li key={h.id}><a href={`#${h.id}`}>{h.text}</a></li>)}</ol></details></nav>}
     <div className="article-prose">{content ? content.content.map(render) : body.split(/\n\s*\n/).filter(Boolean).map((p,i)=><p key={i}>{p}</p>)}</div>
   </>;
 }

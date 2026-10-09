@@ -36,3 +36,15 @@ test("game cards place the description below the title over the image", () => {
   assert.match(markup, /game-like/);
   assert.doesNotMatch(markup, /game-card-author|game-metadata/);
 });
+
+test("game shelves expose labelled edge controls without changing grid sections", () => {
+  const game = { ...seedDatabase().entries.find(e => e.kind === "game")!, image: "" };
+  const section = { id: "discover", title: "มาใหม่", kind: "game" as const, template: "shelf" as const, category: "", enabled: true };
+  const render = (template: "shelf" | "grid") => renderToStaticMarkup(<GamePreferencesProvider><CatalogSection section={{ ...section, template }} entries={[game]} /></GamePreferencesProvider>);
+  const shelf = render("shelf");
+  assert.match(shelf, /class="game-rail"/);
+  assert.match(shelf, /aria-label="เลื่อน มาใหม่ ไปทางซ้าย"/);
+  assert.match(shelf, /aria-label="เลื่อน มาใหม่ ไปทางขวา"/);
+  assert.match(shelf, /aria-controls="[^"]+"/);
+  assert.doesNotMatch(render("grid"), /game-rail-arrow/);
+});

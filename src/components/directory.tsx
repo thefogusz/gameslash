@@ -6,7 +6,7 @@ import { NewsPublicationTime } from "./news-publication-time";
 import { newsPublicationAt } from "@/lib/news-publication";
 import { FilterSelect } from "./filter-select";
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { directorySorts, filterDirectory, gameMakingTools, rankedGameCategories, toolWorkflowCategories, visibleGameCategories, gameGenreHref } from "@/lib/directory-filters";
 import { normalizeGamePlatform } from "@/lib/game-platforms";
@@ -148,6 +148,8 @@ export function CatalogSection({
   entries: Entry[];
 }) {
   const rail = useRef<HTMLDivElement>(null);
+  const railId = useId();
+  const [canScroll, setCanScroll] = useState({ left: false, right: false });
   const items = entries.filter(
     (e) =>
       e.kind === section.kind &&
@@ -155,6 +157,30 @@ export function CatalogSection({
   );
   if (section.id === "discover")
     items.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const gameShelf = section.kind === "game" && section.template === "shelf";
+  useEffect(() => {
+    const element = rail.current;
+    if (!gameShelf || !element) return;
+    const update = () => setCanScroll({
+      left: element.scrollLeft > 1,
+      right: element.scrollLeft + element.clientWidth < element.scrollWidth - 1,
+    });
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(element);
+    element.addEventListener("scroll", update, { passive: true });
+    return () => {
+      observer.disconnect();
+      element.removeEventListener("scroll", update);
+    };
+  }, [gameShelf, items.length]);
+  function scrollGames(direction: number) {
+    const element = rail.current;
+    if (element) element.scrollBy({
+      left: direction * element.clientWidth,
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth",
+    });
+  }
   if (!items.length) return null;
   return (
     <section className={`catalog-section section-${section.kind}`}>
@@ -170,7 +196,7 @@ export function CatalogSection({
           >
             ดูทั้งหมด <ArrowUpRight size={14} />
           </Link>
-          {section.template === "shelf" && section.kind !== "article" && (
+          {section.template === "shelf" && section.kind !== "article" && !gameShelf && (
             <div className="rail-controls">
               <button
                 aria-label={`เลื่อน ${section.title} ไปทางซ้าย`}
@@ -192,7 +218,9 @@ export function CatalogSection({
           )}
         </div>
       </div>
+      <div className={gameShelf ? "game-rail" : undefined}>
       <div
+        id={railId}
         ref={rail}
         className={`entries entries-${section.kind} template-${section.kind === "article" ? "home-news" : section.template}`}
       >
@@ -207,6 +235,11 @@ export function CatalogSection({
             <PostCard entry={entry} key={entry.id} />
           ),
         )}
+      </div>
+      {gameShelf && <>
+        <button type="button" className="game-rail-arrow game-rail-prev" aria-label={`เลื่อน ${section.title} ไปทางซ้าย`} aria-controls={railId} disabled={!canScroll.left} onClick={() => scrollGames(-1)}><ChevronLeft size={28} /></button>
+        <button type="button" className="game-rail-arrow game-rail-next" aria-label={`เลื่อน ${section.title} ไปทางขวา`} aria-controls={railId} disabled={!canScroll.right} onClick={() => scrollGames(1)}><ChevronRight size={28} /></button>
+      </>}
       </div>
     </section>
   );
