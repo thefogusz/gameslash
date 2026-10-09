@@ -165,7 +165,7 @@ export function Admin() {
   useEffect(()=>{if(!notice)return;const timer=setTimeout(()=>setNotice(""),5000);return()=>clearTimeout(timer);},[notice]);
   useEffect(()=>{const warn=(e:BeforeUnloadEvent)=>{if(unsaved.current)e.preventDefault();};window.addEventListener("beforeunload",warn);return()=>window.removeEventListener("beforeunload",warn);},[]);
   function canLeave(){if(unsaved.current&&!window.confirm("มีการแก้ไขที่ยังไม่ได้บันทึก ต้องการออกจากหน้านี้หรือไม่?"))return false;unsaved.current=false;return true;}
-  function navigate(next:typeof tab){if(next===tab||!canLeave())return;if(next==="inbox"){setReviewTarget(null);setReviewVersion(v=>v+1);}setTab(next);setError("");if(next === "feedback")void reload();}
+  function navigate(next:typeof tab){if(next===tab||!canLeave())return;if(next==="inbox"){setReviewTarget(null);setReviewVersion(v=>v+1);}setTab(next);setError("");if(next === "feedback" || next === "analytics")void reload();}
   async function openNotification(item:DraftNotification){
     if(!canLeave())return false;
     const next=await reload();if(!next)return false;
@@ -323,7 +323,7 @@ export function Admin() {
               await mutate({ action: "review", id: entry.id, expectedUpdatedAt: entry.updatedAt, decision, note }, { publish: "เผยแพร่แล้ว รายการแสดงบนเว็บทันที", return: "ส่งกลับเป็นฉบับร่างแล้ว เอเจนต์อ่านหมายเหตุและแก้ไขต่อได้", reject: "ย้ายเข้าถังขยะแล้ว สามารถกู้คืนได้" }[decision]);
             }} />}
             {tab === "connections" && <ConnectionsPanel openAgents={() => setTab("agents")} />}
-            {tab === "analytics" && <AnalyticsPanel />}
+            {tab === "analytics" && <AnalyticsPanel entries={data.entries} likeCounts={data.likeCounts} onRefresh={() => { void reload(); }} refreshing={refreshing} />}
             {tab === "layout" && (
               <LayoutEditor
                 key={data.revision}

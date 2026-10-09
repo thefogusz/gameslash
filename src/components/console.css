@@ -1,5 +1,6 @@
 /* Console tokens are scoped so the public directory keeps its existing identity. */
 .traffic-toolbar { display:flex; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:24px; }
+.traffic-likes { margin-top:24px; }
 .admin-app .traffic-toolbar>.filter-select { width:180px; }
 .traffic-toolbar>.button { margin-left:auto; }
 .traffic-totals { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; margin-bottom:24px; }

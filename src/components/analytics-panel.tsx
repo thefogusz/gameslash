@@ -1,13 +1,15 @@
 "use client";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { ArrowUpRight, RefreshCw } from "lucide-react";
 import { ConsoleSelect } from "./console-select";
 import type { TrafficReport } from "@/lib/analytics";
+import type { Entry } from "@/lib/model";
 
 const dashboard = "https://vercel.com/kirdssadee-4203s-projects/gameslash/analytics";
 const number = (value: number) => value.toLocaleString("th-TH");
 
-export function AnalyticsPanel() {
+export function AnalyticsPanel({ entries, likeCounts, onRefresh, refreshing }: { entries: Entry[]; likeCounts: Record<string, number>; onRefresh: () => void; refreshing: boolean }) {
   const [days, setDays] = useState("7"), [refresh, setRefresh] = useState(0);
   const [report, setReport] = useState<TrafficReport | null>(null);
   const [error, setError] = useState(""), [loading, setLoading] = useState(true);
@@ -27,6 +29,8 @@ export function AnalyticsPanel() {
     return () => controller.abort();
   }, [days, refresh]);
   const peak = Math.max(1, ...(report?.daily.map(day => day.pageviews) ?? []));
+  const likedGames = entries.filter(entry => entry.kind === "game" && (likeCounts[entry.id] || 0) > 0)
+    .sort((a, b) => likeCounts[b.id] - likeCounts[a.id] || a.title.localeCompare(b.title, "th"));
   return (
     <section className="traffic-panel">
       <div className="studio-heading">
@@ -36,7 +40,7 @@ export function AnalyticsPanel() {
       <div className="traffic-toolbar">
         <ConsoleSelect label="ช่วงเวลาสถิติ" value={days} onChange={setDays}><option value="7">7 วันล่าสุด</option><option value="30">30 วันล่าสุด</option></ConsoleSelect>
         <span className="status status-published">เว็บจริง · Production</span>
-        <button className="button" disabled={loading} onClick={() => setRefresh(value => value + 1)}><RefreshCw size={15} className={loading ? "spin" : ""} />โหลดสถิติล่าสุด</button>
+        <button className="button" disabled={loading || refreshing} onClick={() => { setRefresh(value => value + 1); onRefresh(); }}><RefreshCw size={15} className={loading || refreshing ? "spin" : ""} />โหลดสถิติล่าสุด</button>
       </div>
       {loading && <div className="empty-state" role="status">กำลังโหลดสถิติ…</div>}
       {error && <div className="form-error" role="alert">{error} · สามารถดูข้อมูลใน Vercel ได้ระหว่างนี้</div>}
@@ -67,6 +71,17 @@ export function AnalyticsPanel() {
         </div>
         <p className="field-hint">แสดงกลุ่มอันดับต้น ๆ และกลุ่มอื่น ๆ ตาม Vercel · ผู้เข้าชมอาจอยู่ได้หลายกลุ่ม จึงไม่ควรบวกแต่ละแถวเป็นยอดรวม</p>
       </>}
+      <section className="traffic-card traffic-likes" aria-labelledby="traffic-likes-title">
+        <h2 id="traffic-likes-title">เกมที่ถูกกดไลค์</h2>
+        <p className="field-hint">ยอดหัวใจปัจจุบันจากระบบ Gameslash · รวมทุกช่วงเวลา และหักการเลิกถูกใจแล้ว · เรียงยอดมากที่สุด</p>
+        {!likedGames.length ? <p role="status">ยังไม่มีเกมที่ถูกกดไลค์</p> : <table>
+          <thead><tr><th scope="col">เกม</th><th scope="col">หัวใจ</th></tr></thead>
+          <tbody>{likedGames.map(entry => <tr key={entry.id}>
+            <td>{entry.status === "published" ? <Link href={`/item/${entry.id}`} target="_blank" rel="noopener noreferrer">{entry.title}</Link> : <>{entry.title} <small>(ไม่ได้เผยแพร่)</small></>}</td>
+            <td>{number(likeCounts[entry.id])}</td>
+          </tr>)}</tbody>
+        </table>}
+      </section>
     </section>
   );
 }
