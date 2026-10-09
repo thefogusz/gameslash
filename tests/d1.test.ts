@@ -1,0 +1,55 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { seedDatabase } from "../src/lib/seed";
+import { readD1, readD1Notifications, initializeD1, updateD1 } from "../src/lib/d1-store";
+import { draftNotifications } from "../src/lib/notifications";
+import { publicData } from "../src/lib/model";
+import { ConflictError } from "../src/lib/postgres-store";
+
+test("D1 migration, concurrent CAS, rollback, ordering and private access", {
+  skip: !process.env.GAMESLASH_TEST_D1_URL,
+}, async () => {
+  const url = new URL(process.env.GAMESLASH_TEST_D1_URL!);
+  assert.ok(["127.0.0.1", "localhost"].includes(url.hostname), "Only an isolated local D1 is allowed");
+  process.env.GAMESLASH_D1_URL = url.origin;
+  process.env.GAMESLASH_D1_TOKEN = process.env.GAMESLASH_TEST_D1_TOKEN;
+  assert.equal((await fetch(new URL("/catalog", url))).status, 401);
+  const seed = seedDatabase();
+  await initializeD1(seed);
+  assert.deepEqual(await readD1(), seed);
+  await assert.rejects(initializeD1(seed), ConflictError);
+  const concurrent = await Promise.allSettled(["first draft", "second draft"].map(tagline =>
+    updateD1(db => { db.draftLayout.tagline = tagline; }, seed.revision)));
+  assert.equal(concurrent.filter(result => result.status === "fulfilled").length, 1);
+  const rejected = concurrent.find(result => result.status === "rejected");
+  assert.ok(rejected?.status === "rejected" && rejected.reason instanceof ConflictError);
+  const before = await readD1();
+  assert.deepEqual(publicData(before), publicData(seed));
+  await assert.rejects(updateD1(db => { db.layout.categories = []; }));
+  await assert.rejects(updateD1(db => { db.entries.push(db.entries[0]); }), /Duplicate/);
+  assert.deepEqual(await readD1(), before);
+  await Promise.all(Array.from({ length: 3 }, () => updateD1(db => {
+    db.limits.test = { count: (db.limits.test?.count ?? 0) + 1, reset: 9999999999999 };
+  }, undefined, false)));
+  assert.equal((await readD1()).limits.test.count, 3);
+  assert.equal((await readD1()).revision, before.revision);
+  const changed = await updateD1(db => {
+    db.entries.reverse(); db.entries.pop();
+    db.entries[0].title = "SQL punctuation ' ; --";
+    db.entries.unshift({ ...db.entries[0], id: "new-draft", status: "draft" });
+  });
+  assert.deepEqual(await readD1(), changed);
+  assert.deepEqual(await readD1Notifications(), draftNotifications(changed.entries));
+  // Invalid input must not partially change the catalog.
+  const request = await fetch(new URL("/catalog", url), {
+    headers: { Authorization: `Bearer ${process.env.GAMESLASH_D1_TOKEN}` },
+  });
+  const { version } = await request.json();
+  const { entries, ...state } = changed;
+  const malformed = await fetch(new URL("/catalog", url), {
+    method: "PUT", headers: { Authorization: `Bearer ${process.env.GAMESLASH_D1_TOKEN}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ expectedVersion: version, state, changed: [{ position: 0, data: { ...entries[0], title: "x" } }], deleted: [] }),
+  });
+  assert.equal(malformed.status, 400);
+  assert.deepEqual(await readD1(), changed);
+});

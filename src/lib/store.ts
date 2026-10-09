@@ -11,6 +11,8 @@ import path from "node:path";
 import { databaseSchema, type Database } from "./model";
 import { seedDatabase } from "./seed";
 import { databaseClient, readPostgres, updatePostgres, ConflictError } from "./postgres-store";
+import { d1Ready, readD1, readD1Notifications, updateD1 } from "./d1-store";
+import { draftNotifications } from "./notifications";
 export { ConflictError } from "./postgres-store";
 
 const blobPath = "gameslash/catalog-v1.json";
@@ -23,6 +25,7 @@ const cloud = () =>
 const usesPostgres = () => process.env.GAMESLASH_STORAGE === "postgres";
 export function storageReady() {
   if (process.env.GAMESLASH_READ_ONLY === "true") return false;
+  if (process.env.GAMESLASH_STORAGE === "d1") return d1Ready();
   return usesPostgres() ? !!process.env.DATABASE_URL : cloud() || !process.env.VERCEL;
 }
 async function readSnapshot(): Promise<{ db: Database; etag?: string }> {
@@ -52,8 +55,13 @@ async function readSnapshot(): Promise<{ db: Database; etag?: string }> {
   }
 }
 export async function readDatabase() {
+  if (process.env.GAMESLASH_STORAGE === "d1") return readD1();
   if (usesPostgres()) return readPostgres(databaseClient());
   return (await readSnapshot()).db;
+}
+export async function readNotifications() {
+  return process.env.GAMESLASH_STORAGE === "d1"
+    ? readD1Notifications() : draftNotifications((await readDatabase()).entries);
 }
 
 // ponytail: one conditional snapshot suits a small editorial catalog; move to Postgres for frequent concurrent writes or >3,000 entries.
@@ -64,6 +72,7 @@ export async function updateDatabase(
 ): Promise<Database> {
   if (!storageReady())
     throw new Error("ระบบบันทึกข้อมูลยังไม่พร้อมใช้งาน กรุณาลองใหม่ภายหลัง");
+  if (process.env.GAMESLASH_STORAGE === "d1") return updateD1(change, revision, bumpRevision);
   if (usesPostgres()) return updatePostgres(databaseClient(), change, revision, bumpRevision);
   if (cloud()) {
     for (let attempt = 0; attempt < 4; attempt++) {
