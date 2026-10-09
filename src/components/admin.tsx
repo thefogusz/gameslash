@@ -1,5 +1,6 @@
 "use client";
 import { FeedbackTickets } from "./feedback";
+import { AnalyticsPanel } from "./analytics-panel";
 import { ConsoleSelect } from "./console-select";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
@@ -27,6 +28,7 @@ import {
   Plug,
   History,
   ChevronRight,
+  ChartNoAxesCombined,
 } from "lucide-react";
 import "./console.css";
 import { TagPanel } from "./tag-panel";
@@ -138,7 +140,7 @@ export function Login({ configured }: { configured: boolean }) {
 export function Admin() {
   const router = useRouter();
   const [data, setData] = useState<Snapshot | null>(null),
-    [tab, setTab] = useState<"feedback" | "inbox" | "entries" | "layout" | "import" | "agents" | "activity" | "connections" | "tags">("inbox");
+    [tab, setTab] = useState<"analytics" | "feedback" | "inbox" | "entries" | "layout" | "import" | "agents" | "activity" | "connections" | "tags">("inbox");
   const [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
     [busy, setBusy] = useState(false);
@@ -212,7 +214,7 @@ export function Admin() {
       updatedAt: new Date().toISOString(),
     });
   }
-  const tabNames={feedback:"ฟีดแบค",tags:"คลังแท็กเกม",inbox:"กล่องรอตรวจ",entries:"คลังเนื้อหา",layout:"จัดหน้าเว็บไซต์",import:"นำเข้า / ส่งออก",connections:"แหล่งข้อมูล",agents:"เอเจนต์และการเชื่อมต่อ",activity:"ประวัติล่าสุด"};
+  const tabNames={feedback:"ฟีดแบค",tags:"คลังแท็กเกม",inbox:"กล่องรอตรวจ",entries:"คลังเนื้อหา",layout:"จัดหน้าเว็บไซต์",import:"นำเข้า / ส่งออก",analytics:"ทราฟฟิคเว็บ",connections:"แหล่งข้อมูล",agents:"เอเจนต์และการเชื่อมต่อ",activity:"ประวัติล่าสุด"};
   return (
     <div className="admin-app">
       <a href="#studio-main" className="console-skip">ข้ามไปเนื้อหา</a>
@@ -267,6 +269,7 @@ export function Admin() {
         </button>
         <button aria-current={tab === "tags" ? "page" : undefined} className={tab === "tags" ? "active" : ""} onClick={() => navigate("tags")}><ListFilter size={16} />คลังแท็กเกม <span>{data?.tagRequests.filter(r => r.status === "pending").length || 0}</span></button>
         <p className="nav-section-label">เครื่องมือและระบบ</p>
+        <button aria-current={tab === "analytics" ? "page" : undefined} className={tab === "analytics" ? "active" : ""} onClick={() => navigate("analytics")}><ChartNoAxesCombined size={16} />ทราฟฟิคเว็บ</button>
         <button aria-current={tab==="connections"?"page":undefined} className={tab === "connections" ? "active" : ""} onClick={() => navigate("connections")}>
           <Plug size={16} />แหล่งข้อมูล
         </button>
@@ -320,6 +323,7 @@ export function Admin() {
               await mutate({ action: "review", id: entry.id, expectedUpdatedAt: entry.updatedAt, decision, note }, { publish: "เผยแพร่แล้ว รายการแสดงบนเว็บทันที", return: "ส่งกลับเป็นฉบับร่างแล้ว เอเจนต์อ่านหมายเหตุและแก้ไขต่อได้", reject: "ย้ายเข้าถังขยะแล้ว สามารถกู้คืนได้" }[decision]);
             }} />}
             {tab === "connections" && <ConnectionsPanel openAgents={() => setTab("agents")} />}
+            {tab === "analytics" && <AnalyticsPanel />}
             {tab === "layout" && (
               <LayoutEditor
                 key={data.revision}

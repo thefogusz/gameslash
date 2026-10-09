@@ -1,4 +1,29 @@
 /* Console tokens are scoped so the public directory keeps its existing identity. */
+.traffic-toolbar { display:flex; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:24px; }
+.admin-app .traffic-toolbar>.filter-select { width:180px; }
+.traffic-toolbar>.button { margin-left:auto; }
+.traffic-totals { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; margin-bottom:24px; }
+.traffic-totals>div,.traffic-card { background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:24px; min-width:0; }
+.traffic-totals dt { color:var(--muted); }
+.traffic-totals dt small { display:block; }
+.traffic-totals dd { margin:8px 0 0; font-size:36px; font-weight:700; line-height:1.2; font-variant-numeric:tabular-nums; }
+.traffic-card h2 { font-size:20px; margin-bottom:8px; }
+.traffic-chart { display:flex; gap:8px; list-style:none; padding:0; margin:24px 0 0; overflow-x:auto; }
+.traffic-chart>li { position:relative; flex:1; min-width:0; text-align:center; font-size:12px; font-variant-numeric:tabular-nums; }
+.traffic-chart time { display:block; white-space:nowrap; }
+.traffic-chart[data-days="30"] { gap:4px; }
+.traffic-chart[data-days="30"] .traffic-count,.traffic-chart[data-days="30"]>li:not(:nth-child(5n)):not(:last-child) time { visibility:hidden; }
+.traffic-chart[data-days="30"]>li:last-child :is(time,.traffic-count) { visibility:visible; text-align:right; }
+.traffic-count { display:block; color:var(--muted); }
+.traffic-bar { height:160px; display:flex; align-items:flex-end; border-bottom:1px solid var(--line); margin:8px 0; }
+.traffic-bar>span { width:100%; background:var(--accent); border-radius:3px 3px 0 0; }
+.traffic-breakdowns { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:24px; margin:24px 0 16px; }
+.traffic-card table { width:100%; border-collapse:collapse; font-size:14px; }
+.traffic-card :is(th,td) { text-align:right; border-bottom:1px solid var(--line); padding:12px 4px; }
+.traffic-card :is(th,td):first-child { text-align:left; overflow-wrap:anywhere; }
+.traffic-card th { color:var(--muted); font-weight:500; white-space:nowrap; }
+.traffic-card td:not(:first-child) { font-variant-numeric:tabular-nums; }
+@media(max-width:760px) { .traffic-breakdowns { grid-template-columns:1fr; } .traffic-card,.traffic-totals>div { padding:16px; } .traffic-toolbar>.button { margin-left:0; } }
 .admin-app { --muted:#b0adc2; --line:#ffffff1c; min-height:100dvh; background:var(--bg); color:var(--ink); font-size:16px; line-height:1.65; padding:68px 0 0 232px; }
 .admin-app :is(h1,h2,h3) { font-family:var(--font-body); letter-spacing:-.025em; }
 .admin-app .button { min-height:44px; padding:9px 16px; border-radius:8px; font-size:15px; font-weight:650; gap:8px; }
