@@ -349,14 +349,19 @@ a:focus-visible {
   right: 12px;
   bottom: 14px;
   color: #fff;
-  text-shadow: 0 1px 2px #000, 0 0 4px #000, 0 0 8px #000;
+  isolation: isolate;
+}
+.feature-copy::before {
+  content: "";
+  position: absolute;
+  inset: 36px -28px -28px;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(0deg, #080a12 0%, #080a12e8 30%, transparent 100%);
 }
 .feature-copy h2,
 .feature-copy h3 {
-  width: fit-content;
-  max-width: 100%;
-  background: #080a1270;
-  box-shadow: 0 0 8px 3px #080a1270;
+  text-shadow: 0 1px 3px #000b;
 }
 .feature-main .feature-copy {
   left: 28px;
@@ -2623,6 +2628,7 @@ textarea {
 .spotlight-grid.single { grid-template-columns:1fr; }
 .spotlight-grid.single .spotlight-thumbs { display:none; }
 .spotlight-main .feature-copy { left:28px; right:28px; bottom:24px; }
+.spotlight-main .feature-copy::before { top:60px; }
 .spotlight-main .feature-copy h2 { font-size:clamp(26px,3vw,38px); line-height:1.3; font-weight:800; margin:10px 0; }
 .spotlight-main .feature-copy p { max-width:540px; font-size:14px; line-height:1.75; color:#e0dfe8; margin-top:10px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
 .spotlight-thumbs { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); grid-auto-rows:1fr; gap:12px; }
