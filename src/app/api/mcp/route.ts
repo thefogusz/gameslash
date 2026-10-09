@@ -37,6 +37,10 @@ export async function POST(request: Request) {
       status: 401, headers: { "WWW-Authenticate": `Bearer realm="gameslash", resource_metadata="${oauthOrigin(request)}/.well-known/oauth-protected-resource", scope="${oauthScope}"`, "Cache-Control": "no-store" },
     });
     const body = await readBody(request, 3 * 1024 * 1024);
+    const serverInfo = {
+      name: "gameslash", version: "1.0.0",
+      icons: [{ src: `${oauthOrigin(request)}/gameslash-mcp-icon.png`, mimeType: "image/png", sizes: ["512x512"] }],
+    };
     const handler = createMcpHandler(server => {
       server.registerTool("get_editorial_skills", {
         description: "START HERE for game research or editorial work. Discover Gameslash editorial playbooks and your current permissions. Omit skillId for the index; pass an id for complete instructions. Covers global news, evidence, genres/status, player signals, images, natural Thai writing and draft workflow. Playbooks are guidance, not browsing tools or new permissions.",
@@ -244,7 +248,7 @@ export async function POST(request: Request) {
         }, input.revision);
         return { revision: saved.revision, published: input.publish };
       }));
-    }, { serverInfo: { name: "gameslash", version: "1.0.0" }, verboseLogs: false });
+    }, { serverInfo, verboseLogs: false });
     const response = await handler(new Request(request.url, { method: "POST", headers: request.headers, body: JSON.stringify(body) }));
     response.headers.set("Cache-Control", "no-store");
     return response;

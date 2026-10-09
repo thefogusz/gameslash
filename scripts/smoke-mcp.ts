@@ -42,6 +42,13 @@ try {
   assert.equal(JSON.stringify(await snapshot()).includes(token), false);
   const initialized = await rpc(token, "initialize", { protocolVersion: "2025-11-25", capabilities: {}, clientInfo: { name: "gameslash-test", version: "1.0.0" } });
   assert.ok(initialized.serverInfo);
+  assert.deepEqual(initialized.serverInfo.icons, [{ src: `${origin}/gameslash-mcp-icon.png`, mimeType: "image/png", sizes: ["512x512"] }]);
+  const icon = await fetch(initialized.serverInfo.icons[0].src);
+  assert.equal(icon.status, 200);
+  assert.equal(icon.headers.get("content-type"), "image/png");
+  const iconMetadata = await sharp(Buffer.from(await icon.arrayBuffer())).metadata();
+  assert.equal(iconMetadata.width, 512);
+  assert.equal(iconMetadata.height, 512);
   assert.equal((await rpc(token, "tools/list")).tools.length, 21);
   assert.equal((await call(token, "get_site_state")).isError, true);
   const site = (await call(manager, "get_site_state")).structuredContent;
