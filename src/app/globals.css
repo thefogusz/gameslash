@@ -848,7 +848,7 @@ a:focus-visible {
   margin-inline: auto;
 }
 .template-home-news .article-card {
-  grid-template-columns: minmax(200px, 30%) minmax(0, 1fr);
+  grid-template-columns: minmax(200px, 36%) minmax(0, 1fr);
   gap: 28px;
   padding: 20px;
   border: 1px solid var(--line);
