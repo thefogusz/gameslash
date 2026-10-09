@@ -23,5 +23,31 @@ test("metadata separates release stage, platform and genres without guessing abs
   const unknown = renderToStaticMarkup(<GameMetadata tags={["RPG"]} />);
   assert.doesNotMatch(unknown, /game-status|Released|CBT/);
   const compact = renderToStaticMarkup(<GameMetadata tags={["OBT", "PC", "RPG"]} compact />);
-  assert.match(compact, /OBT/); assert.match(compact, /PC/); assert.doesNotMatch(compact, /RPG/);
+  assert.doesNotMatch(compact, /OBT|RPG/); assert.match(compact, /PC/);
+});
+
+
+test("compact metadata groups devices without losing full detail or guessing unknown platforms", () => {
+  const tags = ["CBT", "เว็บ", "PC", "macOS", "Linux", "Android", "iOS", "RPG"];
+  const compact = renderToStaticMarkup(<GameMetadata tags={tags} compact />);
+  assert.match(compact, /เล่นบนเว็บ/); assert.match(compact, /มือถือ/);
+  assert.equal((compact.match(/>PC</g) || []).length, 1);
+  assert.doesNotMatch(compact, />macOS<|>Android<|>CBT<|>RPG</);
+  assert.equal(renderToStaticMarkup(<GameMetadata tags={["RPG", "สร้างด้วย AI"]} compact />), "");
+  const full = renderToStaticMarkup(<GameMetadata tags={tags} />);
+  for (const tag of tags) assert.ok(full.includes(tag));
+});
+
+test("phone-browser tag is canonical platform metadata with stable existing IDs", () => {
+  assert.equal(findGameTag(baseGameTags, "เว็บ")?.id, "gameslash:2");
+  assert.equal(findGameTag(baseGameTags, "PC")?.id, "gameslash:3");
+  assert.equal(findGameTag(baseGameTags, "เว็บบนมือถือ")?.id, "gameslash:13");
+  const db = seedDatabase();
+  const entry = { ...db.entries[0], tags: ["เว็บบนมือถือ", "RPG"] };
+  validateGameTags(db, entry);
+  const full = renderToStaticMarkup(<GameMetadata tags={entry.tags} />);
+  assert.match(full, /class="game-platform">เว็บบนมือถือ/);
+  const compact = renderToStaticMarkup(<GameMetadata tags={entry.tags} compact />);
+  assert.match(compact, /เล่นบนเว็บ/); assert.match(compact, /มือถือ/);
+  assert.doesNotMatch(compact, /Android|iOS|>PC</);
 });

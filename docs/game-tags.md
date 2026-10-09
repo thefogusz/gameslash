@@ -1,6 +1,6 @@
 # Game tags and Dots review
 
-The shared registry contains a checked-in snapshot of all 429 entries on Steam's public [tag browse list](https://store.steampowered.com/tag/browse/) fetched on 2026-10-08 in English and Thai, joined by Steam tag ID. This is the public popular-tag list, not a claim to contain every internal Steam tag. Thirteen Gameslash labels cover platforms, AI use and existing catalog values. Steam's names are reference metadata, not an endorsement or a game's verified features.
+The shared registry contains a checked-in snapshot of all 429 entries on Steam's public [tag browse list](https://store.steampowered.com/tag/browse/) fetched on 2026-10-08 in English and Thai, joined by Steam tag ID. This is the public popular-tag list, not a claim to contain every internal Steam tag. Fourteen Gameslash labels cover platforms, AI use and existing catalog values. Steam's names are reference metadata, not an endorsement or a game's verified features.
 
 `src/lib/steam-tags.json` is the source snapshot. `game-tags.ts` adds local labels; custom reviewed tags live in the existing database. No new service or paid API is required. Updating the source is an explicit code change: fetch both language pages, join `data-tagid` values, verify counts/duplicates, review the diff. It does not fetch Steam at request time.
 
@@ -28,3 +28,7 @@ There is no background Dots scheduler or browsing worker here. A connected Dots 
 `npm test`, `npm run typecheck`, `npm run build`.
 
 `scripts/smoke-tags.ts` requires `ADMIN_PASSWORD` and `SMOKE_ORIGIN` pointing to an isolated localhost server with its own `GAMESLASH_DATA_DIR`. It creates fixture entries/tags and revokes the fixture key. It rejects non-localhost targets; do not use a development server connected to production storage.
+
+## Platform evidence
+
+`เว็บบนมือถือ` is the canonical phone-browser platform tag. Add it only when creator documentation explicitly supports phone browsers or an actual mobile-browser test establishes support. It maps to both Web and Mobile discovery; it does not imply an Android/iOS app or a specific OS. `PC` denotes computer compatibility, not necessarily a native download. A public game URL alone does not establish phone compatibility. Preserve existing genre, status and platform tags. Existing tag IDs are unchanged; the new local label is appended.

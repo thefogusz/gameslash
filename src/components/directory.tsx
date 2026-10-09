@@ -2,11 +2,14 @@
 import { ArticleContent, legacyGuideDocument } from "./article-content";
 import { ToolDirectoryCard } from "./tool-directory-card";
 import { GameMetadata } from "./game-metadata";
+import { NewsPublicationTime } from "./news-publication-time";
+import { newsPublicationAt } from "@/lib/news-publication";
 import { FilterSelect } from "./filter-select";
 import Link from "next/link";
 import { useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { directorySorts, filterDirectory, gameMakingTools, rankedGameCategories, toolWorkflowCategories } from "@/lib/directory-filters";
+import { directorySorts, filterDirectory, gameMakingTools, rankedGameCategories, toolWorkflowCategories, visibleGameCategories, gameGenreHref } from "@/lib/directory-filters";
+import { platformGroups, normalizeGamePlatform, matchesGamePlatform } from "@/lib/game-platforms";
 import {
   ArrowUpRight,
   ArrowRight,
@@ -42,6 +45,18 @@ export type View =
   | "community"
   | "submit"
   | "detail";
+function PlatformNavigation({ entries, value = "", onChange }: { entries: Entry[]; value?: string; onChange?: (value: string) => void }) {
+  const games = entries.filter(entry => entry.kind === "game");
+  const options = [{ value: "", label: "ทั้งหมด" }, ...platformGroups];
+  return <nav className="platform-navigation" aria-label="เลือกแพลตฟอร์มเกม">
+    {options.map(option => {
+      const count = games.filter(entry => matchesGamePlatform(entry.tags, option.value)).length;
+      const label = <>{option.label}<span className="platform-count">{count}</span></>;
+      return onChange ? <button key={option.value} type="button" aria-label={`${option.label} ${count} เกม`} aria-pressed={value === option.value} onClick={() => onChange(option.value)}>{label}</button>
+        : <Link key={option.value} aria-label={`${option.label} ${count} เกม`} href={`/games${option.value ? `?platform=${option.value}` : ""}`}>{label}</Link>;
+    })}
+  </nav>;
+}
 const paths = {
   game: "games",
   tool: "tools",
@@ -73,6 +88,7 @@ function ArticleCard({ entry }: { entry: Entry }) {
       <div>
         <span className="eyebrow">{entry.category}</span>
         <h3>{entry.title}</h3>
+        <NewsPublicationTime publishedAt={newsPublicationAt(entry)} />
         <p>{entry.description}</p>
         <span className="text-link">
           อ่านต่อ <ArrowUpRight size={14} />
@@ -217,6 +233,7 @@ export function HomeContent({
   return (
     <>
       {!editSection && <h1 className="sr-only">gameslash — รวมเกมที่สร้างด้วย AI</h1>}
+      <PlatformNavigation entries={catalog.entries} />
       <div className={editSection ? "editable-region" : ""}>
         {editSection && (
           <button
@@ -260,6 +277,7 @@ function Detail({ entry }: { entry: Entry }) {
         <div>
           <span className="eyebrow">{entry.category}</span>
           <h1>{entry.title}</h1>
+          {entry.kind === "article" && <NewsPublicationTime publishedAt={newsPublicationAt(entry)} />}
           <p>โดย {entry.author}</p>
         </div>
         <div className="detail-actions">
@@ -334,6 +352,7 @@ export function Directory({
   const likedOnly = params.get("liked") === "1" && view === "games";
   const query = params.get("q") || "";
   const category = view === "tools" && params.get("category") === "เผยแพร่" ? "" : params.get("category") || "";
+  const platform = normalizeGamePlatform(params.get("platform") || "");
   const tag = view === "tools" ? "" : params.get("tag") || "";
   const requestedSort = view === "tools" ? "curated" : params.get("sort") || "curated";
   const sort = Object.hasOwn(directorySorts, requestedSort) ? requestedSort : "curated";
@@ -361,10 +380,10 @@ export function Directory({
           ? "post"
           : "game";
   const entries = kind === "tool" ? gameMakingTools(catalog.entries) : catalog.entries.filter(e => e.kind === kind);
-  const categories = [...new Set([...(kind === "tool" ? toolWorkflowCategories : kind === "game" ? catalog.layout.categories : []), ...entries.map(e => e.category), ...(category ? [category] : [])])];
+  const categories = [...new Set([...(kind === "tool" ? toolWorkflowCategories : kind === "game" ? visibleGameCategories(catalog.layout.categories, catalog.entries, category) : []), ...entries.map(e => e.category), ...(category ? [category] : [])])];
   const tags = [...new Set([...entries.flatMap(e => e.tags), ...(tag ? [tag] : [])])].sort((a,b) => a.localeCompare(b,"th"));
-  const results = filterDirectory(likedOnly ? entries.filter(e => likedIds.includes(e.id)) : entries, { kind, query, category, tag, sort }, kind === "game" ? catalog.layout.featuredIds : []);
-  const filtered = !!(query || category || tag || likedOnly || sort !== "curated");
+  const results = filterDirectory(likedOnly ? entries.filter(e => likedIds.includes(e.id)) : entries, { kind, query, category, tag, sort, platform }, kind === "game" ? catalog.layout.featuredIds : []);
+  const filtered = !!(query || category || tag || (kind === "game" && platform) || likedOnly || sort !== "curated");
   const compactFilters = kind === "game" || kind === "article";
   const titles = {
     game: ["ค้นพบเกม", "ค้นหาเกมตามชื่อ ผู้สร้าง หรือหมวดหมู่"],
@@ -373,7 +392,7 @@ export function Directory({
     post: ["คอมมูนิตี้", "แชร์ผลงาน ถามคำถาม และขอฟีดแบ็ก"],
   };
   function reset() {
-    updateFilters({ q: "", category: "", tag: "", liked: "", sort: "" });
+    updateFilters({ q: "", category: "", tag: "", liked: "", sort: "", platform: "" });
   }
   return (
     <>
@@ -447,12 +466,13 @@ export function Directory({
               ค้นพบเกม
             </Link>
           </div>
-          <div className="sidebar-group">
-            {rankedGameCategories(catalog.layout.categories, catalog.entries).map(({ category: c, index: i, count }) => {
+          <details className="sidebar-group sidebar-genres" key={category} open={!!category && kind === "game"}>
+            <summary>แนวเกม <ChevronRight size={14} /></summary>
+            {rankedGameCategories([...new Set([...catalog.layout.categories, ...catalog.entries.filter(entry => entry.kind === "game").map(entry => entry.category)])], catalog.entries).filter(group => group.count > 0).map(({ category: c, index: i, count }) => {
               return (
                 <Link
                   key={c}
-                  href={`/games?category=${encodeURIComponent(c)}`}
+                  href={gameGenreHref(c, view === "games" ? params.toString() : "")}
                   className={`sidebar-link ${category === c ? "active" : ""}`}
                   onClick={() => setMenu(false)}
                 >
@@ -477,7 +497,7 @@ export function Directory({
                 </Link>
               );
             })}
-          </div>
+          </details>
           <div className="sidebar-group">
             <Link className="sidebar-link" href="/tools">
               <Wrench size={16} />
@@ -532,13 +552,22 @@ export function Directory({
                   ))}
                 </div>
               )}
+              {kind === "game" && <>
+                <PlatformNavigation entries={filterDirectory(likedOnly ? entries.filter(e => likedIds.includes(e.id)) : entries, { kind, query, category, tag, sort })} value={platform} onChange={platform => updateFilters({ platform })} />
+                {platform && <p className="platform-note">{platformGroups.find(group => group.value === platform)?.description}</p>}
+              </>}
               {kind !== "tool" && <div className={`directory-filters${compactFilters ? " compact-filters" : ""}`} role="group" aria-label="ตัวกรองรายการ">
-                <FilterSelect label="หมวดหมู่" compact={compactFilters} value={category}
-                  options={[{ value: "", label: `ทุกหมวดหมู่ (${entries.length})` }, ...categories.map(c => ({ value: c, label: `${c} (${entries.filter(e => e.category === c).length})` }))]}
+                <FilterSelect label={kind === "game" ? "แนวเกม" : "หมวดหมู่"} compact={compactFilters} value={category}
+                  options={[{ value: "", label: `${kind === "game" ? "ทุกแนวเกม" : "ทุกหมวดหมู่"} (${entries.length})` }, ...categories.map(c => ({ value: c, label: `${c} (${entries.filter(e => e.category === c).length})` }))]}
                   onChange={category => updateFilters({ category })} />
-                <FilterSelect label={kind === "game" ? "แท็ก / แพลตฟอร์ม" : "แท็ก"} compact={compactFilters} value={tag}
+                {kind === "game" ? <details className="advanced-tag-filter" key={tag} open={!!tag}>
+                  <summary>{tag ? `แท็ก: ${tag}` : "แท็กเพิ่มเติม"}</summary>
+                  <FilterSelect label="แท็ก" compact={compactFilters} value={tag}
+                    options={[{ value: "", label: "ทุกแท็ก" }, ...tags.map(t => ({ value: t, label: `${t} (${entries.filter(e => e.tags.includes(t)).length})` }))]}
+                    onChange={tag => updateFilters({ tag })} />
+                </details> : <FilterSelect label="แท็ก" compact={compactFilters} value={tag}
                   options={[{ value: "", label: "ทุกแท็ก" }, ...tags.map(t => ({ value: t, label: `${t} (${entries.filter(e => e.tags.includes(t)).length})` }))]}
-                  onChange={tag => updateFilters({ tag })} />
+                  onChange={tag => updateFilters({ tag })} />}
                 <FilterSelect label="เรียงลำดับ" compact={compactFilters} value={sort}
                   options={Object.entries(directorySorts).map(([value, label]) => ({ value, label }))}
                   onChange={sort => updateFilters({ sort: sort === "curated" ? "" : sort })} />
@@ -612,3 +641,4 @@ export function Directory({
     </>
   );
 }
+

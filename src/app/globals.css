@@ -2726,3 +2726,30 @@ textarea {
 .popularity-method p { margin-top:10px; }
 .popularity-editor { display:grid; gap:14px; min-width:0; padding:18px; border:1px solid var(--line); border-radius:10px; }
 .popularity-editor legend { padding:0 6px; font-weight:650; }
+
+
+/* Platforms are primary; genres and the complete tag registry remain secondary. */
+.platform-navigation { display:flex; gap:6px; margin:8px 0 20px; overflow-x:auto; padding:3px; border-bottom:1px solid var(--line); }
+.platform-navigation > a, .platform-navigation > button { display:inline-flex; align-items:center; justify-content:center; gap:8px; flex:0 0 auto; min-height:44px; padding:9px 15px; border:0; border-radius:9px; background:transparent; color:var(--muted); font:inherit; font-size:14px; font-weight:600; white-space:nowrap; cursor:pointer; }
+.platform-navigation > :hover { background:var(--surface); color:var(--ink); }
+.platform-navigation > [aria-pressed="true"] { background:var(--surface); color:var(--accent); box-shadow:inset 0 -2px var(--accent); }
+.platform-navigation > :focus-visible, .sidebar-genres > summary:focus-visible, .advanced-tag-filter > summary:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+.platform-count { font-size:11px; font-weight:400; color:var(--muted); font-variant-numeric:tabular-nums; }
+.platform-note { margin:-8px 3px 20px; color:var(--muted); font-size:12px; line-height:1.7; }
+.sidebar-genres > summary { display:flex; align-items:center; justify-content:space-between; min-height:44px; padding:9px 10px; color:var(--muted); font-size:13px; cursor:pointer; list-style:none; }
+.sidebar-genres > summary::-webkit-details-marker { display:none; }
+.sidebar-genres[open] > summary svg { transform:rotate(90deg); }
+.advanced-tag-filter { order:3; font-size:13px; min-width:0; }
+.advanced-tag-filter > summary { cursor:pointer; color:var(--muted); padding:12px 6px; min-height:44px; }
+.advanced-tag-filter[open] { flex-basis:100%; }
+.advanced-tag-filter .filter-select { max-width:360px; }
+.game-platform-badges { display:flex; flex-wrap:wrap; gap:6px; min-height:22px; }
+.game-platform-badges > span { color:#cbc9d7; background:#ffffff07; border:1px solid var(--line); border-radius:6px; padding:2px 7px; font-size:11px; line-height:1.6; }
+@media (max-width:480px) {
+  .platform-navigation { gap:2px; margin-bottom:16px; }
+  .platform-navigation > a, .platform-navigation > button { gap:5px; flex:1 0 auto; padding:9px 8px; font-size:13px; }
+  .platform-count { font-size:10px; }
+  .advanced-tag-filter { flex-basis:100%; }
+}
+.news-publication-time { display:block; margin:7px 0 10px; color:var(--muted); font-size:12px; line-height:1.7; font-weight:400; }
+.detail .news-publication-time { margin-top:12px; font-size:13px; }

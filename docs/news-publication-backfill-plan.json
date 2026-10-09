@@ -1,0 +1,88 @@
+{
+  "status": "plan-only-not-applied",
+  "evidence": "homepage_news_publication_results.json",
+  "evidenceSha256": "934ca2c30d80574cec15175d908a2671b8c06d5edcb6e5d47e07ddc5a124cf68",
+  "rationale": "These ten supplied receipts document entries created directly as published, with matching creation and update timestamps. No general inference from createdAt or updatedAt is permitted.",
+  "entries": [
+    {
+      "id": "google-unity-playground-20261007",
+      "publishedAt": "2026-10-09T00:22:31.553Z",
+      "expectedCreatedAt": "2026-10-09T00:22:31.553Z",
+      "receiptUpdatedAt": "2026-10-09T00:22:31.553Z",
+      "expectedKind": "article",
+      "expectedSourceUrl": "https://unity.com/news/google-and-unity-partner-on-new-ai-gaming-platform-for-the-next-era-of-interactive-entertainment"
+    },
+    {
+      "id": "aidungeon-filter-20261008",
+      "publishedAt": "2026-10-09T00:23:09.807Z",
+      "expectedCreatedAt": "2026-10-09T00:23:09.807Z",
+      "receiptUpdatedAt": "2026-10-09T00:23:09.807Z",
+      "expectedKind": "article",
+      "expectedSourceUrl": "https://play.aidungeon.com/whats-new/feature/announcement:9f69d3b5-a4f9-4ab2-87a2-58693f2a30ef"
+    },
+    {
+      "id": "ataraxos-stratego-20260930",
+      "publishedAt": "2026-10-09T00:23:23.186Z",
+      "expectedCreatedAt": "2026-10-09T00:23:23.186Z",
+      "receiptUpdatedAt": "2026-10-09T00:23:23.186Z",
+      "expectedKind": "article",
+      "expectedSourceUrl": "https://news.mit.edu/2026/game-playing-ai-stratego-new-champ-0930"
+    },
+    {
+      "id": "pubg-ally-paper-20260924",
+      "publishedAt": "2026-10-09T00:23:37.645Z",
+      "expectedCreatedAt": "2026-10-09T00:23:37.645Z",
+      "receiptUpdatedAt": "2026-10-09T00:23:37.645Z",
+      "expectedKind": "article",
+      "expectedSourceUrl": "https://arxiv.org/abs/2609.29837"
+    },
+    {
+      "id": "nvidia-ace-update-20260922",
+      "publishedAt": "2026-10-09T00:23:56.628Z",
+      "expectedCreatedAt": "2026-10-09T00:23:56.628Z",
+      "receiptUpdatedAt": "2026-10-09T00:23:56.628Z",
+      "expectedKind": "article",
+      "expectedSourceUrl": "https://developer.nvidia.com/blog/whats-new-for-game-developers-dlss-5-with-3d-guided-neural-rendering-nvidia-ace-updates-and-new-rtx-kit-capabilities/"
+    },
+    {
+      "id": "garena-ai-challenge-20260918",
+      "publishedAt": "2026-10-09T00:24:10.794Z",
+      "expectedCreatedAt": "2026-10-09T00:24:10.794Z",
+      "receiptUpdatedAt": "2026-10-09T00:24:10.794Z",
+      "expectedKind": "article",
+      "expectedSourceUrl": "https://www.garena.sg/news/B5ABCR"
+    },
+    {
+      "id": "dimensional-double-shift-ai-20260914",
+      "publishedAt": "2026-10-09T00:24:31.684Z",
+      "expectedCreatedAt": "2026-10-09T00:24:31.684Z",
+      "receiptUpdatedAt": "2026-10-09T00:24:31.684Z",
+      "expectedKind": "article",
+      "expectedSourceUrl": "https://www.globenewswire.com/news-release/2026/09/14/3361481/0/en/artificial-agency-integrates-agentic-behavior-into-first-commercial-video-game-in-dimensional-double-shift-s-new-single-player-mode.html"
+    },
+    {
+      "id": "roblox-rdc-build-20260911",
+      "publishedAt": "2026-10-09T00:24:44.676Z",
+      "expectedCreatedAt": "2026-10-09T00:24:44.676Z",
+      "receiptUpdatedAt": "2026-10-09T00:24:44.676Z",
+      "expectedKind": "article",
+      "expectedSourceUrl": "https://about.roblox.com/newsroom/2026/09/rdc-2026-the-world-needs-more-play"
+    },
+    {
+      "id": "soonlab-astra-20260911",
+      "publishedAt": "2026-10-09T00:24:57.176Z",
+      "expectedCreatedAt": "2026-10-09T00:24:57.176Z",
+      "receiptUpdatedAt": "2026-10-09T00:24:57.176Z",
+      "expectedKind": "article",
+      "expectedSourceUrl": "https://www.globenewswire.com/de/news-release/2026/09/11/3360392/0/en/soonlab-integrates-gpt-6-astra-into-soonlab-2-0-bringing-advanced-ai-reasoning-to-playable-game-creation.html"
+    },
+    {
+      "id": "playspawn-gamescom-report-20260908",
+      "publishedAt": "2026-10-09T00:25:17.032Z",
+      "expectedCreatedAt": "2026-10-09T00:25:17.032Z",
+      "receiptUpdatedAt": "2026-10-09T00:25:17.032Z",
+      "expectedKind": "article",
+      "expectedSourceUrl": "https://www.tngtech.com/en/about-us/news/from-prompt-to-game-at-gamescom-2026/"
+    }
+  ]
+}

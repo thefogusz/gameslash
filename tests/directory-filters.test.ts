@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { filterDirectory, gameMakingTools, rankedGameCategories, toolWorkflowCategories } from "../src/lib/directory-filters";
+import { filterDirectory, gameMakingTools, rankedGameCategories, toolWorkflowCategories, visibleGameCategories } from "../src/lib/directory-filters";
 import { seedDatabase } from "../src/lib/seed";
 
 const entries = seedDatabase().entries;
@@ -57,4 +57,55 @@ test("directory sorts dates and featured games independently of source order", (
   for (const [sort, expected] of [["new", "b"], ["oldest", "a"], ["updated", "a"], ["az", "a"], ["curated", "b"]]) {
     assert.equal(filterDirectory(sample, { ...defaults, sort }, ["b"])[0].id, expected);
   }
+});
+
+
+test("platform discovery uses explicit tags only and composes with existing filters", () => {
+  const sample = [
+    { ...entries[0], id: "web-only", tags: ["เว็บ", "RPG"], category: "RPG" },
+    { ...entries[0], id: "android", tags: ["Android"], category: "ปริศนา" },
+    { ...entries[0], id: "ios-web", tags: ["iOS", "เว็บ"], category: "RPG" },
+    { ...entries[0], id: "desktop", tags: ["PC", "macOS", "Linux"] },
+    { ...entries[0], id: "unknown", tags: [], url: "https://example.com/play" },
+  ];
+  const before = JSON.stringify(sample);
+  const ids = (platform: string) => filterDirectory(sample, { ...defaults, platform }).map(e => e.id);
+  assert.deepEqual(ids("web"), ["web-only", "ios-web"]);
+  assert.deepEqual(ids("mobile"), ["android", "ios-web"]);
+  assert.deepEqual(ids("pc"), ["desktop"]);
+  assert.equal(ids("").length, 5); assert.equal(ids("invalid").length, 5);
+  assert.deepEqual(filterDirectory(sample, { ...defaults, platform: "mobile", category: "RPG", tag: "เว็บ" }).map(e => e.id), ["ios-web"]);
+  assert.equal(JSON.stringify(sample), before);
+  assert.equal(filterDirectory([{ ...sample[0], kind: "article" }], { ...defaults, kind: "article", platform: "pc" }).length, 1);
+});
+test("public game genres omit empty/news-only categories without modifying taxonomy", () => {
+  const categories = ["RPG", "การศึกษา", "ข่าวเกม AI", "ปาร์ตี้"];
+  const sample = [ { ...entries[0], category: "การศึกษา" }, { ...entries[0], kind: "article" as const, category: "ข่าวเกม AI" } ];
+  assert.deepEqual(visibleGameCategories(categories, sample), ["การศึกษา"]);
+  assert.deepEqual(visibleGameCategories(categories, sample, "RPG"), ["RPG", "การศึกษา"]);
+  assert.equal(categories.length, 4);
+});
+
+test("secondary sidebar genres preserve platform, query, tag, sort and likes", async () => {
+  const { gameGenreHref } = await import("../src/lib/directory-filters");
+  const href = gameGenreHref("RPG", "platform=mobile&q=cat&tag=iOS&sort=new&liked=1&category=Puzzle");
+  const params = new URL(href, "https://gameslash.vercel.app").searchParams;
+  assert.deepEqual(Object.fromEntries(params), { platform: "mobile", q: "cat", tag: "iOS", sort: "new", liked: "1", category: "RPG" });
+  assert.equal(params.getAll("category").length, 1);
+  assert.equal(gameGenreHref("RPG"), "/games?category=RPG");
+  assert.equal(gameGenreHref("", "platform=web&category=RPG"), "/games?platform=web");
+  const sample = [
+    { ...entries[0], id: "mobile-rpg", title: "Cat RPG", category: "RPG", tags: ["iOS"] },
+    { ...entries[0], id: "web-rpg", title: "Cat RPG", category: "RPG", tags: ["เว็บ"] },
+  ];
+  assert.deepEqual(filterDirectory(sample, { ...defaults, platform: params.get("platform")!, category: params.get("category")!, query: params.get("q")!, tag: params.get("tag")!, sort: params.get("sort")! }).map(e => e.id), ["mobile-rpg"]);
+});
+
+test("explicit mobile-browser support matches Web and Mobile without inventing OS or PC", async () => {
+  const { gamePlatformBadges } = await import("../src/lib/game-platforms");
+  const game = { ...entries[0], tags: ["เว็บบนมือถือ"] };
+  for (const platform of ["web", "mobile"]) assert.equal(filterDirectory([game], { ...defaults, platform }).length, 1);
+  assert.equal(filterDirectory([game], { ...defaults, platform: "pc" }).length, 0);
+  assert.deepEqual(gamePlatformBadges(game.tags).map(g => g.value), ["web", "mobile"]);
+  assert.deepEqual(game.tags, ["เว็บบนมือถือ"]);
 });
