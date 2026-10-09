@@ -5,16 +5,33 @@ import { ConflictError } from "./postgres-store";
 export function d1Ready() {
   return !!(process.env.GAMESLASH_D1_URL && process.env.GAMESLASH_D1_TOKEN);
 }
+export class D1RequestError extends Error {
+  constructor(public status: number, public outcomeUnknown = false, public retryAfterSeconds = 5) {
+    super(`D1 catalog request failed (${status})`);
+    this.name = "D1RequestError";
+  }
+}
 async function requestD1(method: "GET" | "PUT", body?: unknown, path = "/catalog") {
   if (!d1Ready()) throw new Error("D1 URL and token are required");
-  const response = await fetch(new URL(path, process.env.GAMESLASH_D1_URL), {
-    method, cache: "no-store", redirect: "error", signal: AbortSignal.timeout(30_000),
-    headers: { Authorization: `Bearer ${process.env.GAMESLASH_D1_TOKEN}`, "Content-Type": "application/json" },
-    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-  });
-  if (response.status === 409) throw new ConflictError("ข้อมูลเปลี่ยนแล้ว กรุณาโหลดข้อมูลล่าสุดก่อนบันทึก");
-  if (!response.ok) throw new Error(`D1 catalog request failed (${response.status})`);
-  return response.json();
+  try {
+    const response = await fetch(new URL(path, process.env.GAMESLASH_D1_URL), {
+      method, cache: "no-store", redirect: "error", signal: AbortSignal.timeout(30_000),
+      headers: { Authorization: `Bearer ${process.env.GAMESLASH_D1_TOKEN}`, "Content-Type": "application/json" },
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    });
+    if (response.status === 409) throw new ConflictError("ข้อมูลเปลี่ยนแล้ว กรุณาโหลดข้อมูลล่าสุดก่อนบันทึก");
+    if (!response.ok) {
+      const retryAfter = response.headers.get("Retry-After");
+      const seconds = retryAfter && /^\d+$/.test(retryAfter) ? Number(retryAfter) :
+        retryAfter ? Math.ceil((Date.parse(retryAfter) - Date.now()) / 1000) : 5;
+      throw new D1RequestError(response.status, method === "PUT" && response.status >= 500,
+        Number.isFinite(seconds) ? Math.max(5, seconds) : 5);
+    }
+    return await response.json();
+  } catch (error) {
+    if (error instanceof ConflictError || error instanceof D1RequestError) throw error;
+    throw new D1RequestError(503, method === "PUT");
+  }
 }
 const snapshotSchema = z.object({ version: z.number().int().nonnegative(), supportsGameLikes: z.boolean().default(false), db: databaseSchema });
 export async function readD1Notifications() {
