@@ -60,4 +60,11 @@ test("D1 migration, concurrent CAS, rollback, ordering and private access", {
   });
   assert.equal(malformed.status, 400);
   assert.deepEqual(await readD1(), changed);
+  const { entries: _entries, gameLikes: _likes, ...legacyState } = changed;
+  const legacyWrite = await fetch(new URL("/catalog", url), {
+    method: "PUT", headers: { Authorization: `Bearer ${process.env.GAMESLASH_D1_TOKEN}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ expectedVersion: version, state: legacyState, changed: [], deleted: [] }),
+  });
+  assert.equal(legacyWrite.status, 200);
+  assert.deepEqual(await readD1(), changed, "An older app must not wipe existing game likes");
 });

@@ -8,8 +8,8 @@ use the existing storage lock/CAS and do not change the editorial revision.
 Deploy the Cloudflare D1 worker from this branch **before** deploying the Next.js
 app when using D1. Its bundled catalog schema must understand `gameLikes`; an
 older worker strips this field. The app rejects likes writes until the worker
-advertises support. Keep older app/worker versions from writing the
-catalog after rollout, because their schemas also strip the new field.
+advertises support. The updated worker preserves likes when an older app omits
+the field. Keep this worker version on rollback: an older worker strips likes.
 
 Existing local favorites import once when that browser returns. Failed imports
 keep the original local data for retry. Clearing browser cookies, changing devices

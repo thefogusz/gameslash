@@ -57,7 +57,8 @@ export default {
         chunks.push(value);
       }
       const body = await new Blob(chunks).text();
-      const parsed = mutationSchema.safeParse(JSON.parse(body));
+      const input = JSON.parse(body);
+      const parsed = mutationSchema.safeParse(input);
       if (!parsed.success) return json({ error: "Invalid catalog mutation" }, 400);
       const { expectedVersion, initialize, state, changed, deleted } = parsed.data;
       const stateJson = JSON.stringify(state);
@@ -89,7 +90,11 @@ export default {
       if (deleted.length) queries.push(env.DB.prepare(
         "DELETE FROM gameslash_entries WHERE id IN (SELECT value FROM json_each(?))",
       ).bind(JSON.stringify(deleted)));
-      queries.push(env.DB.prepare("UPDATE gameslash_state SET version = version + 1, data = ? WHERE id = 1").bind(stateJson));
+      // Older app schemas omit likes; retain them atomically inside the same CAS batch.
+      queries.push(env.DB.prepare(Object.hasOwn(input.state, "gameLikes")
+        ? "UPDATE gameslash_state SET version = version + 1, data = ? WHERE id = 1"
+        : "UPDATE gameslash_state SET version = version + 1, data = json_set(?, '$.gameLikes', json(COALESCE(json_extract(data, '$.gameLikes'), '{}'))) WHERE id = 1"
+      ).bind(stateJson));
       await env.DB.batch(queries);
       return json({ version: expectedVersion + 1 });
     } catch (error) {
