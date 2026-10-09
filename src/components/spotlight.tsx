@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { ArrowLeft, ArrowRight, Pause, Play, Sparkles, TrendingUp, Users } from "lucide-react";
+import { ArrowLeft, ArrowRight, Pause, Play, Sparkles, TrendingUp } from "lucide-react";
 import type { Entry, Layout } from "@/lib/model";
 import { discoveryCollections } from "@/lib/spotlights";
 import { Cover } from "./cover";
@@ -14,8 +14,6 @@ export function Spotlight({ entries, layout }: { entries: Entry[]; layout: Layou
   const groups = [
     ...(manual.length ? manual : [{ id: "auto-curated", title: "คัดสรร", badge: "เกมแนะนำ", entries: games.slice(0, 5) }]),
     { id: "auto-trending", title: "ติดเทรนด์", badge: "ติดเทรนด์ · ทีมงานคัดเลือก", entries: trending?.entries || [] },
-    // ponytail: connect a comparable player-count source before ranking; editorial picks cannot substitute for statistics.
-    { id: "auto-most-played", title: "ผู้เล่นมากที่สุด", badge: "ผู้เล่นมากที่สุด", entries: [] as Entry[] },
     { id: "liked", title: `ถูกใจ${ready ? ` (${liked.length})` : ""}`, badge: "เกมที่คุณถูกใจ", entries: liked.slice(0,5) },
   ];
   const [groupId, setGroupId] = useState("");
@@ -23,12 +21,9 @@ export function Spotlight({ entries, layout }: { entries: Entry[]; layout: Layou
   if (!games.length) return null;
   const note = group.id === "liked" ? "ถูกใจเก็บเฉพาะเบราว์เซอร์นี้ ไม่ต้องสมัครสมาชิก หากล้างข้อมูลเว็บไซต์ รายการนี้จะหายไป"
     : group.id === "auto-trending" ? "เกมที่ทีมงานคัดเลือกสำหรับชุดติดเทรนด์"
-    : group.id === "auto-most-played" ? "อันดับนี้จะใช้ข้อมูลจำนวนผู้เล่นที่มีแหล่งอ้างอิงและช่วงเวลาตรงกัน"
     : /popular|trending|ยอดนิยม|มาแรง|เทรน/i.test(group.title) ? "ชุดเด่นที่ผู้ดูแลคัดเลือก ไม่ใช่อันดับจากยอดไลก์หรือจำนวนผู้เล่น" : "";
   const empty = group.id === "auto-trending"
     ? { title: "กำลังคัดเกมติดเทรนด์", description: "เมื่อทีมงานเพิ่มเกมในชุดนี้ คุณจะเห็นได้ที่นี่", icon: <TrendingUp size={36} className="empty-heart" aria-hidden="true" /> }
-    : group.id === "auto-most-played"
-    ? { title: "ยังไม่มีข้อมูลจำนวนผู้เล่น", description: "จะแสดงอันดับเมื่อมีสถิติที่ตรวจสอบและเปรียบเทียบกันได้", icon: <Users size={36} className="empty-heart" aria-hidden="true" /> }
     : group.id === "liked"
     ? { title: "ยังไม่มีเกมที่ถูกใจ", description: "กดหัวใจบนการ์ดเกม แล้วกลับมาดูได้ที่นี่", icon: <HeartEmpty /> }
     : { title: "ยังไม่มีเกมในชุดนี้", description: "ลองเลือกชุดอื่นหรือค้นหาเกมทั้งหมด", icon: <HeartEmpty /> };

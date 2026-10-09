@@ -23,6 +23,10 @@ test("curated games render directly below the tabs without the removed note", ()
   const db = seedDatabase();
   const markup = renderToStaticMarkup(<GamePreferencesProvider><Spotlight entries={db.entries.map(e => ({ ...e, image: "" }))} layout={db.layout} /></GamePreferencesProvider>);
   assert.match(markup, /spotlight-tabs/);
+  assert.match(markup, /คัดสรร/);
+  assert.match(markup, /ติดเทรนด์/);
+  assert.match(markup, /ถูกใจ/);
+  assert.doesNotMatch(markup, /ผู้เล่นมากที่สุด/);
   assert.doesNotMatch(markup, /spotlight-note|เกมเด่นที่คัดสรรให้ลองค้นพบ/);
 });
 
