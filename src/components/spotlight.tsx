@@ -58,7 +58,7 @@ function Slides({ entries, badge }: { entries: Entry[]; badge: string }) {
     <div className={`spotlight-grid ${entries.length === 1 ? "single" : ""}`}>
       <div className="spotlight-main-wrap">
       <Link href={`/item/${active.id}`} className="feature-tile spotlight-main" key={active.id}>
-        <Cover entry={active} priority /><div className="feature-shade" />
+        <Cover entry={active} priority />
         <span className="feature-badge"><Sparkles size={12} />{badge}</span>
         <div className="feature-copy"><span className="feature-category">{active.category}</span><h2>{active.title}</h2><p>{active.description}</p></div>
         {entries.length > 1 && <span className="spotlight-progress" aria-hidden="true"><span className="spotlight-progress-fill" onAnimationEnd={() => { if (running) setIndex(i => (i + 1) % entries.length); }} /></span>}
@@ -66,7 +66,7 @@ function Slides({ entries, badge }: { entries: Entry[]; badge: string }) {
       <LikeButton id={active.id} title={active.title} compact />
       </div>
       <div className="spotlight-thumbs">{entries.map((entry, i) => i === index ? null : <button key={entry.id} className="feature-tile" aria-label={`แสดง ${entry.title}`} onClick={() => { setIndex(i); setPlaying(false); }}>
-        <Cover entry={entry} /><div className="feature-shade" /><div className="feature-copy"><span className="feature-category">{entry.category}</span><h3>{entry.title}</h3><p>{entry.description}</p></div>
+        <Cover entry={entry} /><div className="feature-copy"><span className="feature-category">{entry.category}</span><h3>{entry.title}</h3><p>{entry.description}</p></div>
       </button>)}</div>
     </div>
     {entries.length > 1 && <div className="spotlight-controls"><span aria-live={playing ? "off" : "polite"}>{index + 1} / {entries.length} · {active.title}</span><div>

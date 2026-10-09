@@ -56,7 +56,6 @@ export function GameCard({ entry }: { entry: Entry }) {
     <div className="game-card">
     <Link href={`/item/${entry.id}`} className="feature-tile game-card-link">
       <Cover entry={entry} />
-      <div className="feature-shade" />
       <div className="feature-copy">
         <span className="feature-category">{entry.category}</span>
         <h3>{entry.title}</h3>

@@ -34,7 +34,7 @@ test("game cards place the description below the title over the image", () => {
   const game = { ...seedDatabase().entries.find(e => e.kind === "game")!, image: "" };
   const markup = renderToStaticMarkup(<GamePreferencesProvider><GameCard entry={game} /></GamePreferencesProvider>);
   assert.match(markup, /feature-tile game-card-link/);
-  assert.match(markup, /feature-shade/);
+  assert.match(markup, /feature-copy/);
   assert.match(markup, /<h3>.*?<\/h3><p>.*?<\/p>/);
   assert.match(markup, /href="\/item\//);
   assert.match(markup, /game-like/);

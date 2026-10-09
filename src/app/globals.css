@@ -343,20 +343,21 @@ a:focus-visible {
   padding: 19%;
   background: #15252a;
 }
-.feature-shade {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(0deg, #080a12 0%, #080a12e8 30%, transparent 85%);
-}
-.feature-main .feature-shade {
-  background: linear-gradient(0deg, #080910e8, transparent 90%);
-}
 .feature-copy {
   position: absolute;
   left: 12px;
   right: 12px;
   bottom: 14px;
   color: #fff;
+  isolation: isolate;
+}
+.feature-copy::before {
+  content: "";
+  position: absolute;
+  inset: -28px -28px -28px;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent, #080a12e8 28px, #080a12);
 }
 .feature-main .feature-copy {
   left: 28px;
@@ -2623,7 +2624,6 @@ textarea {
 .spotlight-main .feature-copy { left:28px; right:28px; bottom:24px; }
 .spotlight-main .feature-copy h2 { font-size:clamp(26px,3vw,38px); line-height:1.3; font-weight:800; margin:10px 0; }
 .spotlight-main .feature-copy p { max-width:540px; font-size:14px; line-height:1.75; color:#e0dfe8; margin-top:10px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
-.spotlight-main .feature-shade { background:linear-gradient(0deg,#080a12 0%,#080a12e8 30%,#080a1230 80%); }
 .spotlight-thumbs { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); grid-auto-rows:1fr; gap:12px; }
 .spotlight-thumbs .feature-tile { display:block; text-align:left; width:100%; }
 .spotlight-thumbs .feature-copy h3 { font-size:16px; line-height:1.2; }
