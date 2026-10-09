@@ -36,15 +36,15 @@ export const metadata: Metadata = {
     siteName: "GameSlash",
     locale: "th_TH",
     images: [{
-      url: "/images/gameslash-social-v3.png",
-      width: 1730,
-      height: 909,
+      url: "/images/gameslash-social-v4.png",
+      width: 1734,
+      height: 907,
       alt: "GameSlash รวมเกมที่สร้างด้วย AI — RPG ผจญภัย ปริศนา และจำลอง",
     }],
   },
   twitter: {
     card: "summary_large_image",
-    images: ["/images/gameslash-social-v3.png"],
+    images: ["/images/gameslash-social-v4.png"],
   },
 };
 export default function RootLayout({

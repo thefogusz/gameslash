@@ -17,6 +17,25 @@ test("canonical origin accepts future domains and rejects misleading URL configu
   const metadata = pageMetadata("/games", "AI Games", "รวมเกม AI");
   assert.equal(metadata.alternates?.canonical, `${siteOrigin()}/games`);
 });
+test("social metadata uses the selected cover and preserves entry-specific images", () => {
+  const originalOrigin = process.env.GAMESLASH_SITE_URL;
+  delete process.env.GAMESLASH_SITE_URL;
+  try {
+    assert.equal(siteOrigin(), "https://gameslash.app");
+    const metadata = pageMetadata("/", "GameSlash", seoDescription);
+    assert.equal(metadata.alternates?.canonical, "https://gameslash.app/");
+    for (const social of [metadata.openGraph, metadata.twitter]) {
+      assert.match(JSON.stringify(social?.images), /https:\/\/gameslash\.app\/images\/gameslash-social-v4\.png/);
+    }
+    const entry = pageMetadata("/item/game", "Game", "Description", "https://creator.example/cover.png");
+    for (const social of [entry.openGraph, entry.twitter]) {
+      assert.match(JSON.stringify(social?.images), /https:\/\/creator\.example\/cover\.png/);
+    }
+  } finally {
+    if (originalOrigin === undefined) delete process.env.GAMESLASH_SITE_URL;
+    else process.env.GAMESLASH_SITE_URL = originalOrigin;
+  }
+});
 test("sitemap and collection schema include published entries only", () => {
   const db = seedDatabase();
   db.entries[0].status = "draft";

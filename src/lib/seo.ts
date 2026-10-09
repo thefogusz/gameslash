@@ -1,7 +1,7 @@
 import type { Metadata, MetadataRoute } from "next";
 import type { Entry } from "./model";
 
-export function siteOrigin(value = process.env.GAMESLASH_SITE_URL || "https://gameslash.vercel.app") {
+export function siteOrigin(value = process.env.GAMESLASH_SITE_URL || "https://gameslash.app") {
   const url = new URL(value);
   if (url.protocol !== "https:" || url.username || url.password || url.pathname !== "/" || url.search || url.hash) {
     throw new Error("GAMESLASH_SITE_URL must be an HTTPS origin without a path, credentials, query or fragment");
@@ -22,8 +22,8 @@ export const sectionSeo: Record<string, { title: string; description: string; ki
 export function pageMetadata(path: string, title: string, description: string, image?: string): Metadata {
   return {
     title, description, alternates: { canonical: absoluteUrl(path) },
-    openGraph: { title, description, url: absoluteUrl(path), type: "website", siteName: "GameSlash", locale: "th_TH", images: [{ url: absoluteUrl(image || "/images/gameslash-social-v3.png"), alt: title }] },
-    twitter: { card: "summary_large_image", title, description, images: [absoluteUrl(image || "/images/gameslash-social-v3.png")] },
+    openGraph: { title, description, url: absoluteUrl(path), type: "website", siteName: "GameSlash", locale: "th_TH", images: [{ url: absoluteUrl(image || "/images/gameslash-social-v4.png"), alt: title }] },
+    twitter: { card: "summary_large_image", title, description, images: [absoluteUrl(image || "/images/gameslash-social-v4.png")] },
   };
 }
 // Next.js recommends escaping '<' so submitted content cannot close the JSON-LD script.
