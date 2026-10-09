@@ -257,7 +257,7 @@ function Detail({ entry }: { entry: Entry }) {
       </Link>
       {entry.kind === "game" && (
         <div className="detail-cover">
-          <Cover entry={entry} priority />
+          <Cover entry={entry} priority sizes="(max-width: 900px) 100vw, 850px" />
         </div>
       )}
       <div className="detail-heading">
@@ -287,7 +287,7 @@ function Detail({ entry }: { entry: Entry }) {
           <span key={t}>{t}</span>
         ))}
       </div>}
-      {entry.kind === "article" && entry.image && <div className="detail-cover"><Cover entry={entry} priority /></div>}
+      {entry.kind === "article" && entry.image && <div className="detail-cover"><Cover entry={entry} priority sizes="(max-width: 800px) 100vw, 760px" /></div>}
       <ArticleContent content={guideContent} body={entry.body}/>
       {entry.kind === "game" && (
         <p className="game-source-note">
