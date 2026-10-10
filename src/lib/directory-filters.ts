@@ -1,5 +1,6 @@
 import type { Entry } from "./model";
 import { matchesGamePlatform } from "./game-platforms";
+import { newsPublicationAt } from "./news-publication";
 
 export function rankedGameCategories(categories: string[], entries: Entry[]) {
   return categories.map((category, index) => ({
@@ -34,6 +35,7 @@ export function filterDirectory(entries: Entry[], filters: {
     && (tools || !filters.tag || e.tags.includes(filters.tag))
     && (!query || `${e.title} ${e.description} ${e.author} ${e.tags.join(" ")} ${e.category}`.toLocaleLowerCase().includes(query)))
     .sort((a, b) => {
+      if (filters.kind === "article") return Date.parse(newsPublicationAt(b) || b.createdAt) - Date.parse(newsPublicationAt(a) || a.createdAt);
       if (tools && filters.sort === "popularity") return (b.popularity?.score ?? 0) - (a.popularity?.score ?? 0);
       if (filters.sort === "az") return a.title.localeCompare(b.title, "th");
       if (filters.sort === "new") return b.createdAt.localeCompare(a.createdAt);

@@ -6,6 +6,20 @@ import { seedDatabase } from "../src/lib/seed";
 const entries = seedDatabase().entries;
 const defaults = { kind: "game" as const, query: "", category: "", tag: "", sort: "curated" };
 
+test("news always sorts by latest publication, falling back to creation, with stable ties", () => {
+  const base = entries.find(e => e.kind === "article")!;
+  const sample = [
+    { ...base, id: "older", title: "A", createdAt: "2026-10-10T00:00:00Z", publishedAt: "2026-10-07T00:00:00Z" },
+    { ...base, id: "newer", title: "Z", createdAt: "2026-10-01T00:00:00Z", publishedAt: "2026-10-09T07:00:00+07:00" },
+    { ...base, id: "tie", createdAt: "2026-10-01T00:00:00Z", publishedAt: "2026-10-09T00:00:00Z" },
+    { ...base, id: "legacy", createdAt: "2026-10-08T00:00:00Z", publishedAt: null },
+  ];
+  for (const sort of ["curated", "new", "az", "oldest"]) {
+    assert.deepEqual(filterDirectory(sample, { ...defaults, kind: "article", sort }).map(e => e.id), ["newer", "tie", "legacy", "older"]);
+  }
+  assert.deepEqual(sample.map(e => e.id), ["older", "newer", "tie", "legacy"]);
+});
+
 test("sidebar ranks game counts, preserves ties and color indices, and keeps empty genres last", () => {
   const categories = [...seedDatabase().layout.categories, "แอ็กชัน"];
   const sample = [

@@ -39,7 +39,7 @@ import { Cover } from "./cover";
 export { Cover } from "./cover";
 import { Spotlight } from "./spotlight";
 import { LikeButton, useGamePreferences } from "./game-preferences";
-const kindLabels = { ...contentKindLabels, article: "ข่าวสร้างเกมด้วย AI" };
+const kindLabels = { ...contentKindLabels, article: "ข่าว AI Game" };
 export type View =
   | "home"
   | "games"
@@ -152,7 +152,7 @@ export function CatalogSection({
   const rail = useRef<HTMLDivElement>(null);
   const railId = useId();
   const [canScroll, setCanScroll] = useState({ left: false, right: false });
-  const items = entries.filter(
+  const items = section.kind === "article" ? filterDirectory(entries, { kind: "article", query: "", category: section.category || "", tag: "", sort: "new" }) : entries.filter(
     (e) =>
       e.kind === section.kind &&
       (!section.category || e.category === section.category),
@@ -373,10 +373,10 @@ export function Directory({
   const { likedIds, ready } = useGamePreferences();
   const likedOnly = params.get("liked") === "1" && view === "games";
   const query = params.get("q") || "";
-  const category = view === "tools" && params.get("category") === "เผยแพร่" ? "" : params.get("category") || "";
+  const category = view === "journal" || (view === "tools" && params.get("category") === "เผยแพร่") ? "" : params.get("category") || "";
   const platform = normalizeGamePlatform(params.get("platform") || "");
-  const tag = view === "tools" ? "" : params.get("tag") || "";
-  const requestedSort = view === "tools" ? (params.get("sort") === "popularity" ? "popularity" : "curated") : params.get("sort") || "curated";
+  const tag = view === "tools" || view === "journal" ? "" : params.get("tag") || "";
+  const requestedSort = view === "journal" ? "new" : view === "tools" ? (params.get("sort") === "popularity" ? "popularity" : "curated") : params.get("sort") || "curated";
   const sort = (view === "tools" && requestedSort === "popularity") || Object.hasOwn(directorySorts, requestedSort) ? requestedSort : "curated";
   function updateFilters(values: Record<string, string>, replace = false) {
     const url = new URL(window.location.href);
@@ -411,7 +411,7 @@ export function Directory({
   const titles = {
     game: ["ค้นพบเกม", "ค้นหาเกมตามชื่อ ผู้สร้าง หรือหมวดหมู่"],
     tool: ["เครื่องมือทำเกม", "เลือกเครื่องมือที่ใช่ ตั้งแต่ไอเดีย เขียนโค้ด สร้างภาพ ไปจนถึงทดสอบเกม"],
-    article: ["ข่าวสร้างเกมด้วย AI", "ข่าวสาร อัปเดต และเทคนิคสำหรับคนสร้างเกมด้วย AI"],
+    article: ["ข่าว AI Game", "ข่าวสาร อัปเดต และเทคนิคสำหรับคนสร้างเกมด้วย AI"],
     post: ["คอมมูนิตี้", "แชร์ผลงาน ถามคำถาม และขอฟีดแบ็ก"],
   };
   function reset() {
@@ -566,7 +566,7 @@ export function Directory({
                 <button type="button" className="tool-star-sort" aria-pressed={sort === "popularity"} title="เรียงตามดาวความนิยมจากมากไปน้อย กดซ้ำเพื่อกลับลำดับเดิม" onClick={() => updateFilters({ sort: sort === "popularity" ? "" : "popularity" })}><Star size={15} aria-hidden="true" />เรียงตามความนิยม</button>
                 <span role="status" aria-live="polite">{results.length} เครื่องมือ</span>
               </div>}
-              {kind !== "tool" && <div className={`directory-filters${compactFilters ? " compact-filters" : ""}${kind === "game" ? " game-directory-filters" : ""}`} role="group" aria-label="ตัวกรองรายการ">
+              {kind !== "tool" && kind !== "article" && <div className={`directory-filters${compactFilters ? " compact-filters" : ""}${kind === "game" ? " game-directory-filters" : ""}`} role="group" aria-label="ตัวกรองรายการ">
                 <FilterSelect label={kind === "game" ? "แนวเกม" : "หมวดหมู่"} compact={compactFilters && kind !== "game"} value={category}
                   options={[{ value: "", label: `${kind === "game" ? "ทุกแนวเกม" : "ทุกหมวดหมู่"} (${entries.length})` }, ...categories.map(c => ({ value: c, label: `${c} (${entries.filter(e => e.category === c).length})` }))]}
                   onChange={category => updateFilters({ category })} />
@@ -578,7 +578,7 @@ export function Directory({
                   onChange={sort => updateFilters({ sort: sort === "curated" ? "" : sort })} />
                 {(!compactFilters || filtered) && <button className="button secondary filter-reset" onClick={reset} disabled={!filtered}><X size={16} />ล้างตัวกรอง</button>}
               </div>}
-              {kind !== "tool" && <p className="result-count" role="status" aria-live="polite">
+              {kind !== "tool" && kind !== "article" && <p className="result-count" role="status" aria-live="polite">
                 พบ {results.length} จาก {entries.length} {kindLabels[kind]}
               </p>}
               {likedOnly && !ready ? <p role="status">กำลังอ่านรายการที่ถูกใจ…</p> : !results.length ? (

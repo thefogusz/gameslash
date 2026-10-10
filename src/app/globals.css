@@ -890,6 +890,26 @@ header.topbar.tools-topbar .topbar-end { grid-column: 2; grid-row: 1; }
 .entries-article.template-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
+.entries-article.browse-grid {
+  gap: 28px;
+}
+.browse-grid .article-card {
+  grid-template-columns: minmax(140px, 32%) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+}
+.browse-grid .article-cover { aspect-ratio: 4 / 3; }
+.browse-grid .article-card h3 { font-size: 22px; line-height: 1.6; }
+.browse-grid .article-card p { font-size: 15px; }
+@media (max-width: 600px) {
+  .browse-grid .article-card { grid-template-columns: minmax(0, 1fr); gap: 16px; padding: 16px; }
+  .browse-grid .article-cover { aspect-ratio: 16 / 9; }
+  .browse-grid .article-card h3 { font-size: 20px; }
+}
 .entries-article.template-shelf {
   grid-auto-columns: 45%;
 }
