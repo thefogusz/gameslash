@@ -7,7 +7,7 @@ import { discoveryCollections } from "@/lib/spotlights";
 import { Cover } from "./cover";
 import { LikeButton, useGamePreferences } from "./game-preferences";
 export function Spotlight({ entries, layout }: { entries: Entry[]; layout: Layout }) {
-  const { likedIds, ready, error } = useGamePreferences();
+  const { likedIds, ready } = useGamePreferences();
   const games = entries.filter(e => e.kind === "game" && e.status === "published");
   const { manual, trending } = discoveryCollections(entries, layout);
   const liked = games.filter(e => likedIds.includes(e.id));
@@ -30,7 +30,6 @@ export function Spotlight({ entries, layout }: { entries: Entry[]; layout: Layou
   return <section className="spotlight" aria-label="ชุดเกมเด่น">
     <div className="spotlight-tabs" aria-label="เลือกชุดเกมเด่น">{groups.map(g => <button key={g.id} aria-pressed={g.id === group.id} onClick={() => setGroupId(g.id)}>{g.title}</button>)}</div>
     {note && <div className="spotlight-note"><p>{note}</p>{group.id === "liked" && liked.length > 0 && <Link href="/games?liked=1">ดูถูกใจทั้งหมด ({liked.length})</Link>}</div>}
-    {error && <p className="form-error" role="alert">{error}</p>}
     {group.entries.length > 0 ? <Slides key={`${group.id}:${group.entries.map(e => e.id).join()}`} entries={group.entries} badge={group.badge} />
       : <div className="spotlight-empty">{empty.icon}<h2>{empty.title}</h2><p>{empty.description}</p><Link className="button" href="/games">ค้นหาเกม</Link></div>}
   </section>;
