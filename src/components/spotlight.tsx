@@ -12,8 +12,8 @@ export function Spotlight({ entries, layout }: { entries: Entry[]; layout: Layou
   const { manual, trending } = discoveryCollections(entries, layout);
   const liked = games.filter(e => likedIds.includes(e.id));
   const groups = [
-    ...(manual.length ? manual : [{ id: "auto-curated", title: "คัดสรร", badge: "เกมแนะนำ", entries: games.slice(0, 5) }]),
-    { id: "auto-trending", title: "ติดเทรนด์", badge: "ติดเทรนด์ · ทีมงานคัดเลือก", entries: trending?.entries || [] },
+    ...(manual.length ? manual : [{ id: "auto-curated", title: "คัดสรร", badge: "ทีมงานคัดเลือก", entries: games.slice(0, 5) }]),
+    { id: "auto-trending", title: "ติดเทรนด์", badge: "ความนิยมจากชุมชน", entries: trending?.entries || [] },
     { id: "liked", title: `ถูกใจ${ready ? ` (${liked.length})` : ""}`, badge: "เกมที่คุณถูกใจ", entries: liked.slice(0,5) },
   ];
   const [groupId, setGroupId] = useState("");
