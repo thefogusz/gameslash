@@ -24,6 +24,12 @@ export const articleDocumentSchema = z.object({ type:z.literal("doc"), content:z
   z.object({ type:z.literal("horizontalRule") }),
 ])).max(200) }).refine(doc => JSON.stringify(doc).length <= 100000, "บทความยาวเกินไป (สูงสุด 100,000 ตัวอักษรรวมรูปแบบ)");
 export type ArticleDocument = z.infer<typeof articleDocumentSchema>;
+export function firstArticleImage(content?: ArticleDocument) {
+  return content?.content.find(node => node.type === "image")?.attrs;
+}
+export function entryCover(entry: { kind: string; content?: ArticleDocument; image: string; imageAlt?: string }) {
+  return (entry.kind === "article" && firstArticleImage(entry.content)) || { src: entry.image, alt: entry.imageAlt || "" };
+}
 export function textDocument(body: string): ArticleDocument {
   return { type:"doc", content:body.split(/\n\s*\n/).map(text => ({ type:"paragraph", ...(text ? { content:[{ type:"text", text }] } : {}) })) };
 }

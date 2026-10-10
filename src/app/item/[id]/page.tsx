@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { entryCover } from "@/lib/article";
 import { Directory } from "@/components/directory";
 import { publicData } from "@/lib/model";
 import { readDatabase } from "@/lib/store";
@@ -15,7 +16,7 @@ export async function generateMetadata({
     (e) => e.id === id && e.status === "published",
   );
   if (!e) notFound();
-  return { ...pageMetadata(`/item/${e.id}`, e.title, e.description, e.image || undefined), keywords: e.tags };
+  return { ...pageMetadata(`/item/${e.id}`, e.title, e.description, entryCover(e).src || undefined), keywords: e.tags };
 }
 export default async function Page({
   params,

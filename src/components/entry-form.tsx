@@ -5,7 +5,7 @@ import { useState } from "react";
 import { GameTagPicker } from "./game-tag-picker";
 import { tagSuggestionsSchema, type TagSuggestion } from "@/lib/game-tags";
 import dynamic from "next/dynamic";
-import { textDocument } from "@/lib/article";
+import { firstArticleImage, textDocument } from "@/lib/article";
 import { ImageField } from "./image-field";
 const ArticleEditor = dynamic(() => import("./article-editor"), { ssr:false });
 import { ArrowUpRight, Check, Loader2, Send } from "lucide-react";
@@ -44,7 +44,12 @@ export function EntryForm({
     [error, setError] = useState("");
   const [image,setImage] = useState(initial?.image || ""), [coverBusy,setCoverBusy] = useState(false), [editorBusy,setEditorBusy] = useState(false);
   const [body,setBody] = useState(initial?.body || "");
-  const [content,setContent] = useState(initial?.content || textDocument(initial?.body || ""));
+  const [content,setContent] = useState(() => {
+    const doc = initial?.content || textDocument(initial?.body || "");
+    return initial?.kind === "article" && initial.image && !firstArticleImage(doc)
+      ? { ...doc, content: [{ type: "image" as const, attrs: { src: initial.image, alt: initial.imageAlt || initial.title || "" } }, ...doc.content] }
+      : doc;
+  });
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
@@ -58,8 +63,8 @@ export function EntryForm({
       category: data.get("category"),
       url: data.get("url") || "",
       sourceUrl: data.get("sourceUrl") || "",
-      image,
-      imageAlt: data.get("imageAlt") || "",
+      image: kind === "article" ? "" : image,
+      imageAlt: kind === "article" ? "" : data.get("imageAlt") || "",
       body,
       popularity: kind === "tool" && admin && popularityScore ? {
         score: Number(popularityScore), reason: data.get("popularityReason"),
@@ -198,8 +203,10 @@ export function EntryForm({
           />
         </label>
       </div>
-      {admin ? <ImageField label="ภาพปก" value={image} onChange={url=>{setImage(url);onDirty?.();}} onBusy={setCoverBusy}/> : <label>ลิงก์ภาพปก<input value={image} onChange={e=>setImage(e.target.value)} maxLength={2000} placeholder="https://…/cover.jpg"/></label>}
+      {kind !== "article" && <>{admin ? <ImageField label="ภาพปก" value={image} onChange={url=>{setImage(url);onDirty?.();}} onBusy={setCoverBusy}/> : <label>ลิงก์ภาพปก<input value={image} onChange={e=>setImage(e.target.value)} maxLength={2000} placeholder="https://…/cover.jpg"/></label>}
       <label>คำอธิบายภาพปก<input name="imageAlt" defaultValue={initial?.imageAlt || ""} maxLength={300} placeholder="อธิบายสิ่งที่เห็นในภาพ"/></label>
+      </>}
+      {kind === "article" && <p className="field-hint">ภาพแรกในบทความจะใช้แสดงในการ์ดข่าวและเมื่อแชร์ลิงก์ ไม่ต้องใส่ภาพปกแยก</p>}
       {kind === "article" ? <section><h3>เนื้อหาบทความ</h3><ArticleEditor initial={content} onChange={(doc,text)=>{setContent(doc);setBody(text.slice(0,20000));onDirty?.();}} onBusy={setEditorBusy}/></section> : <label>รายละเอียดเพิ่มเติม<textarea name="body" maxLength={20000} rows={kind === "post" ? 8 : 4} value={body} onChange={e=>setBody(e.target.value)} placeholder="วิธีเล่น แพลตฟอร์ม หรือสิ่งที่ควรรู้"/></label>}
       {admin && kind === "tool" && <fieldset className="popularity-editor">
         <legend>ดาวความนิยมของเครื่องมือ</legend>

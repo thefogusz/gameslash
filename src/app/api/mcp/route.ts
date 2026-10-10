@@ -83,7 +83,7 @@ export async function POST(request: Request) {
         editorialScope,
         editorialGuides: editorialSkills.filter(skill => ["image-research", "thai-editorial", "draft-workflow"].includes(skill.id)),
         workflow:"Draft agents: upload_image → create_draft/update_draft → get_entry → submit_for_review. Site managers can also use save_site_entry, review_site_entry and save_site_layout for direct publication only when the user authorized that public effect; tool permissions alone are not approval.",
-        cover:"entry.image = uploaded URL or public HTTPS; entry.imageAlt = description",
+        cover:"Articles: the first image node in entry.content supplies the card and share image; do not add a separate cover. Legacy articles without content images fall back to entry.image/imageAlt. Games/tools: entry.image and entry.imageAlt.",
         supported:"paragraph, heading (2/3), image (src, alt, title as caption), bulletList/orderedList (listItem containing paragraphs, one level), blockquote (paragraphs), codeBlock, horizontalRule; text with bold/italic/underline/strike/code/link (HTTPS) marks; hardBreak",
         limits:"200 top-level blocks; 100,000 serialized characters; 2 MiB image input; PNG/JPEG/WebP only. Image URLs are public, including drafts. No raw HTML, SVG, scripts, base64 images in content, or nested lists.",
         example:{type:"doc",content:[{type:"heading",attrs:{level:2},content:[{type:"text",text:"ตัวอย่างฉาก"}]},{type:"paragraph",content:[{type:"text",text:"เปรียบเทียบก่อนและหลังปรับแสง"}]},{type:"image",attrs:{src:"https://example.com/scene.webp",alt:"ฉากหลังปรับแสง",title:"ภาพตัวอย่างและเครดิตผู้สร้าง"}}]},

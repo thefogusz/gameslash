@@ -1,5 +1,6 @@
 import type { Metadata, MetadataRoute } from "next";
 import type { Entry } from "./model";
+import { entryCover } from "./article";
 
 export function siteOrigin(value = process.env.GAMESLASH_SITE_URL || "https://gameslash.app") {
   const url = new URL(value);
@@ -34,10 +35,11 @@ export function collectionSchema(path: string, name: string, entries: Entry[]) {
 export function entrySchema(entry: Entry) {
   if (entry.status !== "published") throw new Error("Only published entries may appear in structured data");
   const url = absoluteUrl(`/item/${entry.id}`);
+  const image = entryCover(entry).src;
   return { "@context": "https://schema.org", "@graph": [
     { "@type": "WebPage", "@id": url, url, name: entry.title, description: entry.description, inLanguage: "th", isPartOf: { "@id": absoluteUrl("/#website") }, mainEntity: { "@id": `${url}#entity` }, breadcrumb: { "@id": `${url}#breadcrumb` } },
     { "@type": "BreadcrumbList", "@id": `${url}#breadcrumb`, itemListElement: [{ "@type": "ListItem", position: 1, name: "GameSlash", item: absoluteUrl("/") }, { "@type": "ListItem", position: 2, name: { game: "เกมที่สร้างด้วย AI", tool: "เครื่องมือสร้างเกม", article: "ข่าวสร้างเกมด้วย AI", post: "คอมมูนิตี้" }[entry.kind], item: absoluteUrl(`/${{ game: "games", tool: "tools", article: "journal", post: "community" }[entry.kind]}`) }, { "@type": "ListItem", position: 3, name: entry.title, item: url }] },
-    { "@type": { game: "VideoGame", tool: "SoftwareApplication", article: "Article", post: "DiscussionForumPosting" }[entry.kind], "@id": `${url}#entity`, name: entry.title, ...(entry.kind === "article" || entry.kind === "post" ? { headline: entry.title } : {}), description: entry.description, url, mainEntityOfPage: { "@id": url }, ...(entry.image ? { image: absoluteUrl(entry.image) } : {}), ...(entry.url ? { sameAs: entry.url } : {}), keywords: entry.tags.join(", "), ...(entry.kind === "game" ? { genre: entry.category } : {}), ...(entry.kind === "tool" ? { applicationCategory: "DeveloperApplication" } : {}), dateModified: entry.updatedAt },
+    { "@type": { game: "VideoGame", tool: "SoftwareApplication", article: "Article", post: "DiscussionForumPosting" }[entry.kind], "@id": `${url}#entity`, name: entry.title, ...(entry.kind === "article" || entry.kind === "post" ? { headline: entry.title } : {}), description: entry.description, url, mainEntityOfPage: { "@id": url }, ...(image ? { image: absoluteUrl(image) } : {}), ...(entry.url ? { sameAs: entry.url } : {}), keywords: entry.tags.join(", "), ...(entry.kind === "game" ? { genre: entry.category } : {}), ...(entry.kind === "tool" ? { applicationCategory: "DeveloperApplication" } : {}), dateModified: entry.updatedAt },
   ] };
 }
 export function sitemapEntries(entries: Entry[]): MetadataRoute.Sitemap {

@@ -1,5 +1,6 @@
 "use client";
 import { Feedback } from "./feedback";
+import { firstArticleImage } from "@/lib/article";
 import { ArticleContent, legacyGuideDocument } from "./article-content";
 import { ToolDirectoryCard } from "./tool-directory-card";
 import { GameMetadata } from "./game-metadata";
@@ -322,7 +323,7 @@ function Detail({ entry }: { entry: Entry }) {
           <span key={t}>{t}</span>
         ))}
       </div>}
-      {entry.kind === "article" && entry.image && <div className="detail-cover"><Cover entry={entry} priority sizes="(max-width: 800px) 100vw, 760px" /></div>}
+      {entry.kind === "article" && entry.image && !firstArticleImage(entry.content) && <div className="detail-cover"><Cover entry={entry} priority sizes="(max-width: 800px) 100vw, 760px" /></div>}
       <ArticleContent content={guideContent} body={entry.body} metadata={entry.kind === "game" && entry.tags.length > 0 ? <GameMetadata tags={entry.tags} /> : undefined}/>
       {entry.kind === "game" && (
         <p className="game-source-note">

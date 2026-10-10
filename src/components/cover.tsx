@@ -3,6 +3,7 @@ import Image from "next/image";
 import { useState } from "react";
 import { Sprout, Gamepad2 } from "lucide-react";
 import type { Entry } from "@/lib/model";
+import { entryCover } from "@/lib/article";
 export function Cover({
   entry,
   priority = false,
@@ -13,13 +14,14 @@ export function Cover({
   sizes?: string;
 }) {
   const [failed, setFailed] = useState(false);
-  if (entry.image && !failed)
+  const image = entryCover(entry);
+  if (image.src && !failed)
     return (
       <Image
         fill
         unoptimized
-        src={entry.image}
-        alt={entry.imageAlt || `ภาพประชาสัมพันธ์ ${entry.title}`}
+        src={image.src}
+        alt={image.alt || `ภาพประชาสัมพันธ์ ${entry.title}`}
         sizes={sizes}
         loading={priority ? "eager" : "lazy"}
         fetchPriority={priority ? "high" : "auto"}
