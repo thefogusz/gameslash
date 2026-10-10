@@ -1,7 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { seedDatabase } from "../src/lib/seed";
-import { readD1, readD1AgentAuth, readD1Likes, readD1Notifications, initializeD1, updateD1, reserveD1Image, D1RequestError } from "../src/lib/d1-store";
+import { readD1, readD1AgentAuth, readD1Likes, readD1Notifications, readD1Tags, initializeD1, updateD1, reserveD1Image, D1RequestError } from "../src/lib/d1-store";
+import { catalogChunkCharacters } from "../src/lib/d1-protocol";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -99,6 +100,53 @@ test("D1 migration, concurrent CAS, rollback, ordering and private access", {
   });
   assert.ok(Buffer.byteLength(JSON.stringify(large)) > 1_800_000);
   assert.deepEqual(await readD1(), large, "Large catalogs must retain split-row reads rather than exceed D1's single-value limit");
+});
+
+test("bounded catalog chunks reconstruct Unicode and restart when the storage version changes", {
+  skip: !process.env.GAMESLASH_TEST_D1_URL,
+}, async () => {
+  const url = new URL(process.env.GAMESLASH_TEST_D1_URL!);
+  assert.ok(["127.0.0.1", "localhost"].includes(url.hostname));
+  process.env.GAMESLASH_D1_URL = url.origin;
+  process.env.GAMESLASH_D1_TOKEN = process.env.GAMESLASH_TEST_D1_TOKEN;
+  const db = await updateD1(db => {
+    db.entries = Array.from({ length: 50 }, (_, i) => ({ ...db.entries[0], id: `unicode-${i}`, body: 'ก😀\\"\n'.repeat(1000) }));
+  });
+  const originalFetch = globalThis.fetch;
+  let maxBytes = 0, chunks = 0, manifests = 0, changed = false;
+  try {
+    globalThis.fetch = async (target, init) => {
+      const requestUrl = new URL(String(target));
+      const response = await originalFetch(target, init);
+      if (requestUrl.searchParams.get("format") === "chunks") manifests++;
+      if (requestUrl.pathname === "/catalog-chunk" && response.ok) {
+        const text = await response.clone().text();
+        maxBytes = Math.max(maxBytes, Buffer.byteLength(text)); chunks++;
+        assert.ok(Buffer.byteLength(text) <= catalogChunkCharacters * 4);
+        if (!changed) {
+          changed = true;
+          await updateD1(current => { current.layout.tagline = "Changed during chunk read"; });
+        }
+      }
+      return response;
+    };
+    const read = await readD1();
+    assert.equal(read.layout.tagline, "Changed during chunk read");
+    assert.deepEqual(read.entries, db.entries);
+    assert.ok(manifests >= 3, "A conflicting read restarts from fresh metadata");
+    assert.ok(chunks > 10);
+    assert.deepEqual(await readD1Tags(), db.customTags);
+    assert.deepEqual((await readD1("unicode-1")).entries, [db.entries[1]]);
+    assert.deepEqual((await readD1("missing-entry")).entries, []);
+  } finally { globalThis.fetch = originalFetch; }
+  const headers = { Authorization: `Bearer ${process.env.GAMESLASH_D1_TOKEN}` };
+  const manifest = await (await originalFetch(new URL("/catalog?format=chunks", url), { headers })).json();
+  assert.equal((await originalFetch(new URL(`/catalog-chunk?part=state&offset=0&version=${manifest.version - 1}`, url), { headers })).status, 409);
+  for (const query of ["part=unknown&offset=0&version=1", "part=state&offset=1&version=1", "part=state&offset=0&version=oops", "part=entries&offset=0&version=1&entryId=INVALID"])
+    assert.equal((await originalFetch(new URL(`/catalog-chunk?${query}`, url), { headers })).status, 400);
+  assert.equal((await originalFetch(new URL("/catalog-chunk?part=state&offset=0&version=1", url))).status, 401);
+  assert.equal((await originalFetch(new URL("/tags", url))).status, 401);
+  console.log(JSON.stringify({ isolatedChunkRead: true, maxChunkBytes: maxBytes, chunks, manifests }));
 });
 
 test("D1 image reservations survive lost replies and storage failures without double charging", {

@@ -1,8 +1,7 @@
 import { notFound } from "next/navigation";
 import { entryCover } from "@/lib/article";
 import { Directory } from "@/components/directory";
-import { publicData } from "@/lib/model";
-import { readDatabase } from "@/lib/store";
+import { readPublicCatalog } from "@/lib/public-catalog";
 import { isAdmin } from "@/lib/auth";
 import { entrySchema, jsonLd, pageMetadata } from "@/lib/seo";
 export const dynamic = "force-dynamic";
@@ -12,7 +11,7 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const e = (await readDatabase()).entries.find(
+  const e = (await readPublicCatalog()).entries.find(
     (e) => e.id === id && e.status === "published",
   );
   if (!e) notFound();
@@ -24,8 +23,7 @@ export default async function Page({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [db, admin] = await Promise.all([readDatabase(), isAdmin()]);
-  const catalog = publicData(db);
+  const [catalog, admin] = await Promise.all([readPublicCatalog(), isAdmin()]);
   const item = catalog.entries.find((e) => e.id === id);
   if (!item) notFound();
   return (

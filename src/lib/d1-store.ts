@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { databaseSchema, entrySchema, type Database } from "./model";
 import { ConflictError } from "./postgres-store";
+import { catalogChunkCharacters } from "./d1-protocol";
 
 export function d1Ready() {
   return !!(process.env.GAMESLASH_D1_URL && process.env.GAMESLASH_D1_TOKEN);
@@ -14,7 +15,7 @@ export class D1RequestError extends Error {
 const quotaSchema = z.object({ code: z.literal("D1_QUOTA_EXHAUSTED"), resetAt: z.iso.datetime() });
 // shortcut: quota suppression is per server instance; use a shared gate if cold-instance retries become significant.
 let quota: { url: string; reset: number } | undefined;
-async function requestD1(method: "GET" | "PUT", body?: unknown, path = "/catalog") {
+async function requestD1(method: "GET" | "PUT", body?: unknown, path = "/catalog", text = false) {
   if (!d1Ready()) throw new Error("D1 URL and token are required");
   if (quota && quota.url === process.env.GAMESLASH_D1_URL && quota.reset > Date.now())
     throw new D1RequestError(503, false, Math.ceil((quota.reset - Date.now()) / 1000), new Date(quota.reset).toISOString());
@@ -40,13 +41,42 @@ async function requestD1(method: "GET" | "PUT", body?: unknown, path = "/catalog
       throw new D1RequestError(response.status, method === "PUT" && response.status >= 500,
         Number.isFinite(seconds) ? Math.max(5, seconds) : 5);
     }
-    return await response.json();
+    return text ? await response.text() : await response.json();
   } catch (error) {
     if (error instanceof ConflictError || error instanceof D1RequestError) throw error;
     throw new D1RequestError(503, method === "PUT");
   }
 }
 const snapshotSchema = z.object({ version: z.number().int().nonnegative(), supportsGameLikes: z.boolean().default(false), supportsFeedback: z.boolean().default(false), supportsStablePositions: z.boolean().default(false), db: databaseSchema });
+const chunkManifestSchema = snapshotSchema.omit({ db: true }).extend({
+  stateCharacters: z.number().int().min(2).max(1_800_000),
+  entryCharacters: z.number().int().min(2).max(1_800_000).nullable(),
+  chunkSize: z.number().int().positive().max(catalogChunkCharacters),
+});
+async function readSnapshotD1(entryId?: string) {
+  const query = new URLSearchParams({ format: "chunks", ...(entryId === undefined ? {} : { entryId }) });
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const response = await requestD1("GET", undefined, `/catalog?${query}`);
+    // Older Workers ignore format and return the existing validated snapshot protocol.
+    if (!Object.hasOwn(response, "stateCharacters")) return response;
+    const manifest = chunkManifestSchema.parse(response);
+    // shortcut: arrays above the snapshot's 1.8 MB bound retain legacy reads; paginate before this becomes frequent.
+    if (manifest.entryCharacters === null) return requestD1("GET", undefined, entryId === undefined ? "/catalog" : `/catalog?${new URLSearchParams({ entryId })}`);
+    const requests: { part: string; offset: number }[] = [];
+    for (const [part, length] of [["state", manifest.stateCharacters], ["entries", manifest.entryCharacters]] as const)
+      for (let offset = 0; offset < length; offset += manifest.chunkSize) requests.push({ part, offset });
+    const chunks: string[] = [];
+    try {
+      for (let i = 0; i < requests.length; i += 4) chunks.push(...await Promise.all(requests.slice(i, i + 4).map(({ part, offset }) => {
+        const params = new URLSearchParams({ version: String(manifest.version), part, offset: String(offset), ...(entryId === undefined ? {} : { entryId }) });
+        return requestD1("GET", undefined, `/catalog-chunk?${params}`, true) as Promise<string>;
+      })));
+      const stateChunks = Math.ceil(manifest.stateCharacters / manifest.chunkSize);
+      return { ...manifest, db: { ...JSON.parse(chunks.slice(0, stateChunks).join("")), entries: JSON.parse(chunks.slice(stateChunks).join("")) } };
+    } catch (error) { if (!(error instanceof ConflictError)) throw error; }
+  }
+  throw new ConflictError("ข้อมูลเปลี่ยนระหว่างอ่าน กรุณาลองใหม่");
+}
 const storedPositionsSchema = z.array(z.object({ id: entrySchema.shape.id, _d1Position: z.number().int().optional() })).max(3000);
 function stablePositions(entries: Database["entries"], previous: Map<string, { position: number }>) {
   const positions = entries.map(entry => previous.get(entry.id)?.position);
@@ -67,8 +97,10 @@ export async function readD1Notifications() {
   })).max(50) }).parse(await requestD1("GET", undefined, "/notifications"));
 }
 export async function readD1(entryId?: string) {
-  const path = entryId === undefined ? "/catalog" : `/catalog?${new URLSearchParams({ entryId })}`;
-  return (snapshotSchema.parse(await requestD1("GET", undefined, path))).db;
+  return snapshotSchema.parse(await readSnapshotD1(entryId)).db;
+}
+export async function readD1Tags() {
+  return databaseSchema.shape.customTags.parse(await requestD1("GET", undefined, "/tags"));
 }
 export async function readD1AgentAuth() {
   return databaseSchema.pick({ agents: true, oauthGrants: true }).parse(await requestD1("GET", undefined, "/agent-auth"));
@@ -100,7 +132,7 @@ export async function initializeD1(input: Database) {
 }
 export async function updateD1(change: (db: Database) => void, revision?: number, bumpRevision = true) {
   for (let attempt = 0; attempt < 4; attempt++) {
-    const response = await requestD1("GET");
+    const response = await readSnapshotD1();
     const { db, version, supportsGameLikes, supportsFeedback, supportsStablePositions } = snapshotSchema.parse(response);
     const positions = supportsStablePositions
       ? new Map(storedPositionsSchema.parse(response.db.entries).map((entry, i) => [entry.id, entry._d1Position ?? i]))

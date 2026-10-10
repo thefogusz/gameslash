@@ -1,6 +1,6 @@
-import { readDatabase } from "@/lib/store";
+import { readPublicCatalog } from "@/lib/public-catalog";
 import { indexable, sitemapEntries } from "@/lib/seo";
 export const dynamic = "force-dynamic";
 export default async function sitemap() {
-  return indexable ? sitemapEntries((await readDatabase()).entries) : [];
+  return indexable ? sitemapEntries((await readPublicCatalog()).entries) : [];
 }

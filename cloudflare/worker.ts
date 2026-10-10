@@ -1,6 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 import { consumeLimit, databaseSchema, entrySchema, type Database } from "../src/lib/model";
+import { catalogChunkCharacters } from "../src/lib/d1-protocol";
 
 const mutationSchema = z.object({
   expectedVersion: z.number().int().nonnegative(),
@@ -81,8 +82,32 @@ export default {
       return json({ error: "Unauthorized" }, 401);
     const url = new URL(request.url);
     const path = url.pathname;
-    if (!["/catalog", "/notifications", "/agent-auth", "/likes", "/image-reservation"].includes(path)) return json({ error: "Not found" }, 404);
+    if (!["/catalog", "/catalog-chunk", "/notifications", "/agent-auth", "/likes", "/image-reservation", "/tags"].includes(path)) return json({ error: "Not found" }, 404);
     try {
+      if (path === "/tags") {
+        if (request.method !== "GET") return json({ error: "Method not allowed" }, 405);
+        const data = await env.DB.prepare("SELECT COALESCE(json_extract(data, '$.customTags'), '[]') AS data FROM gameslash_state WHERE id = 1 AND data != '{}'").first<string>("data");
+        return data === null ? json({ error: "D1 catalog has not been migrated" }, 503)
+          : new Response(data, { headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } });
+      }
+      if (path === "/catalog-chunk") {
+        if (request.method !== "GET") return json({ error: "Method not allowed" }, 405);
+        const version = url.searchParams.get("version"), offset = url.searchParams.get("offset"), part = url.searchParams.get("part");
+        const entryId = url.searchParams.get("entryId");
+        if (!version || !offset || !/^\d{1,15}$/.test(version) || !/^\d{1,7}$/.test(offset)
+          || Number(offset) > 1_800_000 || Number(offset) % catalogChunkCharacters !== 0
+          || !["state", "entries"].includes(part || "") || (entryId !== null && !entrySchema.shape.id.safeParse(entryId).success))
+          return json({ error: "Invalid catalog chunk" }, 400);
+        const expression = part === "state" ? "s.data" : entryId !== null
+          ? "COALESCE((SELECT json_array(json(data)) FROM gameslash_entries WHERE id = ?), '[]')"
+          : "(SELECT entries FROM gameslash_entry_snapshot WHERE id = 1 AND version = s.version)";
+        const params = part === "entries" && entryId !== null ? [entryId] : [];
+        const data = await env.DB.prepare(`SELECT substr(${expression}, ?, ?) AS data FROM gameslash_state s WHERE s.id = 1 AND s.version = ?`)
+          .bind(...params, Number(offset) + 1, catalogChunkCharacters, Number(version)).first<string>("data");
+        if (data === null) return json({ error: "Catalog changed; restart the read" }, 409);
+        if (!data.length) return json({ error: "Invalid chunk offset" }, 400);
+        return new Response(data, { headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" } });
+      }
       if (path === "/image-reservation" && request.method !== "PUT") return json({ error: "Method not allowed" }, 405);
       if (path === "/agent-auth" || path === "/likes") {
         if (request.method !== "GET") return json({ error: "Method not allowed" }, 405);
@@ -115,6 +140,17 @@ export default {
         const entryId = url.searchParams.get("entryId");
         if (entryId !== null && !entrySchema.shape.id.safeParse(entryId).success)
           return json({ error: "Invalid entry ID" }, 400);
+        if (url.searchParams.get("format") === "chunks") {
+          const expression = entryId !== null
+            ? "COALESCE((SELECT json_array(json(data)) FROM gameslash_entries WHERE id = ?), '[]')"
+            : "(SELECT entries FROM gameslash_entry_snapshot WHERE id = 1 AND version = s.version)";
+          const statement = env.DB.prepare(`SELECT version, length(data) AS stateCharacters,
+            length(${expression}) AS entryCharacters FROM gameslash_state s WHERE id = 1 AND data != '{}'`);
+          const row = await (entryId !== null ? statement.bind(entryId) : statement)
+            .first<{ version: number; stateCharacters: number; entryCharacters: number | null }>();
+          return row ? json({ ...row, chunkSize: catalogChunkCharacters, supportsGameLikes: true, supportsFeedback: true, supportsStablePositions: true })
+            : json({ error: "D1 catalog has not been migrated" }, 503);
+        }
         // D1 batches are transactions: state and snapshot always describe the same version.
         let [state, entries] = await env.DB.batch([
           env.DB.prepare("SELECT version, data FROM gameslash_state WHERE id = 1"),

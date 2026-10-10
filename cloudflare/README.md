@@ -169,3 +169,36 @@ tests exercise lost successful responses, simultaneous duplicates, storage failu
 counter resets, daily/hourly rejection, revoked/expired permissions and namespace
 isolation. Continue checking production resource outcomes: these tests cannot prove
 that every catalog mutation fits Workers Free's CPU allowance.
+
+## Catalog CPU follow-up
+
+Real-time logs on 2026-10-10 confirmed `GET /catalog` failing with `exceededCpu`,
+including 10–31 ms CPU time while D1 daily quotas remained available. Sending one
+large D1 result through the Worker exceeded Free's per-request CPU budget even
+without parsing the catalog JSON in application code.
+
+Deploy the Worker before the app; no schema change is required. New readers request
+`/catalog?format=chunks`, then retrieve state/entries in at most 32,768 SQLite
+characters per `/catalog-chunk` request (at most 128 KiB of UTF-8). Four requests
+run concurrently. Every chunk checks the manifest's storage version; a concurrent
+write restarts the whole read, never assembles mixed versions. Validation and JSON
+assembly stay on Vercel. Scoped entry reads use the same protocol. Older Workers
+ignore `format` and retain their original response; old apps still work with the
+new Worker. Arrays beyond the existing 1.8 MB snapshot bound retain legacy fallback
+and must be paginated before that becomes frequent.
+
+Public home/section/detail/sitemap reads share a 30-second Next.js data cache that
+contains only published entries and the public layout. React deduplicates metadata
+and page reads in one render. Warm public reads can survive a temporary storage
+failure; cold reads still need working storage. Auth, management and MCP mutation
+snapshots never use this cache. Public edits may appear after revalidation; do not
+use public cache data to make editing decisions. `/tags` projects only the public
+custom-tag registry rather than reading the catalog.
+
+Isolated D1 checks cover multi-chunk Thai/emoji JSON, concurrent-version changes,
+scoped/missing entries, invalid offsets, authentication and large-array fallback.
+A built Next.js fixture verifies home/games/detail reuse public data during a
+simulated D1 outage, private drafts/feedback never appear, and fresh private reads
+still fail rather than serving stale edit state. Verify the actual production
+CPU outcomes after rollout; local fixtures do not reproduce the Free CPU limit.
+Rollback the app while leaving the backward-compatible Worker deployed.

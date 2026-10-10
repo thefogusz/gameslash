@@ -11,7 +11,7 @@ import path from "node:path";
 import { databaseSchema, type Database } from "./model";
 import { seedDatabase } from "./seed";
 import { databaseClient, readPostgres, updatePostgres, ConflictError } from "./postgres-store";
-import { d1Ready, readD1, readD1AgentAuth, readD1Likes, readD1Notifications, updateD1 } from "./d1-store";
+import { d1Ready, readD1, readD1AgentAuth, readD1Likes, readD1Notifications, readD1Tags, updateD1 } from "./d1-store";
 import { draftNotifications } from "./notifications";
 export { ConflictError } from "./postgres-store";
 
@@ -73,6 +73,9 @@ export async function readGameLikes(visitor: string) {
 export async function readNotifications() {
   return process.env.GAMESLASH_STORAGE === "d1"
     ? readD1Notifications() : draftNotifications((await readDatabase()).entries);
+}
+export async function readCustomTags() {
+  return process.env.GAMESLASH_STORAGE === "d1" ? readD1Tags() : (await readDatabase()).customTags;
 }
 
 // ponytail: one conditional snapshot suits a small editorial catalog; move to Postgres for frequent concurrent writes or >3,000 entries.
