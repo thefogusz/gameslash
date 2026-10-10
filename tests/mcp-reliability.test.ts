@@ -224,7 +224,7 @@ test("Worker catalog preserves JSON, ordering and authorization without re-parsi
   try { response = await worker.fetch(request("fixture"), env); } finally { JSON.parse = originalParse; }
   assert.equal(parses, 0);
   assert.equal(response!.headers.get("Cache-Control"), "no-store");
-  assert.deepEqual(await response!.json(), { version: 7, supportsGameLikes: true, supportsFeedback: true, db });
+  assert.deepEqual(await response!.json(), { version: 7, supportsGameLikes: true, supportsFeedback: true, supportsStablePositions: true, db });
   env.DB.batch = async (queries: { sql: string }[]) => {
     assert.equal(queries.length, 2);
     assert.ok(queries[1].sql.includes("gameslash_entry_snapshot"));
@@ -232,7 +232,7 @@ test("Worker catalog preserves JSON, ordering and authorization without re-parsi
     assert.ok(queries.every(query => !query.sql.includes("FROM gameslash_entries")), "A matching snapshot must not scan the entry table");
     return [{ results: [{ version: 7, data: JSON.stringify(state) }] }, { results: [{ entries: JSON.stringify(entries) }] }];
   };
-  assert.deepEqual(await (await worker.fetch(request("fixture"), env)).json(), { version: 7, supportsGameLikes: true, supportsFeedback: true, db });
+  assert.deepEqual(await (await worker.fetch(request("fixture"), env)).json(), { version: 7, supportsGameLikes: true, supportsFeedback: true, supportsStablePositions: true, db });
   env.DB.batch = async () => [{ results: [{ version: 0, data: "{}" }] }, { results: [] }];
   assert.equal((await worker.fetch(request("fixture"), env)).status, 503);
 });

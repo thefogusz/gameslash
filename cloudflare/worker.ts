@@ -5,8 +5,9 @@ import { databaseSchema, entrySchema } from "../src/lib/model";
 const mutationSchema = z.object({
   expectedVersion: z.number().int().nonnegative(),
   initialize: z.boolean().default(false),
+  stablePositions: z.boolean().default(false),
   state: databaseSchema.omit({ entries: true }),
-  changed: z.array(z.object({ position: z.number().int().nonnegative(), data: entrySchema })).max(3000),
+  changed: z.array(z.object({ position: z.number().int(), data: entrySchema })).max(3000),
   deleted: z.array(entrySchema.shape.id).max(3000),
 }).refine(input => new Set(input.changed.map(row => row.data.id)).size === input.changed.length);
 const json = (value: unknown, status = 200) => Response.json(value, {
@@ -67,14 +68,14 @@ export default {
         if (!data) {
           [state, entries] = await env.DB.batch([
             env.DB.prepare("SELECT version, data FROM gameslash_state WHERE id = 1"),
-            env.DB.prepare("SELECT data FROM gameslash_entries ORDER BY position, id"),
+            env.DB.prepare("SELECT json_set(data, '$._d1Position', position) AS data FROM gameslash_entries ORDER BY position, id"),
           ]);
           data = `[${(entries.results as { data: string }[]).map(row => row.data).join(",")}]`;
         }
         const row = state.results[0] as { version: number; data: string } | undefined;
         if (!row || row.data === "{}") return json({ error: "D1 catalog has not been migrated" }, 503);
         // Stored JSON is validated on writes; avoid parsing and re-encoding the entire catalog on the Worker.
-        return new Response(`{"version":${row.version},"supportsGameLikes":true,"supportsFeedback":true,"db":{${row.data.trim().slice(1, -1)},"entries":${data}}}`, {
+        return new Response(`{"version":${row.version},"supportsGameLikes":true,"supportsFeedback":true,"supportsStablePositions":true,"db":{${row.data.trim().slice(1, -1)},"entries":${data}}}`, {
           headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
         });
       }
@@ -93,7 +94,7 @@ export default {
       const input = JSON.parse(body);
       const parsed = mutationSchema.safeParse(input);
       if (!parsed.success) return json({ error: "Invalid catalog mutation" }, 400);
-      const { expectedVersion, initialize, state, changed, deleted } = parsed.data;
+      const { expectedVersion, initialize, stablePositions, state, changed, deleted } = parsed.data;
       const stateJson = JSON.stringify(state);
       if (new TextEncoder().encode(stateJson).byteLength > 1_800_000)
         return json({ error: "Catalog state exceeds D1 row limit" }, 413);
@@ -102,6 +103,11 @@ export default {
           WHERE id = 1 AND version = ? AND (? = 0 OR
             (data = '{}' AND NOT EXISTS (SELECT 1 FROM gameslash_entries)))))`)
         .bind(expectedVersion, Number(initialize))];
+      // Old app instances send array offsets; normalize ranks atomically before their entry writes.
+      if (!stablePositions && changed.length) queries.push(env.DB.prepare(`WITH ranked AS MATERIALIZED (
+        SELECT id, row_number() OVER (ORDER BY position, id) - 1 AS position FROM gameslash_entries
+      ) UPDATE gameslash_entries SET position = ranked.position FROM ranked
+        WHERE gameslash_entries.id = ranked.id AND gameslash_entries.position != ranked.position`));
       // JSON batches avoid D1's 100-bound-parameter and 50-query Free-plan limits.
       let group: typeof changed = []; let groupBytes = 0;
       function addGroup() {
@@ -109,7 +115,8 @@ export default {
         queries.push(env.DB.prepare(`INSERT INTO gameslash_entries (id, position, data)
           SELECT json_extract(value, '$.data.id'), json_extract(value, '$.position'),
             json_extract(value, '$.data') FROM json_each(?) WHERE true
-          ON CONFLICT(id) DO UPDATE SET position = excluded.position, data = excluded.data`)
+          ON CONFLICT(id) DO UPDATE SET position = excluded.position, data = excluded.data
+          WHERE gameslash_entries.position != excluded.position OR gameslash_entries.data != excluded.data`)
           .bind(JSON.stringify(group)));
         group = []; groupBytes = 0;
       }
@@ -134,9 +141,9 @@ export default {
       queries.push(env.DB.prepare(`INSERT OR REPLACE INTO gameslash_entry_snapshot (id, version, entries)
         SELECT 1, version, CASE WHEN ? = 0 AND EXISTS (SELECT 1 FROM gameslash_entry_snapshot WHERE id = 1 AND version = ?)
           THEN (SELECT entries FROM gameslash_entry_snapshot WHERE id = 1)
-          WHEN (SELECT COALESCE(sum(length(CAST(data AS BLOB)) + 1), 0)
+          WHEN (SELECT COALESCE(sum(length(CAST(data AS BLOB)) + 64), 0)
           FROM gameslash_entries) < 1800000 THEN
-          (SELECT json_group_array(json(data)) FROM (SELECT data FROM gameslash_entries ORDER BY position, id))
+          (SELECT json_group_array(json(json_set(data, '$._d1Position', position))) FROM (SELECT data, position FROM gameslash_entries ORDER BY position, id))
           ELSE NULL END FROM gameslash_state WHERE id = 1`).bind(Number(changed.length > 0 || deleted.length > 0), expectedVersion));
       await env.DB.batch(queries);
       return json({ version: expectedVersion + 1 });

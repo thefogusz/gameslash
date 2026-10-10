@@ -46,11 +46,20 @@ test("D1 migration, concurrent CAS, rollback, ordering and private access", {
   await assert.rejects(updateD1(db => { db.layout.categories = []; }));
   await assert.rejects(updateD1(db => { db.entries.push(db.entries[0]); }), /Duplicate/);
   assert.deepEqual(await readD1(), before);
+  const prepended = await updateD1(db => { db.entries.unshift({ ...db.entries[0], id: "stable-rank-draft", status: "draft" }); });
+  const rankedSnapshot = await (await fetch(new URL("/catalog", url), {
+    headers: { Authorization: `Bearer ${process.env.GAMESLASH_D1_TOKEN}` },
+  })).json();
+  assert.equal(rankedSnapshot.supportsStablePositions, true);
+  assert.equal(rankedSnapshot.db.entries[0]._d1Position, -1);
+  assert.equal(rankedSnapshot.db.entries[1]._d1Position, 0, "Prepending must preserve an existing storage rank");
+  assert.deepEqual(await readD1(), prepended);
+  await updateD1(db => { db.entries.shift(); });
   await Promise.all(Array.from({ length: 3 }, () => updateD1(db => {
     db.limits.test = { count: (db.limits.test?.count ?? 0) + 1, reset: 9999999999999 };
   }, undefined, false)));
   assert.equal((await readD1()).limits.test.count, 3);
-  assert.equal((await readD1()).revision, before.revision);
+  assert.equal((await readD1()).revision, prepended.revision + 1);
   const changed = await updateD1(db => {
     db.entries.reverse(); db.entries.pop();
     db.entries[0].title = "SQL punctuation ' ; --";

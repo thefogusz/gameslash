@@ -96,3 +96,34 @@ other app instances or unrelated database consumers, and persists until midnight
 if someone upgrades early. No paid service, production content replacement or automatic
 07:00 deployment has been scheduled. Apply schema → Worker → app; see the
 [rollout instructions](../../cloudflare/README.md#read-budget-rollout-on-the-existing-d1-deployment).
+
+## Write-budget follow-up (2026-10-10)
+
+At 14:44 Bangkok the live account recorded 119,084 rows read and 31,263 rows written
+since 07:00. This aggregate does not identify Dots or individual query costs. The
+code and an isolated D1 reproduction identified an avoidable cost: prepending an
+entry changed every subsequent array offset, so the client upserted unchanged
+entries and maintained their indexes. A no-op save also advanced the version.
+
+Keep integer storage ranks when prepending, appending or deleting. The Worker
+includes private `_d1Position` metadata in the existing snapshot; application
+schemas remove it from returned entries. The client uses ranks only when the
+Worker advertises `supportsStablePositions`. Explicit reorders, middle inserts
+and exhausted integer bounds rebalance ranks. Unchanged validated saves return
+without a PUT or revision increment; revision checks still reject stale callers.
+
+Old app instances keep their array-offset protocol. The new Worker normalizes
+ranks inside the same guarded transaction before an old client's entry mutation.
+This may temporarily retain the former write cost during the app rollout. No
+table migration is needed. Deploy the Worker before the app. To roll back the
+app, leave the new Worker running. Before rolling back the Worker too, normalize
+entry positions to array offsets and invalidate/rebuild the snapshot atomically;
+an older Worker does not understand stable ranks.
+
+An isolated Miniflare/D1 fixture with 281 entries measured prepend writes
+**568 → 6**, deletion writes **506 → 4**, and no-op writes **3 → 0**. These are
+local measurements, not a promise about total production usage. Tests cover
+readback, revision conflicts, middle inserts, explicit reorder, mixed old/new
+writers and large-catalog fallback. Existing daily usage is not refunded. Real
+content changes, authentication state, likes and audit events still consume
+writes; snapshot rebuilds still scan entries on entry-changing mutations.

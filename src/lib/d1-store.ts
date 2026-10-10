@@ -46,7 +46,20 @@ async function requestD1(method: "GET" | "PUT", body?: unknown, path = "/catalog
     throw new D1RequestError(503, method === "PUT");
   }
 }
-const snapshotSchema = z.object({ version: z.number().int().nonnegative(), supportsGameLikes: z.boolean().default(false), supportsFeedback: z.boolean().default(false), db: databaseSchema });
+const snapshotSchema = z.object({ version: z.number().int().nonnegative(), supportsGameLikes: z.boolean().default(false), supportsFeedback: z.boolean().default(false), supportsStablePositions: z.boolean().default(false), db: databaseSchema });
+const storedPositionsSchema = z.array(z.object({ id: entrySchema.shape.id, _d1Position: z.number().int().optional() })).max(3000);
+function stablePositions(entries: Database["entries"], previous: Map<string, { position: number }>) {
+  const positions = entries.map(entry => previous.get(entry.id)?.position);
+  const first = positions.findIndex(position => position !== undefined);
+  const last = positions.findLastIndex(position => position !== undefined);
+  // Prepending/deleting keeps existing ranks; explicit reorders and middle inserts rebalance.
+  if (first === -1 || positions.slice(first, last + 1).some((position, i) =>
+    position === undefined || (i > 0 && position <= positions[first + i - 1]!)))
+    return entries.map((_, position) => position);
+  const ranked = positions.map((position, i) => position ?? (i < first
+    ? positions[first]! - first + i : positions[last]! + i - last));
+  return ranked.every(Number.isSafeInteger) ? ranked : entries.map((_, position) => position);
+}
 export async function readD1Notifications() {
   const { id, title, kind, status, updatedAt } = entrySchema.shape;
   return z.object({ total: z.number().int().nonnegative(), items: z.array(z.object({
@@ -72,26 +85,34 @@ export async function initializeD1(input: Database) {
 }
 export async function updateD1(change: (db: Database) => void, revision?: number, bumpRevision = true) {
   for (let attempt = 0; attempt < 4; attempt++) {
-    const { db, version, supportsGameLikes, supportsFeedback } = snapshotSchema.parse(await requestD1("GET"));
+    const response = await requestD1("GET");
+    const { db, version, supportsGameLikes, supportsFeedback, supportsStablePositions } = snapshotSchema.parse(response);
+    const positions = supportsStablePositions
+      ? new Map(storedPositionsSchema.parse(response.db.entries).map((entry, i) => [entry.id, entry._d1Position ?? i]))
+      : new Map(db.entries.map((entry, i) => [entry.id, i]));
+    const before = JSON.stringify(db);
     const previousLikes = JSON.stringify(db.gameLikes);
     const previousFeedback = JSON.stringify(db.feedback);
     if (revision !== undefined && revision !== db.revision) throw new ConflictError("ข้อมูลเปลี่ยนแล้ว กรุณาโหลดข้อมูลล่าสุดก่อนบันทึก");
-    const previous = new Map(db.entries.map((data, position) => [data.id, { position, json: JSON.stringify(data) }]));
+    const previous = new Map(db.entries.map(data => [data.id, { position: positions.get(data.id)!, json: JSON.stringify(data) }]));
     change(db);
     if (!supportsGameLikes && (Object.keys(db.gameLikes).length || JSON.stringify(db.gameLikes) !== previousLikes))
       throw new Error("ระบบบันทึกหัวใจยังไม่พร้อม กรุณาอัปเดต D1 Worker ก่อน");
     if (!supportsFeedback && (db.feedback.length || JSON.stringify(db.feedback) !== previousFeedback))
       throw new Error("ระบบรับฟีดแบคยังไม่พร้อม กรุณาอัปเดต D1 Worker ก่อน");
-    if (bumpRevision) db.revision++;
     const validated = databaseSchema.parse(db);
     if (new Set(validated.entries.map(entry => entry.id)).size !== validated.entries.length) throw new Error("Duplicate entry IDs");
+    if (JSON.stringify(validated) === before) return validated;
+    if (bumpRevision) validated.revision++;
     const { entries, ...state } = validated;
-    const changed = entries.flatMap((data, position) => {
+    const nextPositions = supportsStablePositions ? stablePositions(entries, previous) : entries.map((_, position) => position);
+    const changed = entries.flatMap((data, i) => {
+      const position = nextPositions[i];
       const old = previous.get(data.id); previous.delete(data.id);
       return old?.position === position && old.json === JSON.stringify(data) ? [] : [{ data, position }];
     });
     try {
-      await requestD1("PUT", { expectedVersion: version, state, changed, deleted: [...previous.keys()] });
+      await requestD1("PUT", { expectedVersion: version, stablePositions: supportsStablePositions, state, changed, deleted: [...previous.keys()] });
       return validated;
     } catch (error) {
       if (!(error instanceof ConflictError) || revision !== undefined) throw error;

@@ -114,6 +114,29 @@ advance the state version, so a newer Worker detects the stale snapshot and fall
 without serving stale entries. Waiting for reset alone restores the budget but does not
 fix repeated scans. See [the evidence and decision](../docs/decisions/001-d1-read-budget.md).
 
+### Write-budget follow-up
+
+Deploy the Worker before the app; no schema migration is required. New apps retain
+integer storage ranks for prepends, appends and deletes rather than rewriting every
+array offset. Old app instances are supported by transactional rank normalization.
+Unchanged validated saves skip the PUT and do not advance revisions. Reorders and
+middle inserts may still rebalance positions.
+
+Rollback the app while leaving the new Worker running. To also roll back the Worker,
+first normalize ranks and invalidate the snapshot in a single D1 batch:
+
+```sql
+WITH ranked AS MATERIALIZED (
+  SELECT id, row_number() OVER (ORDER BY position, id) - 1 AS position FROM gameslash_entries
+) UPDATE gameslash_entries SET position = ranked.position FROM ranked
+  WHERE gameslash_entries.id = ranked.id AND gameslash_entries.position != ranked.position;
+UPDATE gameslash_entry_snapshot SET entries = NULL WHERE id = 1;
+```
+
+This is a rollback-only operation, not a deployment migration. Do it with writes
+paused so a stable-rank app cannot race the old Worker's activation. Preserve the
+current state and entries; do not initialize or replace the production catalog.
+
 ## Feedback rollout
 
 Deploy the Worker before the app: catalog responses advertise `supportsFeedback`,
