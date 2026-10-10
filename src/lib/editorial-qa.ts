@@ -45,6 +45,7 @@ export function recordEditorialQa(db: Database, entry: Entry, agentId: string, r
   db.editorialQa[entry.id] = { evidence: qa, agentId, hash: editorialHash(entry), at: new Date().toISOString() };
 }
 export function requireEditorialQa(db: Database, entry: Entry, basedOnUpdatedAt = entry.updatedAt) {
+  if (entry.kind === "article") return;
   const qa = db.editorialQa[entry.id];
   if (!qa || qa.hash !== editorialHash(entry) || (qa.basedOnUpdatedAt !== undefined && qa.basedOnUpdatedAt !== basedOnUpdatedAt) || Date.parse(qa.at) < Date.now() - 7 * 86400000)
     throw new Error("QA_REQUIRED: อ่านงานกลับและใช้ record_entry_qa ตรวจหลักฐาน ภาพ ลิงก์ และการแสดงผลฉบับล่าสุดก่อนส่งตรวจ/เผยแพร่");

@@ -236,11 +236,18 @@ changes to other entries. Full Console edits retain the existing validated CAS
 path. Local/Blob/Postgres retain their existing concurrency controls; the durable
 ticket/status protocol is specific to the current D1 production backend.
 
-Drafts may be saved incomplete. Before submission or agent publication, call
+Drafts may be saved incomplete. News entries (`kind: article`) do not require a QA
+receipt for submission, publication, edits or restoration; permissions, validation,
+revision checks and operation receipts still apply. Research and image rights still
+need checking. Other entry kinds require current QA before agent publication.
+For entries requiring QA before submission or agent publication, call
 `get_entry`, inspect sources, images, links and desktop/mobile rendering, then
 `record_entry_qa`. Evidence includes claims with original source URLs and dates,
 rights/credit/inspection for every image, checked links and render observations.
 Missing images require a reason. Image credit must also be visible in the article.
+Authenticated human Console saves/reviews do not require MCP QA receipts. Agent
+submission, publication and restoration of non-news entries remain QA-gated at MCP boundaries;
+manual edits do not fabricate QA evidence for later agent writes.
 The server requires evidence matching the content hash and checked within seven
 days, and returns `QA_REQUIRED` for missing/stale evidence. Editing content, links,
 images or tags invalidates the hash. QA itself does not publish or grant approval.

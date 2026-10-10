@@ -10,7 +10,7 @@ test("agent submission/publication requires evidence bound to current content an
   const db = seedDatabase();
   manageCatalog(db, { action: "create_agent", revision: 0, name: "QA fixture", canWriteDrafts: true, canManageSite: true });
   const id = db.agents[0].id;
-  const input = entryInput.parse({ kind: "article", title: "Fixture news", description: "Verified fixture news for this isolated test", author: "Fixture", category: "ข่าว", sourceUrl: "https://example.com/source" });
+  const input = entryInput.parse({ kind: "tool", title: "Fixture tool", description: "Verified fixture tool for this isolated test", author: "Fixture", category: "เครื่องมือ", url: "https://example.com/source", sourceUrl: "https://example.com/source" });
   const draft = createAgentDraft(db, id, "qa-fixture-001", input);
   assert.throws(() => editAgentDraft(db, id, draft.id, draft.updatedAt), /QA_REQUIRED/);
   assert.throws(() => saveSiteEntry(db, id, draft.id, draft.updatedAt, input, "published"), /QA_REQUIRED/);
@@ -26,6 +26,44 @@ test("agent submission/publication requires evidence bound to current content an
   db.editorialQa[draft.id].at = "2020-01-01T00:00:00.000Z";
   assert.throws(() => requireEditorialQa(db, published), /QA_REQUIRED/);
   databaseSchema.parse(db);
+});
+
+test("human Console saves and reviews agent entries without MCP QA while agent writes remain gated", () => {
+  const db = seedDatabase();
+  manageCatalog(db, { action: "create_agent", revision: 0, name: "QA fixture", canWriteDrafts: true, canManageSite: true });
+  const agentId = db.agents[0].id;
+  const input = entryInput.parse({ kind: "tool", title: "Human reviewed fixture", description: "Manual review in the isolated Console fixture", author: "Fixture", category: "เครื่องมือ", url: "https://example.com/manual" });
+  const draft = createAgentDraft(db, agentId, "manual-qa-fixture", input);
+  assert.throws(() => saveSiteEntry(db, agentId, draft.id, draft.updatedAt, input, "pending"), /QA_REQUIRED/);
+  manageCatalog(db, { action: "entry", revision: db.revision, entry: { ...draft, status: "pending" } });
+  const pending = db.entries.find(entry => entry.id === draft.id)!;
+  manageCatalog(db, { action: "review", revision: db.revision, id: pending.id, expectedUpdatedAt: pending.updatedAt, decision: "publish", note: "Reviewed by human" });
+  const published = db.entries.find(entry => entry.id === draft.id)!;
+  assert.equal(published.status, "published");
+  assert.throws(() => saveSiteEntry(db, agentId, published.id, published.updatedAt, input, "published"), /QA_REQUIRED/);
+  manageCatalog(db, { action: "entry", revision: db.revision, entry: { ...published, title: "Human edited live fixture" } });
+  const edited = db.entries.find(entry => entry.id === draft.id)!;
+  assert.equal(edited.title, "Human edited live fixture");
+  assert.equal(edited.status, "published");
+  assert.throws(() => requireEditorialQa(db, edited), /QA_REQUIRED/);
+  assert.equal(db.activity[0].actor, "ผู้ดูแล");
+});
+
+test("news can be submitted, published and edited without QA while other kinds require evidence", () => {
+  const db = seedDatabase();
+  manageCatalog(db, { action: "create_agent", revision: 0, name: "News fixture", canWriteDrafts: true, canManageSite: true });
+  const agentId = db.agents[0].id;
+  const input = entryInput.parse({ kind: "article", title: "News without QA receipt", description: "Isolated news publication fixture", author: "Fixture", category: "ข่าว AI game" });
+  const draft = createAgentDraft(db, agentId, "news-qa-exemption", input);
+  const pending = editAgentDraft(db, agentId, draft.id, draft.updatedAt);
+  const published = saveSiteEntry(db, agentId, pending.id, pending.updatedAt, input, "published");
+  const edited = saveSiteEntry(db, agentId, published.id, published.updatedAt, { ...input, title: "Updated news", category: "อัปเดตเครื่องมือ" }, "published");
+  assert.equal(edited.status, "published");
+  assert.equal(db.editorialQa[edited.id], undefined, "The exemption must not invent QA evidence");
+  assert.throws(() => saveSiteEntry(db, agentId, edited.id, edited.updatedAt, { ...input, kind: "tool", url: "https://example.com/converted-tool" }, "published"), /QA_REQUIRED/);
+  for (const kind of ["game", "tool", "post"] as const) assert.throws(() => requireEditorialQa(db, { ...edited, kind }), /QA_REQUIRED/);
+  db.agents[0].canManageSite = false;
+  assert.throws(() => saveSiteEntry(db, agentId, edited.id, edited.updatedAt, input, "published"), /ไม่มีสิทธิ์/);
 });
 
 test("QA rejects missing image evidence, stale dates, incomplete links and empty attestations", () => {

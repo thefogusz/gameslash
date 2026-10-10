@@ -48,7 +48,6 @@ function saveEntry(db: Database, input: Entry) {
   if (item.kind === "tool" && item.popularity === undefined && old?.popularity) item.popularity = old.popularity;
   if (item.kind !== "tool") delete item.popularity;
   validateGameTags(db, item, old);
-  if (db.ingestions[item.id] && ["pending", "published"].includes(item.status)) requireEditorialQa(db, item, old?.updatedAt);
   const qa = db.editorialQa[item.id];
   if (qa?.basedOnUpdatedAt === old?.updatedAt && qa?.hash === editorialHash(item)) delete qa.basedOnUpdatedAt;
   checkDuplicate(db.entries, item);

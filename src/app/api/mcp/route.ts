@@ -228,7 +228,7 @@ export async function POST(request: Request) {
         return { entry: db.entries.find(e => e.id === input.id)! };
       }));
       server.registerTool("submit_for_review", {
-        description: "Move your own draft to the human review queue. It becomes pending, not public; the agent can no longer edit it after submission.",
+        description: "Move your own draft to the human review queue. News (kind=article) needs no QA receipt; other kinds require current QA. It becomes pending, not public; the agent can no longer edit it after submission.",
         inputSchema: z.object({ ...reference, operationId }), outputSchema: entryResult, annotations,
       }, input => result(async () => {
         const db = await updateAgentDatabase(db => { editAgentDraft(db, agent.id, input.id, input.expectedUpdatedAt); }, undefined, input.id, operation("submit_for_review", input, input.operationId));
@@ -242,7 +242,7 @@ export async function POST(request: Request) {
         return { revision: db.revision, layout: db.layout, draftLayout: db.draftLayout, entryCount: db.entries.length };
       }));
       server.registerTool("save_site_entry", {
-        description: "Create or edit any catalog entry and set draft/pending/published/archived status directly. Archived entries are in the recoverable trash; prefer trash_site_entry and restore_site_entry for this workflow. Requires site-management permission. Read get_site_state for revision and get_entry for expectedUpdatedAt. For a new entry choose a unique lowercase slug id and omit expectedUpdatedAt; for edits supply exact current expectedUpdatedAt. Publication is immediate. Verify creator, source, links and article images before calling.",
+        description: "Create or edit any catalog entry and set draft/pending/published/archived status directly. Archived entries are in the recoverable trash; prefer trash_site_entry and restore_site_entry for this workflow. Requires site-management permission. Read get_site_state for revision and get_entry for expectedUpdatedAt. For a new entry choose a unique lowercase slug id and omit expectedUpdatedAt; for edits supply exact current expectedUpdatedAt. Publication is immediate. News (kind=article) does not require a QA receipt; other kinds require current QA. Verify creator, source, links and article images before calling.",
         inputSchema: z.object({ revision: z.number().int().nonnegative(), id: reference.id, expectedUpdatedAt: z.iso.datetime().optional(), entry: entryInput, status: entrySchema.shape.status, operationId }), outputSchema: entryResult,
         annotations: { ...annotations, destructiveHint: true },
       }, input => result(async () => {
@@ -261,13 +261,13 @@ export async function POST(request: Request) {
         const db = await updateAgentDatabase(db => {
           const manager = requireSiteAgent(db, agent.id);
           const entry = db.entries.find(e => e.id === input.id);
-          if (action === "restore_entry" && entry?.restoreStatus === "published") requireEditorialQa(db, entry);
+          if (action === "restore_entry" && entry && ["pending", "published"].includes(entry.restoreStatus ?? "draft")) requireEditorialQa(db, entry);
           manageCatalog(db, { action, ...input }, manager.name);
         }, input.revision, input.id, operation(name, input, input.operationId));
         return { entry: db.entries.find(e => e.id === input.id)! };
       }));
       server.registerTool("review_site_entry", {
-        description: "Approve/publish, return or reject a pending submission with an audited review. Requires site-management permission, current revision and exact expectedUpdatedAt. Return/reject require a note. Publication is immediate.",
+        description: "Approve/publish, return or reject a pending submission with an audited review. Requires site-management permission, current revision and exact expectedUpdatedAt. Return/reject require a note. Publication is immediate. News (kind=article) does not require a QA receipt; other kinds require current QA.",
         inputSchema: z.object({ revision: z.number().int().nonnegative(), ...reference, decision: z.enum(["publish", "return", "reject"]), note: z.string().trim().max(1000).default(""), operationId }), outputSchema: entryResult,
         annotations: { ...annotations, destructiveHint: true },
       }, input => result(async () => {

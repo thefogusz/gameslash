@@ -192,7 +192,7 @@ test("three MCP clients follow QA gates, private receipts and a staged live edit
     const text = await response.text();
     return JSON.parse(text.startsWith("{") ? text : text.split("\n").find(line => line.startsWith("data: "))!.slice(6)).result;
   };
-  const inputs = tokens.map((_, i) => entryInput.parse({ kind: "article", title: `Isolated MCP news ${i}`, description: "Isolated news fixture with public original source", author: "Fixture author", category: "ข่าว", sourceUrl: `https://example.com/source/${i}` }));
+  const inputs = tokens.map((_, i) => entryInput.parse({ kind: "tool", title: `Isolated MCP tool ${i}`, description: "Isolated tool fixture with public original source", author: "Fixture author", category: "เครื่องมือ", url: `https://example.com/source/${i}`, sourceUrl: `https://example.com/source/${i}` }));
   try {
     const drafts = await Promise.all(inputs.map((entry, i) => call(i, "create_draft", { requestId: `mcp-news-request-${i}`, entry })));
     assert.ok(drafts.every(result => !result.isError));
@@ -223,6 +223,28 @@ test("three MCP clients follow QA gates, private receipts and a staged live edit
     assert.equal(edited.structuredContent.entry.title, replacement.title);
     assert.equal(edited.structuredContent.entry.status, "published");
     assert.equal((await call(0, "get_entry", { id: published.id })).structuredContent.qa.current, true);
+    const newsInput = entryInput.parse({ ...inputs[0], kind: "article", title: "News without mandatory QA", url: "https://example.com/news", sourceUrl: "https://example.com/news", category: "ข่าว AI game" });
+    const newsDraft = (await call(1, "create_draft", { requestId: "mcp-news-no-qa-001", entry: newsInput })).structuredContent.entry;
+    const newsPending = (await call(1, "submit_for_review", { id: newsDraft.id, expectedUpdatedAt: newsDraft.updatedAt })).structuredContent.entry;
+    const newsPublished = (await call(0, "review_site_entry", { id: newsPending.id, expectedUpdatedAt: newsPending.updatedAt, revision: (await call(0, "get_site_state", {})).structuredContent.revision, decision: "publish" })).structuredContent.entry;
+    assert.equal(newsPublished.status, "published");
+    const newsEdited = await call(0, "save_site_entry", { id: newsPublished.id, expectedUpdatedAt: newsPublished.updatedAt, revision: (await call(0, "get_site_state", {})).structuredContent.revision, entry: { ...newsInput, title: "Edited news without QA" }, status: "published" });
+    assert.equal(newsEdited.structuredContent.entry.title, "Edited news without QA");
+    assert.equal((await call(0, "get_entry", { id: newsPublished.id })).structuredContent.qa, null);
+    const archivedNews = (await call(0, "trash_site_entry", { id: newsPublished.id, expectedUpdatedAt: newsEdited.structuredContent.entry.updatedAt, revision: (await call(0, "get_site_state", {})).structuredContent.revision })).structuredContent.entry;
+    const restoredNews = await call(0, "restore_site_entry", { id: archivedNews.id, expectedUpdatedAt: archivedNews.updatedAt, revision: (await call(0, "get_site_state", {})).structuredContent.revision });
+    assert.equal(restoredNews.structuredContent.entry.status, "published");
+    const manualToolId = drafts[2].structuredContent.entry.id;
+    await updateD1(db => {
+      const manualTool = db.entries.find(item => item.id === manualToolId)!;
+      manageCatalog(db, { action: "entry", revision: db.revision, entry: { ...manualTool, status: "pending" } });
+    });
+    const manualTool = (await call(0, "get_entry", { id: manualToolId })).structuredContent.entry;
+    const deniedReview = await call(0, "review_site_entry", { id: manualTool.id, expectedUpdatedAt: manualTool.updatedAt, revision: (await call(0, "get_site_state", {})).structuredContent.revision, decision: "publish" });
+    assert.equal(JSON.parse(deniedReview.content[0].text).code, "QA_REQUIRED");
+    const archivedTool = (await call(0, "trash_site_entry", { id: manualTool.id, expectedUpdatedAt: manualTool.updatedAt, revision: (await call(0, "get_site_state", {})).structuredContent.revision })).structuredContent.entry;
+    const deniedRestore = await call(0, "restore_site_entry", { id: archivedTool.id, expectedUpdatedAt: archivedTool.updatedAt, revision: (await call(0, "get_site_state", {})).structuredContent.revision });
+    assert.equal(JSON.parse(deniedRestore.content[0].text).code, "QA_REQUIRED");
   } finally { delete process.env.GAMESLASH_STORAGE; }
 });
 
