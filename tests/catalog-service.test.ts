@@ -3,7 +3,8 @@ import assert from "node:assert/strict";
 import { seedDatabase } from "../src/lib/seed";
 import { databaseSchema, entryInput, publicData, type Database } from "../src/lib/model";
 import { manageCatalog, authenticateAgent, createAgentDraft, editAgentDraft, agentEntries } from "../src/lib/catalog-service";
-const input = () => entryInput.parse({ ...seedDatabase().entries[0], url: "https://example.com/agent-test" });
+import { qaFixture } from "./qa-fixture";
+const input = () => entryInput.parse({ ...seedDatabase().entries[0], image: "", url: "https://example.com/agent-test" });
 function key(db: Database, write = true) {
   const token = manageCatalog(db, { action: "create_agent", revision: db.revision, name: "Test agent", canWriteDrafts: write })!;
   return { token, agent: authenticateAgent(db, token)! };
@@ -35,6 +36,7 @@ test("review returns feedback, allows resubmission, and only publishes pending e
   assert.throws(() => createAgentDraft(db, agent.id, "context-request", input(), { ...context, reason: "Different collection explanation" }), /requestId/);
   const review = (decision: "publish" | "return" | "reject", note: string, updatedAt: string) => manageCatalog(db, { action: "review", revision: db.revision, id: draft.id, expectedUpdatedAt: updatedAt, decision, note });
   assert.throws(() => review("publish", "", draft.updatedAt), /รอตรวจ/);
+  qaFixture(db, draft);
   const pending = editAgentDraft(db, agent.id, draft.id, draft.updatedAt);
   assert.throws(() => review("return", "", pending.updatedAt), /เหตุผล/);
   assert.throws(() => review("reject", "", pending.updatedAt), /เหตุผล/);
@@ -43,6 +45,7 @@ test("review returns feedback, allows resubmission, and only publishes pending e
   assert.equal(db.entries[0].status, "draft");
   assert.equal(db.reviews[draft.id].note, "Please verify creator credit");
   const fixed = editAgentDraft(db, agent.id, draft.id, db.entries[0].updatedAt, { ...input(), author: "Verified creator" });
+  qaFixture(db, fixed);
   const again = editAgentDraft(db, agent.id, draft.id, fixed.updatedAt);
   review("publish", "Checked against source", again.updatedAt);
   assert.equal(db.entries[0].status, "published");
@@ -54,6 +57,7 @@ test("review returns feedback, allows resubmission, and only publishes pending e
 test("rejecting archives instead of deleting the submission", () => {
   const db = seedDatabase(), { agent } = key(db);
   const draft = createAgentDraft(db, agent.id, "reject-request", input());
+  qaFixture(db, draft);
   const pending = editAgentDraft(db, agent.id, draft.id, draft.updatedAt);
   manageCatalog(db, { action: "review", revision: db.revision, id: draft.id, expectedUpdatedAt: pending.updatedAt, decision: "reject", note: "Off topic" });
   assert.equal(db.entries[0].id, draft.id);
@@ -80,6 +84,7 @@ test("agents cannot access other drafts, overwrite changes, publish, or modify r
   const changed = editAgentDraft(db, first.agent.id, draft.id, draft.updatedAt, { ...input(), title: "Updated draft" });
   assert.notEqual(changed.updatedAt, draft.updatedAt);
   assert.throws(() => editAgentDraft(db, first.agent.id, draft.id, draft.updatedAt, input()), /ข้อมูลล่าสุด/);
+  qaFixture(db, changed);
   const pending = editAgentDraft(db, first.agent.id, changed.id, changed.updatedAt);
   assert.equal(pending.status, "pending");
   assert.equal(publicData(db).entries.some(e => e.id === draft.id), false);

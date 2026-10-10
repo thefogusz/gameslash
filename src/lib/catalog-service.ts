@@ -4,6 +4,7 @@ import { tagSuggestionsSchema } from "./game-tags";
 import { requestGameTags, validateGameTags, resolveGameTag, tagResolutionSchema } from "./tag-service";
 import { checkDuplicate, collectionContextSchema, consumeLimit, entryInput, entrySchema, layoutSchema, type Database, type Entry, type EntryInput } from "./model";
 import { ConflictError } from "./postgres-store";
+import { requireEditorialQa, editorialHash } from "./editorial-qa";
 
 export const managementMutation = z.discriminatedUnion("action", [
   z.object({ action: z.literal("feedback_status"), revision: z.number().int(), id: z.string().uuid(), status: z.enum(["open", "closed"]) }),
@@ -47,6 +48,9 @@ function saveEntry(db: Database, input: Entry) {
   if (item.kind === "tool" && item.popularity === undefined && old?.popularity) item.popularity = old.popularity;
   if (item.kind !== "tool") delete item.popularity;
   validateGameTags(db, item, old);
+  if (db.ingestions[item.id] && ["pending", "published"].includes(item.status)) requireEditorialQa(db, item, old?.updatedAt);
+  const qa = db.editorialQa[item.id];
+  if (qa?.basedOnUpdatedAt === old?.updatedAt && qa?.hash === editorialHash(item)) delete qa.basedOnUpdatedAt;
   checkDuplicate(db.entries, item);
   db.entries = old ? db.entries.map(e => e.id === item.id ? item : e) : [item, ...db.entries];
   return item;
@@ -142,6 +146,8 @@ export function saveSiteEntry(db: Database, agentId: string, id: Entry["id"], ex
   if (!old && expectedUpdatedAt) throw new ConflictError("ไม่พบรายการที่จะแก้ไข");
   const now = new Date().toISOString();
   const entry = entrySchema.parse({ ...entryInput.parse(data), id, status, createdAt: old?.createdAt ?? now, updatedAt: now });
+  if (entry.kind === "tool" && entry.popularity === undefined && old?.popularity) entry.popularity = old.popularity;
+  if (status === "published" || status === "pending") requireEditorialQa(db, entry, old?.updatedAt);
   manageCatalog(db, { action: "entry", revision: db.revision, entry }, agent.name);
   return db.entries.find(e => e.id === id)!;
 }
@@ -156,10 +162,11 @@ export function agentEntries(db: Database, agentId: string) {
   const agent = requireAgent(db, agentId);
   return agent.canManageSite ? db.entries : db.entries.filter(e => e.status === "published" || db.ingestions[e.id]?.agentId === agentId);
 }
+export const agentDraftId = (agentId: string, requestId: string) => "agent-" + hash(`${agentId}:${requestId}`).slice(0, 40);
 export function createAgentDraft(db: Database, agentId: string, requestId: string, data: EntryInput, context?: z.infer<typeof collectionContextSchema>) {
   const agent = requireAgent(db, agentId, true);
   const parsed = entryInput.parse(data);
-  const id = "agent-" + hash(`${agentId}:${requestId}`).slice(0, 40);
+  const id = agentDraftId(agentId, requestId);
   const collected = context ? collectionContextSchema.parse(context) : undefined;
   const inputHash = hash(JSON.stringify(collected ? { entry: parsed, context: collected } : parsed));
   const receipt = db.ingestions[id];
@@ -181,6 +188,7 @@ export function editAgentDraft(db: Database, agentId: string, id: string, expect
   if (!old || db.ingestions[id]?.agentId !== agentId || old.status !== "draft")
     throw new Error("แก้ไขได้เฉพาะฉบับร่างที่เอเจนต์นี้สร้างเอง");
   if (old.updatedAt !== expectedUpdatedAt) throw new ConflictError("รายการเปลี่ยนแล้ว กรุณาอ่านข้อมูลล่าสุดก่อนแก้ไข");
+  if (!data) requireEditorialQa(db, old);
   consumeLimit(db, `agent:${agentId}`, 60, 3600000);
   const item = saveEntry(db, data ? { ...old, ...entryInput.parse(data), status: "draft" } : { ...old, status: "pending" });
   log(db, agent.name, data ? "entry.agent_draft" : "entry.pending", item.title, item.id);

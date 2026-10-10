@@ -184,8 +184,9 @@ run concurrently. Every chunk checks the manifest's storage version; a concurren
 write restarts the whole read, never assembles mixed versions. Validation and JSON
 assembly stay on Vercel. Scoped entry reads use the same protocol. Older Workers
 ignore `format` and retain their original response; old apps still work with the
-new Worker. Arrays beyond the existing 1.8 MB snapshot bound retain legacy fallback
-and must be paginated before that becomes frequent.
+new Worker. Arrays beyond the existing 1.8 MB snapshot bound use version-bound
+byte-weighted `/catalog-pages` and `/catalog-page` chunks, rather than a large
+legacy response. Each page remains within D1's single-value limit.
 
 Public home/section/detail/sitemap reads share a 30-second Next.js data cache that
 contains only published entries and the public layout. React deduplicates metadata
@@ -196,9 +197,69 @@ use public cache data to make editing decisions. `/tags` projects only the publi
 custom-tag registry rather than reading the catalog.
 
 Isolated D1 checks cover multi-chunk Thai/emoji JSON, concurrent-version changes,
-scoped/missing entries, invalid offsets, authentication and large-array fallback.
+scoped/missing entries, invalid offsets, authentication and large-array pagination.
 A built Next.js fixture verifies home/games/detail reuse public data during a
 simulated D1 outage, private drafts/feedback never appear, and fresh private reads
 still fail rather than serving stale edit state. Verify the actual production
 CPU outcomes after rollout; local fixtures do not reproduce the Free CPU limit.
+
+## Three-agent writes and editorial QA
+
+Apply `schema.sql` to add `gameslash_write_queue` and `gameslash_editorial_qa`, then
+deploy the Worker before the Vercel app. This is additive: never initialize or
+replace the production catalog. Keep service tokens, OAuth identities and grants.
+Older apps remain compatible. Roll back the app first and retain the new Worker
+and tables, so old writers continue preserving QA metadata.
+
+All MCP catalog mutations use durable FIFO tickets. Each invocation waits at most
+eight seconds for its turn; a claimed ticket lasts sixty seconds. The catalog's
+transaction checks both the ticket and storage version, preventing an expired
+writer from committing after another ticket starts. A successful catalog commit
+also stores its receipt atomically. Failed/finished receipts are retained at least
+seven days; expired running tickets become `unknown` and are never replayed
+automatically. This is coordination of incoming requests, not a background agent
+runner: a stopped client must reconnect, inspect the receipt and reconcile.
+Image uploads retain their existing independent hash reservation receipts.
+
+Use one identity per client, sequential tool calls per client and a stable
+`operationId` for each logical mutation (`create_draft` uses its existing
+`requestId`). `get_operation_status` is scoped to the authenticated agent and
+reports queued/running/succeeded/failed/unknown. Payload changes cannot reuse an
+operation ID. Duplicate succeeded entry operations read the current entry without
+replaying the callback. Receipt results record the committed entry ID/updatedAt
+and revision; current content may have changed afterwards. Draft-only permissions
+still cannot edit another client's draft or publish. No permissions are widened.
+
+MCP lookup tools read metadata; entry mutations read metadata for duplicate checks
+and the full target entry only. Scoped updates reject changes, deletions or position
+changes to other entries. Full Console edits retain the existing validated CAS
+path. Local/Blob/Postgres retain their existing concurrency controls; the durable
+ticket/status protocol is specific to the current D1 production backend.
+
+Drafts may be saved incomplete. Before submission or agent publication, call
+`get_entry`, inspect sources, images, links and desktop/mobile rendering, then
+`record_entry_qa`. Evidence includes claims with original source URLs and dates,
+rights/credit/inspection for every image, checked links and render observations.
+Missing images require a reason. Image credit must also be visible in the article.
+The server requires evidence matching the content hash and checked within seven
+days, and returns `QA_REQUIRED` for missing/stale evidence. Editing content, links,
+images or tags invalidates the hash. QA itself does not publish or grant approval.
+
+Managers can provide the exact `proposedEntry` to QA a live replacement before
+publishing it, without unpublishing the existing article. This proof is also bound
+to the existing `updatedAt`. Re-read site revision before the actual save. Evidence
+is private and stored separately from the small catalog state; only ownership or
+site-management permission allows MCP reads. Public entries never carry QA.
+
+Source truth, image licensing and visual observations are client-reported evidence,
+not independently certified by the server. The agent still needs browsing and
+image inspection tools and user authorization. Passing a schema is not proof of
+editorial quality. No tool automatically fetches arbitrary evidence URLs.
+
+Isolated HTTP/D1 tests exercise three concurrent clients, unchanged content,
+lost commit responses, receipt isolation, all QA gates and a staged live edit.
+Run `npm run test:d1` to compile the current Worker and exercise those tests against
+an in-memory localhost D1, including FIFO and an expired-ticket fencing assertion.
+Recheck production CPU/errors and daily request/read/write budgets after rollout;
+serialization reduces conflict traffic but does not increase Free plan quotas.
 Rollback the app while leaving the backward-compatible Worker deployed.

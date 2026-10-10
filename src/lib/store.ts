@@ -13,6 +13,8 @@ import { seedDatabase } from "./seed";
 import { databaseClient, readPostgres, updatePostgres, ConflictError } from "./postgres-store";
 import { d1Ready, readD1, readD1AgentAuth, readD1Likes, readD1Notifications, readD1Tags, updateD1 } from "./d1-store";
 import { draftNotifications } from "./notifications";
+import { updateD1Queued, readD1Metadata, readD1QaEvidence } from "./d1-store";
+import type { OperationContext } from "./write-queue";
 export { ConflictError } from "./postgres-store";
 
 const blobPath = "gameslash/catalog-v1.json";
@@ -76,6 +78,16 @@ export async function readNotifications() {
 }
 export async function readCustomTags() {
   return process.env.GAMESLASH_STORAGE === "d1" ? readD1Tags() : (await readDatabase()).customTags;
+}
+export async function updateAgentDatabase(change: (db: Database) => void, revision?: number, scopeId?: string, operation?: OperationContext) {
+  if (!storageReady()) throw new Error("ระบบบันทึกข้อมูลยังไม่พร้อมใช้งาน กรุณาลองใหม่ภายหลัง");
+  return process.env.GAMESLASH_STORAGE === "d1" ? updateD1Queued(change, revision, scopeId, operation) : updateDatabase(change, revision);
+}
+export async function readMetadataDatabase() {
+  return process.env.GAMESLASH_STORAGE === "d1" ? readD1Metadata() : readDatabase();
+}
+export async function readQaEvidence(id: string, db: Database) {
+  return process.env.GAMESLASH_STORAGE === "d1" ? readD1QaEvidence(id) : db.editorialQa[id]?.evidence ?? null;
 }
 
 // ponytail: one conditional snapshot suits a small editorial catalog; move to Postgres for frequent concurrent writes or >3,000 entries.

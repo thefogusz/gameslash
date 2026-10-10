@@ -4,6 +4,9 @@ import { D1RequestError } from "./d1-store";
 import { ImageUploadError } from "./media-errors";
 
 export function mcpError(error: unknown) {
+  if (error instanceof Error && error.message.startsWith("QA_REQUIRED")) return {
+    code: "QA_REQUIRED", message: error.message, retryable: false, outcomeUnknown: false,
+  };
   if (error instanceof ImageUploadError) return {
     code: "SERVICE_UNAVAILABLE", message: error.message, retryable: true, retryAfterSeconds: 5, outcomeUnknown: false,
   };

@@ -6,6 +6,7 @@ import { NewsPublicationTime } from "../src/components/news-publication-time";
 import { seedDatabase } from "../src/lib/seed";
 import { entryInput, entrySchema, type Entry, type Database } from "../src/lib/model";
 import { manageCatalog, createAgentDraft, editAgentDraft, saveSiteEntry } from "../src/lib/catalog-service";
+import { qaFixture } from "./qa-fixture";
 
 const data = () => entryInput.parse({ kind: "article", title: "Publication test", description: "Testing original publication timestamp", author: "Gameslash", category: "ข่าวเกม AI" });
 function setup() {
@@ -22,6 +23,7 @@ test("draft creation and submission stay undated; approval records first publica
   const { db, agent } = setup();
   const draft = createAgentDraft(db, agent.id, "publication-review", data());
   assert.equal(draft.publishedAt, undefined);
+  qaFixture(db, draft);
   const pending = editAgentDraft(db, agent.id, draft.id, draft.updatedAt);
   assert.equal(pending.publishedAt, undefined);
   manageCatalog(db, { action: "review", revision: db.revision, id: pending.id, expectedUpdatedAt: pending.updatedAt, decision: "publish", note: "" });
@@ -32,8 +34,11 @@ test("draft creation and submission stay undated; approval records first publica
 
 test("direct publication is timestamped and immutable across site edits and republish", () => {
   const { db, agent } = setup();
-  const published = saveSiteEntry(db, agent.id, "publication-direct", undefined, data(), "published");
+  const prepared = saveSiteEntry(db, agent.id, "publication-direct", undefined, data(), "draft");
+  qaFixture(db, prepared);
+  const published = saveSiteEntry(db, agent.id, prepared.id, prepared.updatedAt, data(), "published");
   assert.equal(published.publishedAt, published.updatedAt);
+  qaFixture(db, { ...published, title: "Edited title" });
   const edited = saveSiteEntry(db, agent.id, published.id, published.updatedAt, { ...data(), title: "Edited title" }, "published");
   assert.equal(edited.publishedAt, published.publishedAt);
   assert.notEqual(edited.updatedAt, published.updatedAt);

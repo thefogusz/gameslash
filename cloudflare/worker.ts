@@ -2,6 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 import { consumeLimit, databaseSchema, entrySchema, type Database } from "../src/lib/model";
 import { catalogChunkCharacters } from "../src/lib/d1-protocol";
+import { writeQueue } from "./write-queue";
 
 const mutationSchema = z.object({
   expectedVersion: z.number().int().nonnegative(),
@@ -10,10 +11,25 @@ const mutationSchema = z.object({
   state: databaseSchema.omit({ entries: true }),
   changed: z.array(z.object({ position: z.number().int(), data: entrySchema })).max(3000),
   deleted: z.array(entrySchema.shape.id).max(3000),
+  ticket: z.uuid().optional(),
+  operationResult: z.string().max(2000).optional(),
 }).refine(input => new Set(input.changed.map(row => row.data.id)).size === input.changed.length);
 const json = (value: unknown, status = 200) => Response.json(value, {
   status, headers: { "Cache-Control": "no-store" },
 });
+// Unchanged entries supply only duplicate/layout metadata; their stored content is never written back.
+const summaryExpression = `(SELECT json_group_array(json(entry)) FROM (SELECT CASE WHEN id = ?
+  THEN json_set(data, '$._d1Position', position) ELSE json_object('id', id, '_d1Position', position,
+  'kind', json_extract(data, '$.kind'), 'status', json_extract(data, '$.status'),
+  'title', json_extract(data, '$.title'), 'author', json_extract(data, '$.author'),
+  'category', json_extract(data, '$.category'), 'url', json_extract(data, '$.url'),
+  'description', json_extract(data, '$.description'), 'tags', json(COALESCE(json_extract(data, '$.tags'), '[]')), 'createdAt', json_extract(data, '$.createdAt'),
+  'updatedAt', json_extract(data, '$.updatedAt')) END AS entry FROM gameslash_entries ORDER BY position, id))`;
+// Byte-weighted groups keep large catalogs out of one D1 result value.
+const catalogPagesSql = `WITH ranked AS (SELECT data, position,
+  sum(length(CAST(data AS BLOB)) + 64) OVER (ORDER BY position, id) AS bytes FROM gameslash_entries),
+  pages AS (SELECT CAST(bytes / 32768 AS INTEGER) AS page,
+  json_group_array(json(json_set(data, '$._d1Position', position))) AS entries FROM ranked GROUP BY page)`;
 const imageReservationSchema = z.object({
   namespace: z.enum(["media", "feedback"]),
   imageId: z.string().regex(/^[a-f0-9]{64}$/),
@@ -82,8 +98,32 @@ export default {
       return json({ error: "Unauthorized" }, 401);
     const url = new URL(request.url);
     const path = url.pathname;
-    if (!["/catalog", "/catalog-chunk", "/notifications", "/agent-auth", "/likes", "/image-reservation", "/tags"].includes(path)) return json({ error: "Not found" }, 404);
+    if (!["/catalog", "/catalog-chunk", "/catalog-pages", "/catalog-page", "/notifications", "/agent-auth", "/likes", "/image-reservation", "/tags", "/write-queue", "/editorial-qa"].includes(path)) return json({ error: "Not found" }, 404);
     try {
+      if (path === "/write-queue") return await writeQueue(request, env);
+      if (path === "/editorial-qa") {
+        if (request.method !== "GET") return json({ error: "Method not allowed" }, 405);
+        const entryId = url.searchParams.get("entryId");
+        if (!entrySchema.shape.id.safeParse(entryId).success) return json({ error: "Invalid entry ID" }, 400);
+        const data = await env.DB.prepare("SELECT data FROM gameslash_editorial_qa WHERE entry_id = ?").bind(entryId).first<string>("data");
+        return new Response(data ?? "null", { headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } });
+      }
+      if (path === "/catalog-pages" || path === "/catalog-page") {
+        if (request.method !== "GET") return json({ error: "Method not allowed" }, 405);
+        const version = url.searchParams.get("version"), page = url.searchParams.get("page"), offset = url.searchParams.get("offset");
+        if (!version || !/^\d{1,15}$/.test(version) || (path === "/catalog-page" &&
+          (!page || !offset || !/^\d{1,9}$/.test(page) || !/^\d{1,7}$/.test(offset) || Number(offset) > 1_800_000 || Number(offset) % catalogChunkCharacters !== 0)))
+          return json({ error: "Invalid catalog page" }, 400);
+        const expression = path === "/catalog-pages" ?
+          "(SELECT json_group_array(json_object('page', page, 'characters', length(entries))) FROM pages)" :
+          "(SELECT substr(entries, ?, ?) FROM pages WHERE page = ?)";
+        const params = path === "/catalog-pages" ? [] : [Number(offset) + 1, catalogChunkCharacters, Number(page)];
+        const data = await env.DB.prepare(`${catalogPagesSql} SELECT ${expression} AS data FROM gameslash_state WHERE id = 1 AND version = ?`)
+          .bind(...params, Number(version)).first<string>("data");
+        if (data === null) return json({ error: "Catalog changed; restart the read" }, 409);
+        if (!data.length) return json({ error: "Invalid catalog page offset" }, 400);
+        return new Response(data, { headers: { "Content-Type": path === "/catalog-pages" ? "application/json" : "text/plain; charset=utf-8", "Cache-Control": "no-store" } });
+      }
       if (path === "/tags") {
         if (request.method !== "GET") return json({ error: "Method not allowed" }, 405);
         const data = await env.DB.prepare("SELECT COALESCE(json_extract(data, '$.customTags'), '[]') AS data FROM gameslash_state WHERE id = 1 AND data != '{}'").first<string>("data");
@@ -94,11 +134,12 @@ export default {
         if (request.method !== "GET") return json({ error: "Method not allowed" }, 405);
         const version = url.searchParams.get("version"), offset = url.searchParams.get("offset"), part = url.searchParams.get("part");
         const entryId = url.searchParams.get("entryId");
+        const summary = url.searchParams.get("summary") === "1";
         if (!version || !offset || !/^\d{1,15}$/.test(version) || !/^\d{1,7}$/.test(offset)
           || Number(offset) > 1_800_000 || Number(offset) % catalogChunkCharacters !== 0
-          || !["state", "entries"].includes(part || "") || (entryId !== null && !entrySchema.shape.id.safeParse(entryId).success))
+          || !["state", "entries"].includes(part || "") || (summary && entryId === null) || (entryId !== null && !entrySchema.shape.id.safeParse(entryId).success))
           return json({ error: "Invalid catalog chunk" }, 400);
-        const expression = part === "state" ? "s.data" : entryId !== null
+        const expression = part === "state" ? "s.data" : summary ? summaryExpression : entryId !== null
           ? "COALESCE((SELECT json_array(json(data)) FROM gameslash_entries WHERE id = ?), '[]')"
           : "(SELECT entries FROM gameslash_entry_snapshot WHERE id = 1 AND version = s.version)";
         const params = part === "entries" && entryId !== null ? [entryId] : [];
@@ -140,8 +181,9 @@ export default {
         const entryId = url.searchParams.get("entryId");
         if (entryId !== null && !entrySchema.shape.id.safeParse(entryId).success)
           return json({ error: "Invalid entry ID" }, 400);
+        if (url.searchParams.get("summary") === "1" && entryId === null) return json({ error: "Metadata reads require an entry ID" }, 400);
         if (url.searchParams.get("format") === "chunks") {
-          const expression = entryId !== null
+          const expression = url.searchParams.get("summary") === "1" ? summaryExpression : entryId !== null
             ? "COALESCE((SELECT json_array(json(data)) FROM gameslash_entries WHERE id = ?), '[]')"
             : "(SELECT entries FROM gameslash_entry_snapshot WHERE id = 1 AND version = s.version)";
           const statement = env.DB.prepare(`SELECT version, length(data) AS stateCharacters,
@@ -195,6 +237,8 @@ export default {
       const parsed = mutationSchema.safeParse(input);
       if (!parsed.success) return json({ error: "Invalid catalog mutation" }, 400);
       const { expectedVersion, initialize, stablePositions, state, changed, deleted } = parsed.data;
+      const evidence = Object.entries(state.editorialQa).flatMap(([id, qa]) => qa.evidence ? [{ id, evidence: qa.evidence }] : []);
+      for (const { id } of evidence) delete state.editorialQa[id].evidence;
       const stateJson = JSON.stringify(state);
       if (new TextEncoder().encode(stateJson).byteLength > 1_800_000)
         return json({ error: "Catalog state exceeds D1 row limit" }, 413);
@@ -203,6 +247,12 @@ export default {
           WHERE id = 1 AND version = ? AND (? = 0 OR
             (data = '{}' AND NOT EXISTS (SELECT 1 FROM gameslash_entries)))))`)
         .bind(expectedVersion, Number(initialize))];
+      if (parsed.data.ticket) queries.push(env.DB.prepare(`INSERT OR REPLACE INTO gameslash_write_guard (id, valid)
+        VALUES (1, (SELECT count(*) FROM gameslash_write_queue WHERE ticket = ? AND status = 'running' AND expires > ?))`)
+        .bind(parsed.data.ticket, Date.now()));
+      if (evidence.length) queries.push(env.DB.prepare(`INSERT INTO gameslash_editorial_qa (entry_id, data)
+        SELECT json_extract(value, '$.id'), json_extract(value, '$.evidence') FROM json_each(?) WHERE true
+        ON CONFLICT(entry_id) DO UPDATE SET data = excluded.data`).bind(JSON.stringify(evidence)));
       // Old app instances send array offsets; normalize ranks atomically before their entry writes.
       if (!stablePositions && changed.length) queries.push(env.DB.prepare(`WITH ranked AS MATERIALIZED (
         SELECT id, row_number() OVER (ORDER BY position, id) - 1 AS position FROM gameslash_entries
@@ -232,7 +282,7 @@ export default {
       ).bind(JSON.stringify(deleted)));
       // Older app schemas omit private state; preserve it during the rollout and rollback.
       let stateExpression = "?";
-      for (const [key, fallback] of [["gameLikes", "{}"], ["feedback", "[]"]]) {
+      for (const [key, fallback] of [["gameLikes", "{}"], ["feedback", "[]"], ["editorialQa", "{}"]]) {
         if (!Object.hasOwn(input.state, key))
           stateExpression = `json_set(${stateExpression}, '$.${key}', json(COALESCE(json_extract(data, '$.${key}'), '${fallback}')))`;
       }
@@ -245,6 +295,8 @@ export default {
           FROM gameslash_entries) < 1800000 THEN
           (SELECT json_group_array(json(json_set(data, '$._d1Position', position))) FROM (SELECT data, position FROM gameslash_entries ORDER BY position, id))
           ELSE NULL END FROM gameslash_state WHERE id = 1`).bind(Number(changed.length > 0 || deleted.length > 0), expectedVersion));
+      if (parsed.data.ticket) queries.push(env.DB.prepare("UPDATE gameslash_write_queue SET status = 'succeeded', result = ?, updated_at = ? WHERE ticket = ?")
+        .bind(parsed.data.operationResult ?? null, Date.now(), parsed.data.ticket));
       await env.DB.batch(queries);
       return json({ version: expectedVersion + 1 });
     } catch (error) {

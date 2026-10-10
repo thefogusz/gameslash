@@ -32,3 +32,19 @@ CREATE TABLE IF NOT EXISTS gameslash_image_reservations (
   expires INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS gameslash_image_reservation_expiry ON gameslash_image_reservations (expires);
+-- Durable FIFO tickets and receipts finish atomically with catalog commits.
+CREATE TABLE IF NOT EXISTS gameslash_write_queue (
+  sequence INTEGER PRIMARY KEY AUTOINCREMENT,
+  ticket TEXT NOT NULL UNIQUE,
+  agent_id TEXT, request_id TEXT, tool TEXT, input_hash TEXT,
+  status TEXT NOT NULL CHECK (status IN ('queued', 'running', 'succeeded', 'failed', 'unknown')),
+  expires INTEGER NOT NULL, updated_at INTEGER NOT NULL, result TEXT,
+  UNIQUE(agent_id, tool, request_id)
+);
+CREATE INDEX IF NOT EXISTS gameslash_write_queue_active ON gameslash_write_queue(status, sequence);
+CREATE INDEX IF NOT EXISTS gameslash_write_queue_expiry ON gameslash_write_queue(expires);
+-- Evidence is separate from the small catalog state and is read only for one entry.
+CREATE TABLE IF NOT EXISTS gameslash_editorial_qa (
+  entry_id TEXT PRIMARY KEY,
+  data TEXT NOT NULL CHECK (json_valid(data))
+);

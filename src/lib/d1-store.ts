@@ -2,6 +2,8 @@ import { z } from "zod";
 import { databaseSchema, entrySchema, type Database } from "./model";
 import { ConflictError } from "./postgres-store";
 import { catalogChunkCharacters } from "./d1-protocol";
+import { queueRecordSchema, type OperationContext } from "./write-queue";
+import { editorialQaInput } from "./editorial-qa";
 
 export function d1Ready() {
   return !!(process.env.GAMESLASH_D1_URL && process.env.GAMESLASH_D1_TOKEN);
@@ -53,22 +55,40 @@ const chunkManifestSchema = snapshotSchema.omit({ db: true }).extend({
   entryCharacters: z.number().int().min(2).max(1_800_000).nullable(),
   chunkSize: z.number().int().positive().max(catalogChunkCharacters),
 });
-async function readSnapshotD1(entryId?: string) {
-  const query = new URLSearchParams({ format: "chunks", ...(entryId === undefined ? {} : { entryId }) });
+async function readSnapshotD1(entryId?: string, summary = false) {
+  const query = new URLSearchParams({ format: "chunks", ...(entryId === undefined ? {} : { entryId }), ...(summary ? { summary: "1" } : {}) });
   for (let attempt = 0; attempt < 4; attempt++) {
     const response = await requestD1("GET", undefined, `/catalog?${query}`);
     // Older Workers ignore format and return the existing validated snapshot protocol.
     if (!Object.hasOwn(response, "stateCharacters")) return response;
     const manifest = chunkManifestSchema.parse(response);
-    // shortcut: arrays above the snapshot's 1.8 MB bound retain legacy reads; paginate before this becomes frequent.
-    if (manifest.entryCharacters === null) return requestD1("GET", undefined, entryId === undefined ? "/catalog" : `/catalog?${new URLSearchParams({ entryId })}`);
+    if (manifest.entryCharacters === null) {
+      if (summary) throw new Error("Metadata exceeds bounded read limit");
+      try {
+        const pages = z.array(z.object({ page: z.number().int().nonnegative(), characters: z.number().int().min(2).max(1_800_000) })).max(3000)
+          .parse(await requestD1("GET", undefined, `/catalog-pages?version=${manifest.version}`));
+        const requests: { path: string; group: number }[] = [];
+        for (let offset = 0; offset < manifest.stateCharacters; offset += manifest.chunkSize)
+          requests.push({ path: `/catalog-chunk?version=${manifest.version}&part=state&offset=${offset}`, group: -1 });
+        for (const { page, characters } of pages) for (let offset = 0; offset < characters; offset += manifest.chunkSize)
+          requests.push({ path: `/catalog-page?version=${manifest.version}&page=${page}&offset=${offset}`, group: page });
+        const groups = new Map<number, string[]>();
+        for (let i = 0; i < requests.length; i += 4) {
+          const batch = requests.slice(i, i + 4);
+          const chunks = await Promise.all(batch.map(item => requestD1("GET", undefined, item.path, true) as Promise<string>));
+          batch.forEach((item, index) => { const group = groups.get(item.group) ?? []; group.push(chunks[index]); groups.set(item.group, group); });
+        }
+        const entries = pages.flatMap(({ page }) => JSON.parse(groups.get(page)!.join("")));
+        return { ...manifest, db: { ...JSON.parse(groups.get(-1)!.join("")), entries } };
+      } catch (error) { if (!(error instanceof ConflictError)) throw error; continue; }
+    }
     const requests: { part: string; offset: number }[] = [];
     for (const [part, length] of [["state", manifest.stateCharacters], ["entries", manifest.entryCharacters]] as const)
       for (let offset = 0; offset < length; offset += manifest.chunkSize) requests.push({ part, offset });
     const chunks: string[] = [];
     try {
       for (let i = 0; i < requests.length; i += 4) chunks.push(...await Promise.all(requests.slice(i, i + 4).map(({ part, offset }) => {
-        const params = new URLSearchParams({ version: String(manifest.version), part, offset: String(offset), ...(entryId === undefined ? {} : { entryId }) });
+        const params = new URLSearchParams({ version: String(manifest.version), part, offset: String(offset), ...(entryId === undefined ? {} : { entryId }), ...(summary ? { summary: "1" } : {}) });
         return requestD1("GET", undefined, `/catalog-chunk?${params}`, true) as Promise<string>;
       })));
       const stateChunks = Math.ceil(manifest.stateCharacters / manifest.chunkSize);
@@ -98,6 +118,12 @@ export async function readD1Notifications() {
 }
 export async function readD1(entryId?: string) {
   return snapshotSchema.parse(await readSnapshotD1(entryId)).db;
+}
+export async function readD1Metadata() {
+  return snapshotSchema.parse(await readSnapshotD1("mcp-metadata", true)).db;
+}
+export async function readD1QaEvidence(id: string) {
+  return editorialQaInput.nullable().parse(await requestD1("GET", undefined, `/editorial-qa?${new URLSearchParams({ entryId: id })}`));
 }
 export async function readD1Tags() {
   return databaseSchema.shape.customTags.parse(await requestD1("GET", undefined, "/tags"));
@@ -130,9 +156,40 @@ export async function initializeD1(input: Database) {
   await requestD1("PUT", { expectedVersion: 0, initialize: true, state,
     changed: entries.map((data, position) => ({ data, position })), deleted: [] });
 }
-export async function updateD1(change: (db: Database) => void, revision?: number, bumpRevision = true) {
+export async function readD1Operation(agentId: string, tool: string, requestId: string) {
+  const response = await requestD1("GET", undefined, `/write-queue?${new URLSearchParams({ agentId, tool, requestId })}`);
+  return z.object({ operation: queueRecordSchema.nullable() }).parse(response).operation;
+}
+export async function updateD1Queued(change: (db: Database) => void, revision?: number, scopeId?: string, operation?: OperationContext) {
+  const ticket = crypto.randomUUID();
+  const enqueue = queueRecordSchema.parse(await requestD1("PUT", { ticket, action: "enqueue", operation }, "/write-queue"));
+  if (enqueue.ticket !== ticket) {
+    if (enqueue.status === "succeeded" && scopeId) return readD1(scopeId);
+    if (enqueue.status === "unknown") throw new D1RequestError(503, true);
+    if (enqueue.status === "failed") throw new ConflictError("รหัสงานนี้ล้มเหลวแล้ว กรุณาตรวจสาเหตุและใช้รหัสงานใหม่เมื่อแก้ไขแล้ว");
+    throw new D1RequestError(429, false);
+  }
+  let acquired = false;
+  const deadline = Date.now() + 8_000;
+  try {
+    while (Date.now() < deadline) {
+      const row = queueRecordSchema.parse(await requestD1("PUT", { ticket, action: "claim" }, "/write-queue"));
+      if (row.status === "running") { acquired = true; break; }
+      await new Promise(resolve => setTimeout(resolve, 300));
+    }
+    if (!acquired) throw new D1RequestError(429, false);
+    return await updateD1(change, revision, true, { ticket, scopeId });
+  } catch (error) {
+    // A lost catalog reply may already have committed; never turn its receipt into a failed operation.
+    await requestD1("PUT", { ticket, action: acquired ? "complete" : "cancel", outcome: error instanceof D1RequestError && error.outcomeUnknown ? "unknown" : "failed",
+      result: JSON.stringify({ error: error instanceof ConflictError ? "CONFLICT" : error instanceof D1RequestError ? "STORAGE_UNAVAILABLE" : "REQUEST_FAILED",
+        ...(error instanceof Error && /[ก-๙]/.test(error.message) ? { message: error.message.slice(0, 500) } : {}) }) }, "/write-queue").catch(() => undefined);
+    throw error;
+  }
+}
+export async function updateD1(change: (db: Database) => void, revision?: number, bumpRevision = true, queue?: { ticket: string; scopeId?: string }) {
   for (let attempt = 0; attempt < 4; attempt++) {
-    const response = await readSnapshotD1();
+    const response = await readSnapshotD1(queue?.scopeId, queue?.scopeId !== undefined);
     const { db, version, supportsGameLikes, supportsFeedback, supportsStablePositions } = snapshotSchema.parse(response);
     const positions = supportsStablePositions
       ? new Map(storedPositionsSchema.parse(response.db.entries).map((entry, i) => [entry.id, entry._d1Position ?? i]))
@@ -149,7 +206,19 @@ export async function updateD1(change: (db: Database) => void, revision?: number
       throw new Error("ระบบรับฟีดแบคยังไม่พร้อม กรุณาอัปเดต D1 Worker ก่อน");
     const validated = databaseSchema.parse(db);
     if (new Set(validated.entries.map(entry => entry.id)).size !== validated.entries.length) throw new Error("Duplicate entry IDs");
-    if (JSON.stringify(validated) === before) return validated;
+    if (queue?.scopeId !== undefined && validated.entries.some(entry => entry.id !== queue.scopeId && previous.get(entry.id)?.json !== JSON.stringify(entry)))
+      throw new Error("Scoped update cannot change another entry");
+    if (queue?.scopeId !== undefined && [...previous.keys()].some(id => id !== queue.scopeId && !validated.entries.some(entry => entry.id === id)))
+      throw new Error("Scoped update cannot delete another entry");
+    if (queue?.scopeId !== undefined && JSON.stringify(validated.entries.filter(e => e.id !== queue.scopeId).map(e => e.id)) !== JSON.stringify([...previous.keys()].filter(id => id !== queue.scopeId)))
+      throw new Error("Scoped update cannot reorder another entry");
+    const unchanged = JSON.stringify(validated) === before;
+    const scopedEntry = validated.entries.find(e => e.id === queue?.scopeId);
+    const operationResult = JSON.stringify({ revision: validated.revision + Number(bumpRevision && !unchanged), ...(scopedEntry ? { entryId: scopedEntry.id, updatedAt: scopedEntry.updatedAt } : {}) });
+    if (unchanged) {
+      if (queue) await requestD1("PUT", { ticket: queue.ticket, action: "complete", outcome: "succeeded", result: operationResult }, "/write-queue");
+      return validated;
+    }
     if (bumpRevision) validated.revision++;
     const { entries, ...state } = validated;
     const nextPositions = supportsStablePositions ? stablePositions(entries, previous) : entries.map((_, position) => position);
@@ -158,8 +227,9 @@ export async function updateD1(change: (db: Database) => void, revision?: number
       const old = previous.get(data.id); previous.delete(data.id);
       return old?.position === position && old.json === JSON.stringify(data) ? [] : [{ data, position }];
     });
+    if (queue?.scopeId !== undefined && changed.some(row => row.data.id !== queue.scopeId)) throw new Error("Scoped update cannot change another entry position");
     try {
-      await requestD1("PUT", { expectedVersion: version, stablePositions: supportsStablePositions, state, changed, deleted: [...previous.keys()] });
+      await requestD1("PUT", { expectedVersion: version, stablePositions: supportsStablePositions, state, changed, deleted: [...previous.keys()], ...(queue ? { ticket: queue.ticket, operationResult } : {}) });
       return validated;
     } catch (error) {
       if (!(error instanceof ConflictError) || revision !== undefined) throw error;

@@ -1,7 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { seedDatabase } from "../src/lib/seed";
-import { readD1, readD1AgentAuth, readD1Likes, readD1Notifications, readD1Tags, initializeD1, updateD1, reserveD1Image, D1RequestError } from "../src/lib/d1-store";
+import { readD1, readD1AgentAuth, readD1Likes, readD1Notifications, readD1Tags, initializeD1, updateD1, updateD1Queued, readD1Operation, reserveD1Image, D1RequestError } from "../src/lib/d1-store";
+import { manageCatalog, createAgentDraft, agentDraftId } from "../src/lib/catalog-service";
+import { entryInput } from "../src/lib/model";
 import { catalogChunkCharacters } from "../src/lib/d1-protocol";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -14,6 +16,7 @@ import { publicData } from "../src/lib/model";
 import { ConflictError } from "../src/lib/postgres-store";
 import { jobSchema } from "../src/lib/collection-model";
 import { changeGameLikes, gameLikeCounts } from "../src/lib/game-likes";
+import { POST } from "../src/app/api/mcp/route";
 
 test("D1 migration, concurrent CAS, rollback, ordering and private access", {
   skip: !process.env.GAMESLASH_TEST_D1_URL,
@@ -99,7 +102,128 @@ test("D1 migration, concurrent CAS, rollback, ordering and private access", {
     }));
   });
   assert.ok(Buffer.byteLength(JSON.stringify(large)) > 1_800_000);
-  assert.deepEqual(await readD1(), large, "Large catalogs must retain split-row reads rather than exceed D1's single-value limit");
+  const originalFetch = globalThis.fetch;
+  let pages = 0, maxPageBytes = 0;
+  globalThis.fetch = async (request, options) => {
+    const response = await originalFetch(request, options);
+    const path = new URL(String(request));
+    if (path.pathname === "/catalog") assert.equal(path.searchParams.get("format"), "chunks", "Large reads must never fall back to one legacy payload");
+    if (path.pathname === "/catalog-page") { pages++; maxPageBytes = Math.max(maxPageBytes, (await response.clone().arrayBuffer()).byteLength); }
+    return response;
+  };
+  try { assert.deepEqual(await readD1(), large); } finally { globalThis.fetch = originalFetch; }
+  assert.ok(pages > 0);
+  assert.ok(maxPageBytes <= 128 * 1024);
+});
+
+test("three agents serialize scoped writes and recover atomic receipts after a lost response", {
+  skip: !process.env.GAMESLASH_TEST_D1_URL,
+}, async () => {
+  const url = new URL(process.env.GAMESLASH_TEST_D1_URL!);
+  assert.ok(["127.0.0.1", "localhost"].includes(url.hostname));
+  process.env.GAMESLASH_D1_URL = url.origin;
+  process.env.GAMESLASH_D1_TOKEN = process.env.GAMESLASH_TEST_D1_TOKEN;
+  const seeded = await updateD1(db => {
+    db.entries = Array.from({ length: 160 }, (_, i) => ({ ...seedDatabase().entries[0], id: `queue-fixture-${i}`, url: `https://example.com/existing/${i}`, body: "x".repeat(15_000) }));
+    for (let i = 0; i < 3; i++) manageCatalog(db, { action: "create_agent", revision: db.revision, name: `Queue fixture ${i}`, canWriteDrafts: true });
+  });
+  const agents = seeded.agents.slice(-3);
+  const originalFetch = globalThis.fetch;
+  const changedCounts: number[] = [];
+  let catalogReadBytes = 0;
+  globalThis.fetch = async (request, options) => {
+    const response = await originalFetch(request, options);
+    const path = new URL(String(request)).pathname;
+    if (path === "/catalog" && options?.method === "PUT") changedCounts.push(JSON.parse(String(options.body)).changed.length);
+    if (path === "/catalog-chunk") catalogReadBytes += (await response.clone().arrayBuffer()).byteLength;
+    return response;
+  };
+  const contexts = agents.map((agent, i) => ({ agentId: agent.id, tool: "create_draft", requestId: "shared-request-id", inputHash: String(i + 1).repeat(64) }));
+  try {
+    await Promise.all(contexts.map((context, i) => updateD1Queued(db => {
+      createAgentDraft(db, context.agentId, context.requestId, entryInput.parse({ ...seedDatabase().entries[0], image: "", url: `https://example.com/new/${i}` }));
+    }, undefined, agentDraftId(context.agentId, context.requestId), context)));
+    assert.deepEqual(changedCounts, [1, 1, 1], "Metadata shells must never overwrite untouched entries");
+    assert.ok(catalogReadBytes < 500_000, "Three writes must not download the 2.4 MB catalog three times");
+    assert.ok((await readD1("queue-fixture-100")).entries[0].body.length === 15_000);
+    for (const context of contexts) {
+      const receipt = await readD1Operation(context.agentId, context.tool, context.requestId);
+      assert.equal(receipt?.status, "succeeded");
+      assert.equal(JSON.parse(receipt!.result!).entryId, agentDraftId(context.agentId, context.requestId));
+    }
+    assert.equal(await readD1Operation(agents[1].id, "create_draft", "another-agents-job"), null);
+    const context = { ...contexts[0], requestId: "lost-reply-request", inputHash: "a".repeat(64) };
+    const id = agentDraftId(context.agentId, context.requestId);
+    let lose = true;
+    globalThis.fetch = async (request, options) => {
+      const response = await originalFetch(request, options);
+      if (lose && new URL(String(request)).pathname === "/catalog" && options?.method === "PUT") { lose = false; throw new Error("Lost committed response"); }
+      return response;
+    };
+    const write = () => updateD1Queued(db => { createAgentDraft(db, context.agentId, context.requestId, entryInput.parse({ ...seedDatabase().entries[0], image: "", url: "https://example.com/lost" })); }, undefined, id, context);
+    await assert.rejects(write(), error => error instanceof D1RequestError && error.outcomeUnknown);
+    assert.equal((await readD1Operation(context.agentId, context.tool, context.requestId))?.status, "succeeded");
+    const recovered = await write();
+    assert.equal(recovered.entries[0].id, id);
+    assert.equal(recovered.limits[`agent:${context.agentId}`].count, 2, "Lost reply recovery cannot double-charge the draft");
+    await assert.rejects(updateD1Queued(() => {}, undefined, id, { ...context, inputHash: "b".repeat(64) }), ConflictError);
+    await assert.rejects(updateD1Queued(db => { db.entries[1].title = "Forbidden shell edit"; }, undefined, id), /another entry/);
+    await assert.rejects(updateD1Queued(db => { db.entries.reverse(); }, undefined, id), /reorder/);
+    console.log(JSON.stringify({ threeAgentWrites: true, catalogReadBytes, untouchedContentPreserved: true, lostReplyReceipt: true }));
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+test("three MCP clients follow QA gates, private receipts and a staged live edit", {
+  skip: !process.env.GAMESLASH_TEST_D1_URL,
+}, async () => {
+  process.env.GAMESLASH_STORAGE = "d1";
+  const tokens: string[] = [];
+  await updateD1(db => {
+    db.entries = seedDatabase().entries;
+    for (let i = 0; i < 3; i++) tokens.push(manageCatalog(db, { action: "create_agent", revision: db.revision, name: `MCP fixture ${i}`, canWriteDrafts: true, canManageSite: i === 0 })!);
+  });
+  let rpcId = 0;
+  const call = async (index: number, name: string, args: unknown) => {
+    const response = await POST(new Request("http://localhost/api/mcp", {
+      method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json, text/event-stream", Authorization: `Bearer ${tokens[index]}` },
+      body: JSON.stringify({ jsonrpc: "2.0", id: ++rpcId, method: "tools/call", params: { name, arguments: args } }),
+    }));
+    assert.equal(response.status, 200);
+    const text = await response.text();
+    return JSON.parse(text.startsWith("{") ? text : text.split("\n").find(line => line.startsWith("data: "))!.slice(6)).result;
+  };
+  const inputs = tokens.map((_, i) => entryInput.parse({ kind: "article", title: `Isolated MCP news ${i}`, description: "Isolated news fixture with public original source", author: "Fixture author", category: "ข่าว", sourceUrl: `https://example.com/source/${i}` }));
+  try {
+    const drafts = await Promise.all(inputs.map((entry, i) => call(i, "create_draft", { requestId: `mcp-news-request-${i}`, entry })));
+    assert.ok(drafts.every(result => !result.isError));
+    const entry = drafts[0].structuredContent.entry;
+    const rejected = await call(0, "submit_for_review", { id: entry.id, expectedUpdatedAt: entry.updatedAt, operationId: "mcp-rejected-submit" });
+    assert.equal(JSON.parse(rejected.content[0].text).code, "QA_REQUIRED");
+    const at = new Date().toISOString();
+    const qa = { claims: [{ claim: "Original announcement verified for this isolated fixture", sourceUrl: inputs[0].sourceUrl, checkedAt: at }], images: [], noImageReason: "No suitable fixture image is needed for this test", links: [inputs[0].sourceUrl], render: { method: "client-preview", checkedAt: at, desktop: true, mobile: true, notes: "Fixture desktop and mobile layout inspected in the isolated client" } };
+    assert.equal((await call(1, "record_entry_qa", { id: entry.id, expectedUpdatedAt: entry.updatedAt, qa })).isError, true);
+    const checked = await call(0, "record_entry_qa", { id: entry.id, expectedUpdatedAt: entry.updatedAt, qa, operationId: "mcp-qa-request-001" });
+    assert.equal(checked.structuredContent.recorded, true);
+    const pending = (await call(0, "submit_for_review", { id: entry.id, expectedUpdatedAt: entry.updatedAt, operationId: "mcp-submit-request-001" })).structuredContent.entry;
+    assert.equal(pending.status, "pending");
+    const state = (await call(0, "get_site_state", {})).structuredContent;
+    const published = (await call(0, "review_site_entry", { id: entry.id, revision: state.revision, expectedUpdatedAt: pending.updatedAt, decision: "publish", operationId: "mcp-publish-request-001" })).structuredContent.entry;
+    assert.equal(published.status, "published");
+    assert.equal((await call(1, "get_entry", { id: entry.id })).structuredContent.qa, null, "Published content never exposes private QA to another writer");
+    assert.equal((await call(1, "get_operation_status", { tool: "record_entry_qa", operationId: "mcp-qa-request-001" })).structuredContent.operation, null);
+    const receipt = (await call(0, "get_operation_status", { tool: "review_site_entry", operationId: "mcp-publish-request-001" })).structuredContent.operation;
+    assert.equal(receipt.status, "succeeded");
+    const replacement = { ...inputs[0], title: "Edited isolated MCP news" };
+    const unverified = await call(0, "save_site_entry", { id: published.id, revision: (await call(0, "get_site_state", {})).structuredContent.revision, expectedUpdatedAt: published.updatedAt, status: "published", entry: replacement, operationId: "mcp-unverified-live-edit" });
+    assert.equal(JSON.parse(unverified.content[0].text).code, "QA_REQUIRED");
+    assert.equal((await call(0, "get_entry", { id: published.id })).structuredContent.entry.title, published.title);
+    assert.equal((await call(0, "record_entry_qa", { id: published.id, expectedUpdatedAt: published.updatedAt, proposedEntry: replacement, qa, operationId: "mcp-proposed-qa-001" })).isError, undefined);
+    const editState = (await call(0, "get_site_state", {})).structuredContent;
+    const edited = await call(0, "save_site_entry", { id: published.id, revision: editState.revision, expectedUpdatedAt: published.updatedAt, status: "published", entry: replacement, operationId: "mcp-live-edit-001" });
+    assert.equal(edited.structuredContent.entry.title, replacement.title);
+    assert.equal(edited.structuredContent.entry.status, "published");
+    assert.equal((await call(0, "get_entry", { id: published.id })).structuredContent.qa.current, true);
+  } finally { delete process.env.GAMESLASH_STORAGE; }
 });
 
 test("bounded catalog chunks reconstruct Unicode and restart when the storage version changes", {

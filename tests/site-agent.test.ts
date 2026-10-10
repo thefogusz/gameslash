@@ -4,6 +4,7 @@ import { seedDatabase } from "../src/lib/seed";
 import { databaseSchema, entryInput, publicData } from "../src/lib/model";
 import { agentEntries, authenticateAgent, manageCatalog, requireSiteAgent, saveSiteEntry } from "../src/lib/catalog-service";
 import { requireTagAgent } from "../src/lib/tag-service";
+import { qaFixture } from "./qa-fixture";
 
 test("site management is opt-in, revocable, and can publish and edit catalog entries", () => {
   const db = seedDatabase();
@@ -16,9 +17,12 @@ test("site management is opt-in, revocable, and can publish and edit catalog ent
   assert.throws(() => saveSiteEntry(db, agent.id, "example-repo", undefined, input, "published"), /ไม่มีสิทธิ์/);
   manageCatalog(db, { action: "agent_site_permission", revision: db.revision, id: agent.id, enabled: true });
   assert.equal(requireTagAgent(db, agent.id).id, agent.id);
-  const published = saveSiteEntry(db, agent.id, "example-repo", undefined, input, "published");
+  const draft = saveSiteEntry(db, agent.id, "example-repo", undefined, input, "draft");
+  qaFixture(db, draft);
+  const published = saveSiteEntry(db, agent.id, "example-repo", draft.updatedAt, input, "published");
   assert.equal(publicData(db).entries.find(e => e.id === published.id)?.title, input.title);
   assert.throws(() => saveSiteEntry(db, agent.id, published.id, undefined, input, "archived"), /ข้อมูลล่าสุด/);
+  qaFixture(db, { ...published, title: "Updated repo" });
   const changed = saveSiteEntry(db, agent.id, published.id, published.updatedAt, { ...input, title: "Updated repo" }, "published");
   assert.equal(changed.title, "Updated repo");
   assert.throws(() => saveSiteEntry(db, agent.id, published.id, published.updatedAt, input, "archived"), /ข้อมูลล่าสุด/);

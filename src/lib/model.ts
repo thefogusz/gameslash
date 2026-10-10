@@ -2,6 +2,7 @@ import { z } from "zod";
 import { gameTagSchema, tagRequestSchema } from "./game-tags";
 import { sourceSchema, jobSchema } from "./collection-model";
 import { articleDocumentSchema, imageUrl, publicHttps } from "./article";
+import { editorialQaSchema } from "./editorial-qa";
 
 export const kinds = ["game", "tool", "article", "post"] as const;
 export const kindLabels = {
@@ -144,6 +145,7 @@ export const reviewSchema = z.object({
   at: z.iso.datetime(),
 });
 export const databaseSchema = z.object({
+  editorialQa: z.record(entrySchema.shape.id, editorialQaSchema).default({}),
   feedback: z.array(z.object({
     id: z.string().uuid(), message: z.string().max(4000), page: z.string().max(1000),
     image: z.string().regex(/^$|^\/api\/feedback\/image\/[a-f0-9]{64}\.webp$/),
