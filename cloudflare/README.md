@@ -93,7 +93,7 @@ is true, observing `Retry-After`. `QUOTA_EXHAUSTED` sets `retryable: false` and 
 calls until then and resumes automatically; this is not a shared account-wide gate.
 `OUTCOME_UNKNOWN` sets `retryable: false`: read back before deciding whether to replay
 a write, retaining draft request IDs. The server never automatically replays uncertain
-writes. Instructions cannot force a third-party agent to obey; enforce client call
+catalog writes. Instructions cannot force a third-party agent to obey; enforce client call
 concurrency and retry limits when its settings permit.
 
 ## Read-budget rollout on the existing D1 deployment
@@ -144,3 +144,28 @@ and the app refuses feedback writes to older Workers. Feedback image files stay
 in the private `feedback/` Blob namespace and require an admin session to view.
 Older apps that omit feedback in their catalog writes retain existing tickets.
 No database migration or catalog replacement is needed for this rollout.
+
+## Image-upload reliability rollout
+
+Apply the additive image-reservation table/index in `schema.sql`, then deploy the
+Worker before the app. Do not initialize or replace the live catalog. The new
+`PUT /image-reservation` accepts at most 1 KiB and projects only current agent
+permissions and two rate counters. A version-guarded D1 batch updates counters,
+stores a 24-hour receipt and advances an already matching snapshot version without
+reading or rewriting its entries. Old writers still share the same counters and CAS
+version. Hourly/daily limits and the read-only switch remain enforced.
+
+The same agent, namespace and normalized image hash reuse a receipt after a lost
+reply or Blob failure. Expired receipts are deleted through an expiry index on the
+next new reservation. Only this operation retries ambiguous responses (at most
+two retries, five-second request deadlines); catalog mutations keep their existing
+read-back requirement. Blob writes use the same content-hashed pathname on retry.
+MCP `upload_image` describes safe retries; tool errors are logged by code without
+payloads or credentials. Refresh the MCP connection once after the app deploy.
+
+Rollback the app while leaving the Worker and additive table in place. Receipts
+are private operational state, never included in catalog/MCP reads. Isolated D1
+tests exercise lost successful responses, simultaneous duplicates, storage failures,
+counter resets, daily/hourly rejection, revoked/expired permissions and namespace
+isolation. Continue checking production resource outcomes: these tests cannot prove
+that every catalog mutation fits Workers Free's CPU allowance.

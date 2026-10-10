@@ -1,6 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 import { z } from "zod";
-import { databaseSchema, entrySchema } from "../src/lib/model";
+import { consumeLimit, databaseSchema, entrySchema, type Database } from "../src/lib/model";
 
 const mutationSchema = z.object({
   expectedVersion: z.number().int().nonnegative(),
@@ -13,6 +13,65 @@ const mutationSchema = z.object({
 const json = (value: unknown, status = 200) => Response.json(value, {
   status, headers: { "Cache-Control": "no-store" },
 });
+const imageReservationSchema = z.object({
+  namespace: z.enum(["media", "feedback"]),
+  imageId: z.string().regex(/^[a-f0-9]{64}$/),
+  agentId: z.uuid().optional(),
+});
+async function reserveImage(input: z.infer<typeof imageReservationSchema>, env: Env) {
+  const actor = `${input.namespace}:${input.agentId || "admin"}`;
+  const daily = `${input.namespace}:daily`;
+  const key = `${actor}:${input.imageId}`;
+  const actorPath = `$.limits."${actor}"`, dailyPath = `$.limits."${daily}"`;
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const now = Date.now();
+    // Project only two counters and current permissions, never the catalog or private jobs.
+    const row = await env.DB.prepare(`SELECT version,
+      COALESCE(json_extract(data, ?), '{}') AS actor,
+      COALESCE(json_extract(data, ?), '{}') AS daily,
+      (? IS NULL OR EXISTS (SELECT 1 FROM json_each(data, '$.agents')
+        WHERE json_extract(value, '$.id') = ? AND json_extract(value, '$.revokedAt') IS NULL
+        AND julianday(json_extract(value, '$.expiresAt')) > julianday(?)
+        AND (json_extract(value, '$.canWriteDrafts') = 1 OR json_extract(value, '$.canManageSite') = 1))) AS allowed,
+      EXISTS (SELECT 1 FROM gameslash_image_reservations WHERE key = ? AND expires > ?) AS reserved
+      FROM gameslash_state WHERE id = 1 AND data != '{}'`)
+      .bind(actorPath, dailyPath, input.agentId ?? null, input.agentId ?? null, new Date(now).toISOString(), key, now)
+      .first<{ version: number; actor: string; daily: string; allowed: number; reserved: number }>();
+    if (!row) return json({ error: "D1 catalog has not been migrated" }, 503);
+    if (!row.allowed) return json({ error: "Agent cannot upload images" }, 403);
+    if (row.reserved) return json({ reserved: true });
+    const limits: Database["limits"] = {};
+    for (const [name, value] of [[actor, row.actor], [daily, row.daily]]) {
+      const counter = JSON.parse(value);
+      if (counter.reset > now) limits[name] = counter;
+    }
+    const db = { limits: databaseSchema.shape.limits.parse(limits) };
+    const exhausted = [actor, daily].filter(name => (db.limits[name]?.count ?? 0) >= (name === actor ? 40 : 200));
+    if (exhausted.length) {
+      const response = json({ error: "Image upload limit reached" }, 429);
+      response.headers.set("Retry-After", String(Math.max(5, Math.ceil((Math.max(...exhausted.map(name => db.limits[name].reset)) - now) / 1000))));
+      return response;
+    }
+    consumeLimit(db, actor, 40, 60 * 60 * 1000, now);
+    consumeLimit(db, daily, 200, 24 * 60 * 60 * 1000, now);
+    try {
+      await env.DB.batch([
+        env.DB.prepare(`INSERT OR REPLACE INTO gameslash_write_guard (id, valid)
+          VALUES (1, (SELECT count(*) FROM gameslash_state WHERE id = 1 AND version = ?))`).bind(row.version),
+        env.DB.prepare("DELETE FROM gameslash_image_reservations WHERE expires <= ?").bind(now),
+        env.DB.prepare("INSERT OR REPLACE INTO gameslash_image_reservations (key, expires) VALUES (?, ?)").bind(key, now + 86400000),
+        env.DB.prepare(`UPDATE gameslash_state SET version = version + 1,
+          data = json_set(data, ?, json(?), ?, json(?)) WHERE id = 1`)
+          .bind(actorPath, JSON.stringify(db.limits[actor]), dailyPath, JSON.stringify(db.limits[daily])),
+        env.DB.prepare("UPDATE gameslash_entry_snapshot SET version = ? WHERE id = 1 AND version = ?").bind(row.version + 1, row.version),
+      ]);
+      return json({ reserved: true });
+    } catch (error) {
+      if (!(error instanceof Error && error.message.includes("CHECK constraint failed: valid = 1"))) throw error;
+    }
+  }
+  return json({ error: "Catalog changed; retry the same image" }, 409);
+}
 
 export default {
   async fetch(request, env) {
@@ -22,8 +81,9 @@ export default {
       return json({ error: "Unauthorized" }, 401);
     const url = new URL(request.url);
     const path = url.pathname;
-    if (!["/catalog", "/notifications", "/agent-auth", "/likes"].includes(path)) return json({ error: "Not found" }, 404);
+    if (!["/catalog", "/notifications", "/agent-auth", "/likes", "/image-reservation"].includes(path)) return json({ error: "Not found" }, 404);
     try {
+      if (path === "/image-reservation" && request.method !== "PUT") return json({ error: "Method not allowed" }, 405);
       if (path === "/agent-auth" || path === "/likes") {
         if (request.method !== "GET") return json({ error: "Method not allowed" }, 405);
         const visitor = url.searchParams.get("visitor");
@@ -87,11 +147,15 @@ export default {
       for (;;) {
         const { value, done } = await reader.read(); if (done) break;
         bytes += value.byteLength;
-        if (bytes > 16 * 1024 * 1024) { await reader.cancel(); return json({ error: "Catalog request too large" }, 413); }
+        if (bytes > (path === "/image-reservation" ? 1024 : 16 * 1024 * 1024)) { await reader.cancel(); return json({ error: "Request too large" }, 413); }
         chunks.push(value);
       }
       const body = await new Blob(chunks).text();
       const input = JSON.parse(body);
+      if (path === "/image-reservation") {
+        const parsed = imageReservationSchema.safeParse(input);
+        return parsed.success ? await reserveImage(parsed.data, env) : json({ error: "Invalid image reservation" }, 400);
+      }
       const parsed = mutationSchema.safeParse(input);
       if (!parsed.success) return json({ error: "Invalid catalog mutation" }, 400);
       const { expectedVersion, initialize, stablePositions, state, changed, deleted } = parsed.data;

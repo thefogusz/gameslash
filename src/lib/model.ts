@@ -213,7 +213,7 @@ export function checkDuplicate(
   }
 }
 export function consumeLimit(
-  db: Database,
+  db: Pick<Database, "limits">,
   key: string,
   max: number,
   windowMs: number,

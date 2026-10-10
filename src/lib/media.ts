@@ -6,7 +6,9 @@ import { get, put } from "@vercel/blob";
 import { mediaIdPattern } from "./article";
 import { consumeLimit } from "./model";
 import { requireAgent } from "./catalog-service";
-import { updateDatabase } from "./store";
+import { storageReady, updateDatabase } from "./store";
+import { reserveD1Image } from "./d1-store";
+import { ImageUploadError } from "./media-errors";
 export const maxImageBytes = 2 * 1024 * 1024;
 const directory = (namespace = "media") => path.resolve(process.env.GAMESLASH_DATA_DIR || ".data", namespace);
 export async function normalizeImage(bytes: Buffer) {
@@ -21,14 +23,19 @@ export async function normalizeImage(bytes: Buffer) {
 export async function saveImage(bytes: Buffer, agentId?: string, namespace: "media" | "feedback" = "media") {
   const { data, info } = await normalizeImage(bytes);
   if (process.env.VERCEL && !process.env.BLOB_READ_WRITE_TOKEN) throw new Error("ยังไม่ได้เชื่อมที่เก็บภาพ");
-  await updateDatabase(db => {
+  if (!storageReady()) throw new Error("ระบบบันทึกข้อมูลยังไม่พร้อมใช้งาน กรุณาลองใหม่ภายหลัง");
+  const hash = createHash("sha256").update(data).digest("hex");
+  if (process.env.GAMESLASH_STORAGE === "d1") await reserveD1Image(hash, agentId, namespace);
+  else await updateDatabase(db => {
     if (agentId) requireAgent(db, agentId, true);
     consumeLimit(db, `${namespace}:${agentId || "admin"}`, 40, 60 * 60 * 1000);
     consumeLimit(db, `${namespace}:daily`, 200, 24 * 60 * 60 * 1000);
   }, undefined, false); // Upload counters do not change the catalog being edited.
-  const id = `${createHash("sha256").update(data).digest("hex")}.webp`;
-  if (process.env.BLOB_READ_WRITE_TOKEN) await put(`${namespace}/${id}`, data, { access:"private", addRandomSuffix:false, allowOverwrite:true, contentType:"image/webp" });
-  else { await mkdir(directory(namespace), { recursive:true }); await writeFile(path.join(directory(namespace), id), data); }
+  const id = `${hash}.webp`;
+  try {
+    if (process.env.BLOB_READ_WRITE_TOKEN) await put(`${namespace}/${id}`, data, { access:"private", addRandomSuffix:false, allowOverwrite:true, contentType:"image/webp" });
+    else { await mkdir(directory(namespace), { recursive:true }); await writeFile(path.join(directory(namespace), id), data); }
+  } catch (error) { throw new ImageUploadError(error); }
   return { url: namespace === "feedback" ? `/api/feedback/image/${id}` : `/api/media/${id}`, width:info.width, height:info.height, bytes:data.length, contentType:"image/webp" as const };
 }
 export async function readImage(id: string, namespace: "media" | "feedback" = "media") {

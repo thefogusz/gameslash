@@ -26,3 +26,9 @@ CREATE TABLE IF NOT EXISTS gameslash_write_guard (
   id INTEGER PRIMARY KEY CHECK (id = 1),
   valid INTEGER NOT NULL CHECK (valid = 1)
 );
+-- Short-lived receipts make retrying the same image reservation safe.
+CREATE TABLE IF NOT EXISTS gameslash_image_reservations (
+  key TEXT PRIMARY KEY,
+  expires INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS gameslash_image_reservation_expiry ON gameslash_image_reservations (expires);

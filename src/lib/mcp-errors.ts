@@ -1,8 +1,12 @@
 import { ZodError } from "zod";
 import { ConflictError } from "./postgres-store";
 import { D1RequestError } from "./d1-store";
+import { ImageUploadError } from "./media-errors";
 
 export function mcpError(error: unknown) {
+  if (error instanceof ImageUploadError) return {
+    code: "SERVICE_UNAVAILABLE", message: error.message, retryable: true, retryAfterSeconds: 5, outcomeUnknown: false,
+  };
   if (error instanceof D1RequestError) {
     if (error.resetAt) return {
       code: "QUOTA_EXHAUSTED", message: "โควต้าฐานข้อมูลวันนี้หมด กรุณารอเวลารีเซ็ตก่อนทำงานต่อ",

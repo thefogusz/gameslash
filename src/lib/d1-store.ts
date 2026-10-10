@@ -20,7 +20,7 @@ async function requestD1(method: "GET" | "PUT", body?: unknown, path = "/catalog
     throw new D1RequestError(503, false, Math.ceil((quota.reset - Date.now()) / 1000), new Date(quota.reset).toISOString());
   try {
     const response = await fetch(new URL(path, process.env.GAMESLASH_D1_URL), {
-      method, cache: "no-store", redirect: "error", signal: AbortSignal.timeout(30_000),
+      method, cache: "no-store", redirect: "error", signal: AbortSignal.timeout(path === "/image-reservation" ? 5_000 : 30_000),
       headers: { Authorization: `Bearer ${process.env.GAMESLASH_D1_TOKEN}`, "Content-Type": "application/json" },
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     });
@@ -75,6 +75,21 @@ export async function readD1AgentAuth() {
 }
 export async function readD1Likes(visitor: string) {
   return z.array(entrySchema.shape.id).max(3000).parse(await requestD1("GET", undefined, `/likes?${new URLSearchParams({ visitor })}`));
+}
+export async function reserveD1Image(imageId: string, agentId?: string, namespace: "media" | "feedback" = "media") {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      z.object({ reserved: z.literal(true) }).parse(await requestD1("PUT", { imageId, agentId, namespace }, "/image-reservation"));
+      return;
+    } catch (error) {
+      const transient = error instanceof ConflictError || (error instanceof D1RequestError && error.status >= 500 && !error.resetAt);
+      // Only this receipt-backed operation is safe to repeat after a lost response.
+      if (transient && attempt < 2) { await new Promise(resolve => setTimeout(resolve, 500 * (attempt + 1))); continue; }
+      if (error instanceof D1RequestError && error.outcomeUnknown)
+        throw new D1RequestError(error.status, false, error.retryAfterSeconds, error.resetAt);
+      throw error;
+    }
+  }
 }
 export async function initializeD1(input: Database) {
   const db = databaseSchema.parse(input);

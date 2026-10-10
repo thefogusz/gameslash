@@ -24,7 +24,9 @@ async function result(work: () => Promise<Record<string, unknown>>) {
     const data = await work();
     return { content: [{ type: "text" as const, text: JSON.stringify(data) }], structuredContent: data };
   } catch (error) {
-    return { isError: true, content: [{ type: "text" as const, text: JSON.stringify(mcpError(error)) }] };
+    const failure = mcpError(error);
+    console.error(JSON.stringify({ event: "MCP_TOOL_ERROR", code: failure.code, retryable: failure.retryable, outcomeUnknown: failure.outcomeUnknown }));
+    return { isError: true, content: [{ type: "text" as const, text: JSON.stringify(failure) }] };
   }
 }
 export async function POST(request: Request) {
@@ -68,9 +70,9 @@ export async function POST(request: Request) {
         return { contents: [{ uri: uri.href, mimeType: "text/markdown", text: editorialHandbook() }] };
       });
       server.registerTool("upload_image", {
-        description: "Upload an image you have permission to publish. Requires draft-writing permission. Send raw base64 PNG/JPEG/WebP, maximum 2 MiB decoded. Returns a public relative URL for entry.image or content image attrs.src. Reusing identical image bytes returns the same URL. Uploads are public by URL even before the draft is published; never upload private information. Does not publish an article.",
+        description: "Upload an image you have permission to publish. Requires draft-writing permission. Send raw base64 PNG/JPEG/WebP, maximum 2 MiB decoded. Returns a public relative URL for entry.image or content image attrs.src. Reusing identical image bytes returns the same URL. On retryable SERVICE_UNAVAILABLE wait retryAfterSeconds and resend identical base64; do not change the image. D1 reservations for the same agent and image are charged once within 24 hours. Uploads are public by URL even before the draft is published; never upload private information. Does not publish an article.",
         inputSchema:z.object({ base64:z.string().min(4).max(Math.ceil(maxImageBytes / 3) * 4).regex(/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/) }),
-        outputSchema:z.object({url:z.string(),width:z.number(),height:z.number(),bytes:z.number(),contentType:z.literal("image/webp")}), annotations:{...annotations,openWorldHint:true},
+        outputSchema:z.object({url:z.string(),width:z.number(),height:z.number(),bytes:z.number(),contentType:z.literal("image/webp")}), annotations:{...annotations,openWorldHint:true,idempotentHint:true},
       }, input=>result(async()=>{
         requireAgent(auth,agent.id,true);
         return saveImage(Buffer.from(input.base64,"base64"),agent.id);
