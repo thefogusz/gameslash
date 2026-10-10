@@ -4,6 +4,7 @@ import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { GamePreferencesProvider } from "@/components/game-preferences";
 import { absoluteUrl, indexable, jsonLd, seoDescription, seoKeywords, siteOrigin } from "@/lib/seo";
+import { Analytics } from "@vercel/analytics/next";
 const geist = Geist({
   subsets: ["latin"],
   variable: "--font-geist",
