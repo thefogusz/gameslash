@@ -286,7 +286,7 @@ export function SubmitPanel({
   if (availability !== "ready") return <div className="submit-wrap success-panel" role="status" aria-live="polite">
     <div className="success-icon">{availability === "checking" ? <Loader2 size={28} className="spin" /> : <Wrench size={28} />}</div>
     <h1>{availability === "checking" ? "กำลังตรวจสอบระบบรับเกม" : "ระบบรับเกมอยู่ระหว่างปรับปรุง"}</h1>
-    {availability === "unavailable" && <><p>จะเปิดให้ใช้งานอีกครั้งเร็ว ๆ นี้<br />ขอบคุณที่อยากแบ่งปันผลงานกับเรา</p><button className="button primary" onClick={() => window.location.reload()}>ลองอีกครั้ง</button></>}
+    {availability === "unavailable" && <><p>จะเปิดให้ใช้งานอีกครั้งเร็ว ๆ นี้<br />ระหว่างนี้ส่งเกมมาได้ที่ <a className="text-link" href="mailto:contract@gameslash.app">contract@gameslash.app</a><br />ขอบคุณที่อยากแบ่งปันผลงานกับเรา</p><button className="button primary" onClick={() => window.location.reload()}>ลองอีกครั้ง</button></>}
   </div>;
   if (done)
     return (
