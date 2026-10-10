@@ -532,6 +532,10 @@ export function Directory({
             </Link>
           </div>
           <Feedback />
+          <p className="sidebar-contact">
+            ติดต่อเรา<br />
+            <a href="mailto:contract@gameslash.app">contract@gameslash.app</a>
+          </p>
         </aside>
         {menu && (
           <button
