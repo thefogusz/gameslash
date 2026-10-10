@@ -2,6 +2,7 @@
 import { FeedbackTickets } from "./feedback";
 import { AnalyticsPanel } from "./analytics-panel";
 import { ConsoleSelect } from "./console-select";
+import { ConsoleFeedback } from "./console-feedback";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -146,11 +147,12 @@ export function Admin() {
     [busy, setBusy] = useState(false);
   const [reviewTarget,setReviewTarget]=useState<DraftNotification|null>(null);
   const [reviewVersion,setReviewVersion]=useState(0);
-  const [refreshing,setRefreshing]=useState(false);
+  const [refreshing,setRefreshing]=useState(true);
   const unsaved=useRef(false);
   const [editing, setEditing] = useState<Entry | null>(null);
   async function reload() {
     setError("");
+    setNotice("");
     setRefreshing(true);
     try {
       const next=await request("/api/manage");setData(next);return next as Snapshot;
@@ -215,6 +217,7 @@ export function Admin() {
     });
   }
   const tabNames={feedback:"ฟีดแบค",tags:"คลังแท็กเกม",inbox:"กล่องรอตรวจ",entries:"คลังเนื้อหา",layout:"จัดหน้าเว็บไซต์",import:"นำเข้า / ส่งออก",analytics:"ทราฟฟิคเว็บ",connections:"แหล่งข้อมูล",agents:"เอเจนต์และการเชื่อมต่อ",activity:"ประวัติล่าสุด"};
+  const feedback = <ConsoleFeedback pending={busy ? "กำลังบันทึกการเปลี่ยนแปลง…" : refreshing ? "กำลังโหลดข้อมูลล่าสุด…" : ""} error={error} notice={notice} dismiss={() => { setError(""); setNotice(""); }} />;
   return (
     <div className="admin-app">
       <a href="#studio-main" className="console-skip">ข้ามไปเนื้อหา</a>
@@ -287,22 +290,11 @@ export function Admin() {
         <div className="nav-foot"><span className="live-dot"/><span>กำหนดสิทธิ์เป็นรายคีย์<br/><small>คีย์จัดการเว็บเผยแพร่ได้โดยตรง</small></span></div>
       </nav>
       <main className="studio-body" id="studio-main" tabIndex={-1}>
-        {error && (
-          <div className="form-error" role="alert">
-            {error}
-          </div>
-        )}
-        {notice && (
-          <div className="success-notice console-toast" role="status">
-            <Check size={15} />
-            {notice}
-            <button className="icon-button" aria-label="ปิดข้อความสำเร็จ" onClick={()=>setNotice("")}><X size={16}/></button>
-          </div>
-        )}
+        {!editing && feedback}
         {!data ? (
           <div className="empty-state">
-            {error ? (
-              "ยังโหลดข้อมูลไม่ได้"
+            {!refreshing ? (
+              "ยังโหลดข้อมูลไม่ได้ กดโหลดข้อมูลล่าสุดเพื่อลองอีกครั้ง"
             ) : (
               <>
                 <Loader2 className="spin" />
@@ -360,6 +352,7 @@ export function Admin() {
       </main>
       {editing && data && (
         <EditorDialog onClose={() => {if(canLeave())setEditing(null);}}>
+          {feedback}
           <div className="drawer-heading">
             <div>
               <span className="eyebrow">CONTENT EDITOR</span>
@@ -408,8 +401,7 @@ function LayoutEditor({
       structuredClone(data.draftLayout),
     ),
     [selected, setSelected] = useState("featured"),
-    [newCategory, setNewCategory] = useState(""),
-    [error, setError] = useState("");
+    [newCategory, setNewCategory] = useState("");
   const section = layout.sections.find((s) => s.id === selected);
   function changeSection(patch: Partial<Layout["sections"][number]>) {
     setLayout({
@@ -454,9 +446,7 @@ function LayoutEditor({
             onClick={async () => {
               try {
                 await save(layout, false);
-              } catch (e) {
-                setError((e as Error).message);
-              }
+              } catch { /* The Console feedback reports save failures. */ }
             }}
           >
             <Save size={15} />
@@ -468,9 +458,7 @@ function LayoutEditor({
             onClick={async () => {
               try {
                 await save(layout, true);
-              } catch (e) {
-                setError((e as Error).message);
-              }
+              } catch { /* The Console feedback reports save failures. */ }
             }}
           >
             <Check size={15} />
@@ -478,11 +466,6 @@ function LayoutEditor({
           </button>
         </div>
       </div>
-      {error && (
-        <p className="form-error" role="alert">
-          {error}
-        </p>
-      )}
       <div className="layout-workspace">
         <div className="layout-preview">
           <div className="preview-bar">

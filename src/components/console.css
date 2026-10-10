@@ -164,6 +164,13 @@
 .admin-app .image-field { padding:16px; background:var(--bg); }
 .admin-app .editor-insert { font-size:15px; }
 .admin-app .console-toast { position:fixed; bottom:24px; left:calc(50% + 100px); transform:translateX(-50%); z-index:50; display:flex; gap:12px; align-items:center; max-width:calc(100vw - 32px); width:max-content; margin:0; padding:10px 12px 10px 18px; box-shadow:0 8px 32px #0005; background:var(--accent-light); color:var(--ink); border:1px solid #f4c54240; border-radius:10px; font-size:15px; }
+.admin-app .console-toast { width:min(520px,calc(100vw - 32px)); background:var(--surface); border-color:var(--line); }
+.admin-app .console-toast[data-state="success"] { background:#17382d; border-color:#36775d; }
+.admin-app .console-toast[data-state="error"] { background:#351e2a; border-color:#743954; color:#f9aabc; }
+.admin-app .console-toast>svg { flex-shrink:0; }
+.admin-app .console-toast>div { flex:1; min-width:0; overflow-wrap:anywhere; }
+.admin-app .console-toast p { margin:2px 0 0; font-size:14px; line-height:1.6; }
+.admin-app .entry-drawer .console-toast { left:50%; bottom:100px; }
 .notification-center { position:relative; }
 .notification-arrival { position:fixed; right:24px; bottom:24px; display:flex; align-items:center; gap:12px; width:min(440px,calc(100vw - 32px)); padding:12px 16px; border:1px solid #f4c54250; border-radius:12px; background:var(--surface); box-shadow:0 12px 44px #0008; }
 .notification-arrival>svg { color:var(--accent); flex-shrink:0; }
