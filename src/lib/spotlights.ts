@@ -9,6 +9,7 @@ export function discoveryCollections(entries: Entry[], layout: Layout) {
   const editorial = spotlightGroups(entries, layout);
   const trendingTitles = ["ติดเทรนด์", "มาแรง", "trending"];
   const trending = editorial.find(g => trendingTitles.includes(g.title.trim().toLowerCase()));
-  const manual = editorial.filter(g => !["มาใหม่", "ใหม่ล่าสุด", "สำหรับคุณ", "ถูกใจ", "ผู้เล่นมากที่สุด", ...trendingTitles].includes(g.title.trim().toLowerCase()));
+  const manual = editorial.filter(g => !["มาใหม่", "ใหม่ล่าสุด", "สำหรับคุณ", "ถูกใจ", "ผู้เล่นมากที่สุด", ...trendingTitles].includes(g.title.trim().toLowerCase()))
+    .map(g => ["เกมแนะนำ", "คัดสรร"].includes(g.title.trim()) ? { ...g, badge: "ทีมงานคัดเลือก" } : g);
   return { manual, trending };
 }
