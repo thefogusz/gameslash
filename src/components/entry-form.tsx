@@ -1,14 +1,14 @@
 "use client";
 import { toolWorkflowCategories } from "@/lib/directory-filters";
 import { ConsoleSelect } from "./console-select";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { GameTagPicker } from "./game-tag-picker";
 import { tagSuggestionsSchema, type TagSuggestion } from "@/lib/game-tags";
 import dynamic from "next/dynamic";
 import { firstArticleImage, textDocument } from "@/lib/article";
 import { ImageField } from "./image-field";
 const ArticleEditor = dynamic(() => import("./article-editor"), { ssr:false });
-import { ArrowUpRight, Check, Loader2, Send } from "lucide-react";
+import { ArrowUpRight, Check, Loader2, Send, Wrench } from "lucide-react";
 import {
   entryInput,
   kindLabels,
@@ -271,10 +271,23 @@ export function SubmitPanel({
   categories: string[];
   type?: string;
 }) {
+  const [availability, setAvailability] = useState<"checking" | "ready" | "unavailable">("checking");
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch("/api/submit", { cache: "no-store", signal: AbortSignal.any([controller.signal, AbortSignal.timeout(8000)]) })
+      .then(response => { if (!controller.signal.aborted) setAvailability(response.ok ? "ready" : "unavailable"); })
+      .catch(() => { if (!controller.signal.aborted) setAvailability("unavailable"); });
+    return () => controller.abort();
+  }, []);
   const [done, setDone] = useState(false),
     [kind, setKind] = useState<"game" | "post">(
       type === "post" ? "post" : "game",
     );
+  if (availability !== "ready") return <div className="submit-wrap success-panel" role="status" aria-live="polite">
+    <div className="success-icon">{availability === "checking" ? <Loader2 size={28} className="spin" /> : <Wrench size={28} />}</div>
+    <h1>{availability === "checking" ? "กำลังตรวจสอบระบบรับเกม" : "ระบบรับเกมอยู่ระหว่างปรับปรุง"}</h1>
+    {availability === "unavailable" && <><p>จะเปิดให้ใช้งานอีกครั้งเร็ว ๆ นี้<br />ขอบคุณที่อยากแบ่งปันผลงานกับเรา</p><button className="button primary" onClick={() => window.location.reload()}>ลองอีกครั้ง</button></>}
+  </div>;
   if (done)
     return (
       <div className="success-panel">

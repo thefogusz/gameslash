@@ -8,8 +8,15 @@ import {
   entryInput,
   type Entry,
 } from "@/lib/model";
-import { storageReady, updateDatabase } from "@/lib/store";
+import { readCustomTags, storageReady, updateDatabase } from "@/lib/store";
 import { errorResponse } from "@/lib/http";
+export async function GET() {
+  try {
+    if (!storageReady()) return Response.json({ ok: false }, { status: 503, headers: { "Cache-Control": "no-store" } });
+    await readCustomTags();
+    return Response.json({ ok: true }, { headers: { "Cache-Control": "no-store" } });
+  } catch (error) { return errorResponse(error); }
+}
 export async function POST(request: Request) {
   try {
     checkOrigin(request);
