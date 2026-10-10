@@ -10,7 +10,7 @@ export function d1Ready() {
   return !!(process.env.GAMESLASH_D1_URL && process.env.GAMESLASH_D1_TOKEN);
 }
 export class D1RequestError extends Error {
-  constructor(public status: number, public outcomeUnknown = false, public retryAfterSeconds = 5, public resetAt?: string) {
+  constructor(public status: number, public outcomeUnknown = false, public retryAfterSeconds = 5, public resetAt?: string, public quotaScope: "database" | "worker_requests" = "database") {
     super(`D1 catalog request failed (${status})`);
     this.name = "D1RequestError";
   }
@@ -18,11 +18,11 @@ export class D1RequestError extends Error {
 const quotaSchema = z.object({ code: z.literal("D1_QUOTA_EXHAUSTED"), resetAt: z.iso.datetime() });
 const imageLimitSchema = z.object({ code: z.literal("IMAGE_UPLOAD_LIMIT"), scope: z.enum(["agent_hourly", "shared_daily"]), limit: z.number().int().positive(), resetAt: z.iso.datetime() });
 // shortcut: quota suppression is per server instance; use a shared gate if cold-instance retries become significant.
-let quota: { url: string; reset: number } | undefined;
+let quota: { url: string; reset: number; scope: D1RequestError["quotaScope"] } | undefined;
 async function requestD1(method: "GET" | "PUT", body?: unknown, path = "/catalog", text = false) {
   if (!d1Ready()) throw new Error("D1 URL and token are required");
   if (quota && quota.url === process.env.GAMESLASH_D1_URL && quota.reset > Date.now())
-    throw new D1RequestError(503, false, Math.ceil((quota.reset - Date.now()) / 1000), new Date(quota.reset).toISOString());
+    throw new D1RequestError(503, false, Math.ceil((quota.reset - Date.now()) / 1000), new Date(quota.reset).toISOString(), quota.scope);
   try {
     const response = await fetch(new URL(path, process.env.GAMESLASH_D1_URL), {
       method, cache: "no-store", redirect: "error", signal: AbortSignal.timeout(path === "/image-reservation" ? 5_000 : 30_000),
@@ -31,6 +31,14 @@ async function requestD1(method: "GET" | "PUT", body?: unknown, path = "/catalog
     });
     if (response.status === 409) throw new ConflictError("ข้อมูลเปลี่ยนแล้ว กรุณาโหลดข้อมูลล่าสุดก่อนบันทึก");
     if (!response.ok) {
+      if (response.status === 429 && response.headers.get("Content-Type")?.includes("text/html")) {
+        const page = await response.clone().text();
+        if (/\b1027\b/.test(page) && /plan limits|temporarily rate limited/i.test(page)) {
+          const reset = (Math.floor(Date.now() / 86400000) + 1) * 86400000;
+          quota = { url: process.env.GAMESLASH_D1_URL!, reset, scope: "worker_requests" };
+          throw new D1RequestError(503, false, Math.ceil((reset - Date.now()) / 1000), new Date(reset).toISOString(), quota.scope);
+        }
+      }
       if (path === "/image-reservation" && response.status === 429) {
         const limited = imageLimitSchema.safeParse(await response.json().catch(() => null));
         if (limited.success) throw new ImageUploadLimitError(limited.data.scope, limited.data.limit, limited.data.resetAt);
@@ -39,7 +47,7 @@ async function requestD1(method: "GET" | "PUT", body?: unknown, path = "/catalog
       if (failure?.success) {
         const reset = Date.parse(failure.data.resetAt);
         if (reset > Date.now() && reset - Date.now() <= 86400000) {
-          quota = { url: process.env.GAMESLASH_D1_URL!, reset };
+          quota = { url: process.env.GAMESLASH_D1_URL!, reset, scope: "database" };
           throw new D1RequestError(503, false, Math.ceil((reset - Date.now()) / 1000), failure.data.resetAt);
         }
       }

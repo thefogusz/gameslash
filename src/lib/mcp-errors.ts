@@ -16,7 +16,8 @@ export function mcpError(error: unknown) {
   };
   if (error instanceof D1RequestError) {
     if (error.resetAt) return {
-      code: "QUOTA_EXHAUSTED", message: "โควต้าฐานข้อมูลวันนี้หมด กรุณารอเวลารีเซ็ตก่อนทำงานต่อ",
+      code: "QUOTA_EXHAUSTED", message: error.quotaScope === "worker_requests" ? "โควต้าคำขอวันนี้หมด กรุณารอเวลารีเซ็ตก่อนทำงานต่อ" : "โควต้าฐานข้อมูลวันนี้หมด กรุณารอเวลารีเซ็ตก่อนทำงานต่อ",
+      ...(error.quotaScope === "worker_requests" ? { scope: error.quotaScope } : {}),
       retryable: false, resetAt: error.resetAt, retryAfterSeconds: error.retryAfterSeconds, outcomeUnknown: false,
     };
     if (error.outcomeUnknown) return {

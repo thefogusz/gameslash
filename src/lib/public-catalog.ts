@@ -7,5 +7,5 @@ import { readDatabase } from "./store";
 export const readPublicCatalog = cache(unstable_cache(
   async () => publicData(await readDatabase()),
   ["gameslash-public-catalog-v1", process.env.GAMESLASH_STORAGE || "local", process.env.GAMESLASH_D1_URL || process.env.GAMESLASH_DATA_DIR || "default"],
-  { revalidate: 30 },
+  { revalidate: 300 },
 ));
