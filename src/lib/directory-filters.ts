@@ -17,11 +17,9 @@ export function gameMakingTools(entries: Entry[]) {
 }
 
 export const directorySorts = {
-  curated: "แนะนำก่อน",
-  new: "เพิ่มล่าสุด",
-  updated: "อัปเดตล่าสุด",
-  oldest: "เพิ่มก่อน",
-  az: "ชื่อ A–Z",
+  curated: "ทีมงานแนะนำ",
+  new: "เพิ่มเข้าเว็บล่าสุด",
+  az: "ชื่อ ก–ฮ / A–Z",
 } as const;
 
 export function filterDirectory(entries: Entry[], filters: {
