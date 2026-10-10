@@ -262,4 +262,7 @@ Run `npm run test:d1` to compile the current Worker and exercise those tests aga
 an in-memory localhost D1, including FIFO and an expired-ticket fencing assertion.
 Recheck production CPU/errors and daily request/read/write budgets after rollout;
 serialization reduces conflict traffic but does not increase Free plan quotas.
+Large catalogs materialize byte-weighted pages in the same transaction as content
+writes. Each chunk reads indexed state/page rows; state-only writes advance page
+versions without rebuilding content. Rebuilding pages still consumes write quota.
 Rollback the app while leaving the backward-compatible Worker deployed.

@@ -27,7 +27,8 @@ const summaryExpression = `(SELECT json_group_array(json(entry)) FROM (SELECT CA
   'updatedAt', json_extract(data, '$.updatedAt')) END AS entry FROM gameslash_entries ORDER BY position, id))`;
 // Byte-weighted groups keep large catalogs out of one D1 result value.
 const catalogPagesSql = `WITH ranked AS (SELECT data, position,
-  sum(length(CAST(data AS BLOB)) + 64) OVER (ORDER BY position, id) AS bytes FROM gameslash_entries),
+  sum(length(CAST(data AS BLOB)) + 64) OVER (ORDER BY position, id) AS bytes FROM gameslash_entries
+  WHERE (SELECT entries IS NULL FROM gameslash_entry_snapshot WHERE id = 1)),
   pages AS (SELECT CAST(bytes / 32768 AS INTEGER) AS page,
   json_group_array(json(json_set(data, '$._d1Position', position))) AS entries FROM ranked GROUP BY page)`;
 const imageReservationSchema = z.object({
@@ -81,6 +82,7 @@ async function reserveImage(input: z.infer<typeof imageReservationSchema>, env: 
           data = json_set(data, ?, json(?), ?, json(?)) WHERE id = 1`)
           .bind(actorPath, JSON.stringify(db.limits[actor]), dailyPath, JSON.stringify(db.limits[daily])),
         env.DB.prepare("UPDATE gameslash_entry_snapshot SET version = ? WHERE id = 1 AND version = ?").bind(row.version + 1, row.version),
+        env.DB.prepare("UPDATE gameslash_catalog_pages SET version = ? WHERE version = ?").bind(row.version + 1, row.version),
       ]);
       return json({ reserved: true });
     } catch (error) {
@@ -115,12 +117,13 @@ export default {
           (!page || !offset || !/^\d{1,9}$/.test(page) || !/^\d{1,7}$/.test(offset) || Number(offset) > 1_800_000 || Number(offset) % catalogChunkCharacters !== 0)))
           return json({ error: "Invalid catalog page" }, 400);
         const expression = path === "/catalog-pages" ?
-          "(SELECT json_group_array(json_object('page', page, 'characters', length(entries))) FROM pages)" :
-          "(SELECT substr(entries, ?, ?) FROM pages WHERE page = ?)";
+          "(SELECT json_group_array(json_object('page', page, 'characters', length(data))) FROM (SELECT page, data FROM gameslash_catalog_pages WHERE version = gameslash_state.version ORDER BY page))" :
+          "(SELECT substr(data, ?, ?) FROM gameslash_catalog_pages WHERE page = ? AND version = gameslash_state.version)";
         const params = path === "/catalog-pages" ? [] : [Number(offset) + 1, catalogChunkCharacters, Number(page)];
-        const data = await env.DB.prepare(`${catalogPagesSql} SELECT ${expression} AS data FROM gameslash_state WHERE id = 1 AND version = ?`)
+        const data = await env.DB.prepare(`SELECT ${expression} AS data FROM gameslash_state WHERE id = 1 AND version = ?`)
           .bind(...params, Number(version)).first<string>("data");
         if (data === null) return json({ error: "Catalog changed; restart the read" }, 409);
+        if (path === "/catalog-pages" && data === "[]") return json({ error: "Catalog pages not available" }, 503);
         if (!data.length) return json({ error: "Invalid catalog page offset" }, 400);
         return new Response(data, { headers: { "Content-Type": path === "/catalog-pages" ? "application/json" : "text/plain; charset=utf-8", "Cache-Control": "no-store" } });
       }
@@ -295,6 +298,11 @@ export default {
           FROM gameslash_entries) < 1800000 THEN
           (SELECT json_group_array(json(json_set(data, '$._d1Position', position))) FROM (SELECT data, position FROM gameslash_entries ORDER BY position, id))
           ELSE NULL END FROM gameslash_state WHERE id = 1`).bind(Number(changed.length > 0 || deleted.length > 0), expectedVersion));
+      if (changed.length || deleted.length || initialize) {
+        queries.push(env.DB.prepare("DELETE FROM gameslash_catalog_pages"));
+        queries.push(env.DB.prepare(`${catalogPagesSql} INSERT INTO gameslash_catalog_pages (page, version, data)
+          SELECT page, (SELECT version FROM gameslash_state WHERE id = 1), entries FROM pages`));
+      } else queries.push(env.DB.prepare("UPDATE gameslash_catalog_pages SET version = ? WHERE version = ?").bind(expectedVersion + 1, expectedVersion));
       if (parsed.data.ticket) queries.push(env.DB.prepare("UPDATE gameslash_write_queue SET status = 'succeeded', result = ?, updated_at = ? WHERE ticket = ?")
         .bind(parsed.data.operationResult ?? null, Date.now(), parsed.data.ticket));
       await env.DB.batch(queries);

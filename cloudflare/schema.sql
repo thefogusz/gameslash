@@ -48,3 +48,14 @@ CREATE TABLE IF NOT EXISTS gameslash_editorial_qa (
   entry_id TEXT PRIMARY KEY,
   data TEXT NOT NULL CHECK (json_valid(data))
 );
+CREATE TABLE IF NOT EXISTS gameslash_catalog_pages (
+  page INTEGER PRIMARY KEY,
+  version INTEGER NOT NULL,
+  data TEXT NOT NULL CHECK (json_valid(data))
+);
+INSERT OR IGNORE INTO gameslash_catalog_pages (page, version, data)
+WITH ranked AS (SELECT data, position,
+  sum(length(CAST(data AS BLOB)) + 64) OVER (ORDER BY position, id) AS bytes
+  FROM gameslash_entries WHERE (SELECT entries IS NULL FROM gameslash_entry_snapshot WHERE id = 1))
+SELECT CAST(bytes / 32768 AS INTEGER), (SELECT version FROM gameslash_state WHERE id = 1),
+  json_group_array(json(json_set(data, '$._d1Position', position))) FROM ranked GROUP BY 1;

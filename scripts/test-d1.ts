@@ -36,11 +36,15 @@ try {
   await db.prepare("UPDATE gameslash_write_queue SET expires = 0 WHERE ticket = ?").bind(first).run();
   assert.equal((await queue({ ticket: second, action: "claim" })).status, "running");
   const state = await db.prepare("SELECT version, data FROM gameslash_state WHERE id = 1").first<{ version: number; data: string }>();
+  await db.prepare("INSERT OR REPLACE INTO gameslash_catalog_pages (page, version, data) VALUES (123, ?, '[]')").bind(state!.version).run();
+  const pageRead = await db.prepare("SELECT (SELECT substr(data, 1, 32768) FROM gameslash_catalog_pages WHERE page = 123 AND version = gameslash_state.version) AS data FROM gameslash_state WHERE id = 1 AND version = ?").bind(state!.version).all();
+  assert.equal(pageRead.results[0].data, "[]");
+  assert.ok(pageRead.meta.rows_read <= 2, "A catalog chunk must read indexed state/page rows, not scan entries");
   const snapshot = seedDatabase(); const { entries: _entries, ...empty } = snapshot;
   const expired = await fetch(new URL("/catalog", origin), { method: "PUT", headers,
     body: JSON.stringify({ ticket: first, expectedVersion: state!.version, state: empty, changed: [], deleted: [] }) });
   assert.equal(expired.status, 409, "An expired writer must be fenced even when its version is current");
   assert.deepEqual(await db.prepare("SELECT version, data FROM gameslash_state WHERE id = 1").first(), state, "An expired ticket cannot replace any state");
   await queue({ ticket: second, action: "complete", outcome: "failed" });
-  console.log(JSON.stringify({ isolatedD1: true, fifo: true, expiredWriterFenced: true, root: path.resolve(".") }));
+  console.log(JSON.stringify({ isolatedD1: true, fifo: true, expiredWriterFenced: true, indexedPageRowsRead: pageRead.meta.rows_read, root: path.resolve(".") }));
 } finally { await mf.dispose(); }
