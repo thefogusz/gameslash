@@ -1,9 +1,13 @@
 import { ZodError } from "zod";
 import { ConflictError } from "./postgres-store";
 import { D1RequestError } from "./d1-store";
-import { ImageUploadError } from "./media-errors";
+import { ImageUploadError, ImageUploadLimitError } from "./media-errors";
 
 export function mcpError(error: unknown) {
+  if (error instanceof ImageUploadLimitError) return {
+    code: "IMAGE_UPLOAD_LIMIT", message: error.message, scope: error.scope, limit: error.limit,
+    resetAt: error.resetAt, retryAfterSeconds: error.retryAfterSeconds, retryable: true, outcomeUnknown: false,
+  };
   if (error instanceof Error && error.message.startsWith("QA_REQUIRED")) return {
     code: "QA_REQUIRED", message: error.message, retryable: false, outcomeUnknown: false,
   };

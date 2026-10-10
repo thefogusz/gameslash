@@ -17,6 +17,7 @@ import { ConflictError } from "../src/lib/postgres-store";
 import { jobSchema } from "../src/lib/collection-model";
 import { changeGameLikes, gameLikeCounts } from "../src/lib/game-likes";
 import { POST } from "../src/app/api/mcp/route";
+import { ImageUploadLimitError, imageUploadLimits } from "../src/lib/media-errors";
 
 test("D1 migration, concurrent CAS, rollback, ordering and private access", {
   skip: !process.env.GAMESLASH_TEST_D1_URL,
@@ -354,20 +355,24 @@ test("D1 image reservations survive lost replies and storage failures without do
     await reserveD1Image("a".repeat(64), agentId, "feedback");
     assert.equal((await readD1()).limits[`feedback:${agentId}`].count, 1);
 
-    await updateD1(db => { db.limits[`media:${agentId}`].count = 40; }, undefined, false);
+    await updateD1(db => { db.limits[`media:${agentId}`].count = imageUploadLimits.media.hourly; }, undefined, false);
     db = await readD1();
-    await assert.rejects(reserveD1Image("c".repeat(64), agentId), error => error instanceof D1RequestError && error.status === 429);
+    await assert.rejects(reserveD1Image("c".repeat(64), agentId), error => error instanceof ImageUploadLimitError && error.scope === "agent_hourly" && mcpError(error).code === "IMAGE_UPLOAD_LIMIT");
     assert.deepEqual(await readD1(), db, "A quota rejection must not partially update counters");
     await reserveD1Image("a".repeat(64), agentId);
     assert.deepEqual(await readD1(), db, "Previously reserved images remain retryable at the limit");
     await updateD1(db => {
       db.limits[`media:${agentId}`].reset = Date.now() - 1;
-      db.limits["media:daily"].count = 200;
+      db.limits["media:daily"].count = 500;
     }, undefined, false);
+    await reserveD1Image("e".repeat(64), agentId);
+    assert.equal((await readD1()).limits["media:daily"].count, 501, "500 daily uploads must not block normal work");
+    await updateD1(db => { db.limits["media:daily"].count = imageUploadLimits.media.daily; }, undefined, false);
     db = await readD1();
-    await assert.rejects(reserveD1Image("d".repeat(64), agentId), error => error instanceof D1RequestError && error.status === 429);
+    await assert.rejects(reserveD1Image("d".repeat(64), agentId), error => error instanceof ImageUploadLimitError && error.scope === "shared_daily" && error.limit === 1000);
     assert.deepEqual(await readD1(), db, "Daily rejection must not consume the next hourly window");
     await updateD1(db => {
+      db.limits[`media:${agentId}`].reset = Date.now() - 1;
       db.limits["media:daily"].reset = Date.now() - 1;
       const agent = db.agents.find(agent => agent.id === agentId)!;
       agent.canWriteDrafts = false; agent.canManageSite = true;

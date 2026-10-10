@@ -3,6 +3,7 @@ import { z } from "zod";
 import { consumeLimit, databaseSchema, entrySchema, type Database } from "../src/lib/model";
 import { catalogChunkCharacters } from "../src/lib/d1-protocol";
 import { writeQueue } from "./write-queue";
+import { imageUploadLimits } from "../src/lib/media-errors";
 
 const mutationSchema = z.object({
   expectedVersion: z.number().int().nonnegative(),
@@ -64,14 +65,17 @@ async function reserveImage(input: z.infer<typeof imageReservationSchema>, env: 
       if (counter.reset > now) limits[name] = counter;
     }
     const db = { limits: databaseSchema.shape.limits.parse(limits) };
-    const exhausted = [actor, daily].filter(name => (db.limits[name]?.count ?? 0) >= (name === actor ? 40 : 200));
+    const policy = imageUploadLimits[input.namespace];
+    const exhausted = [actor, daily].filter(name => (db.limits[name]?.count ?? 0) >= (name === actor ? policy.hourly : policy.daily));
     if (exhausted.length) {
-      const response = json({ error: "Image upload limit reached" }, 429);
-      response.headers.set("Retry-After", String(Math.max(5, Math.ceil((Math.max(...exhausted.map(name => db.limits[name].reset)) - now) / 1000))));
+      const blocked = exhausted.reduce((latest, name) => db.limits[name].reset > db.limits[latest].reset ? name : latest);
+      const reset = db.limits[blocked].reset;
+      const response = json({ error: "Image upload limit reached", code: "IMAGE_UPLOAD_LIMIT", scope: blocked === daily ? "shared_daily" : "agent_hourly", limit: blocked === daily ? policy.daily : policy.hourly, resetAt: new Date(reset).toISOString() }, 429);
+      response.headers.set("Retry-After", String(Math.max(5, Math.ceil((reset - now) / 1000))));
       return response;
     }
-    consumeLimit(db, actor, 40, 60 * 60 * 1000, now);
-    consumeLimit(db, daily, 200, 24 * 60 * 60 * 1000, now);
+    consumeLimit(db, actor, policy.hourly, 60 * 60 * 1000, now);
+    consumeLimit(db, daily, policy.daily, 24 * 60 * 60 * 1000, now);
     try {
       await env.DB.batch([
         env.DB.prepare(`INSERT OR REPLACE INTO gameslash_write_guard (id, valid)

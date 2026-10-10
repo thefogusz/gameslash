@@ -2,7 +2,12 @@ import { ZodError } from "zod";
 import { ConflictError } from "./store";
 import { D1RequestError } from "./d1-store";
 import { mcpError } from "./mcp-errors";
+import { ImageUploadLimitError } from "./media-errors";
 export function errorResponse(error: unknown) {
+  if (error instanceof ImageUploadLimitError) {
+    const failure = mcpError(error);
+    return Response.json({ error: failure.message, ...failure }, { status: 429, headers: { "Cache-Control": "no-store", "Retry-After": String(error.retryAfterSeconds) } });
+  }
   if (error instanceof D1RequestError) {
     const failure = mcpError(error);
     return Response.json({ error: failure.message, ...failure }, {

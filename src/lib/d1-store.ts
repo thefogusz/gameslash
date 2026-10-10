@@ -4,6 +4,7 @@ import { ConflictError } from "./postgres-store";
 import { catalogChunkCharacters } from "./d1-protocol";
 import { queueRecordSchema, type OperationContext } from "./write-queue";
 import { editorialQaInput } from "./editorial-qa";
+import { ImageUploadLimitError } from "./media-errors";
 
 export function d1Ready() {
   return !!(process.env.GAMESLASH_D1_URL && process.env.GAMESLASH_D1_TOKEN);
@@ -15,6 +16,7 @@ export class D1RequestError extends Error {
   }
 }
 const quotaSchema = z.object({ code: z.literal("D1_QUOTA_EXHAUSTED"), resetAt: z.iso.datetime() });
+const imageLimitSchema = z.object({ code: z.literal("IMAGE_UPLOAD_LIMIT"), scope: z.enum(["agent_hourly", "shared_daily"]), limit: z.number().int().positive(), resetAt: z.iso.datetime() });
 // shortcut: quota suppression is per server instance; use a shared gate if cold-instance retries become significant.
 let quota: { url: string; reset: number } | undefined;
 async function requestD1(method: "GET" | "PUT", body?: unknown, path = "/catalog", text = false) {
@@ -29,6 +31,10 @@ async function requestD1(method: "GET" | "PUT", body?: unknown, path = "/catalog
     });
     if (response.status === 409) throw new ConflictError("ข้อมูลเปลี่ยนแล้ว กรุณาโหลดข้อมูลล่าสุดก่อนบันทึก");
     if (!response.ok) {
+      if (path === "/image-reservation" && response.status === 429) {
+        const limited = imageLimitSchema.safeParse(await response.json().catch(() => null));
+        if (limited.success) throw new ImageUploadLimitError(limited.data.scope, limited.data.limit, limited.data.resetAt);
+      }
       const failure = response.status === 503 ? quotaSchema.safeParse(await response.json().catch(() => null)) : undefined;
       if (failure?.success) {
         const reset = Date.parse(failure.data.resetAt);
@@ -45,7 +51,7 @@ async function requestD1(method: "GET" | "PUT", body?: unknown, path = "/catalog
     }
     return text ? await response.text() : await response.json();
   } catch (error) {
-    if (error instanceof ConflictError || error instanceof D1RequestError) throw error;
+    if (error instanceof ConflictError || error instanceof D1RequestError || error instanceof ImageUploadLimitError) throw error;
     throw new D1RequestError(503, method === "PUT");
   }
 }

@@ -4,9 +4,25 @@ import { seedDatabase } from "../src/lib/seed";
 import { manageCatalog } from "../src/lib/catalog-service";
 import { readD1, updateD1, D1RequestError } from "../src/lib/d1-store";
 import { mcpError } from "../src/lib/mcp-errors";
+import { ImageUploadLimitError, imageUploadLimits } from "../src/lib/media-errors";
+import { errorResponse } from "../src/lib/http";
+
+test("image limits are distinct from outages and report a precise retry time", async () => {
+  assert.deepEqual(imageUploadLimits.media, { hourly: 200, daily: 1000 });
+  assert.deepEqual(imageUploadLimits.feedback, { hourly: 40, daily: 200 });
+  const resetAt = new Date(Date.now() + 60_000).toISOString();
+  const error = new ImageUploadLimitError("shared_daily", 1000, resetAt);
+  const result = mcpError(error);
+  assert.equal(result.code, "IMAGE_UPLOAD_LIMIT");
+  assert.equal(result.resetAt, resetAt);
+  assert.equal(result.outcomeUnknown, false);
+  const response = errorResponse(error);
+  assert.equal(response.status, 429);
+  assert.equal(response.headers.get("Retry-After"), "60");
+  assert.equal((await response.json()).scope, "shared_daily");
+});
 import { POST } from "../src/app/api/mcp/route";
 import { mcpOperatingGuidance } from "../src/lib/editorial-skills";
-import { errorResponse } from "../src/lib/http";
 
 test("daily quota errors stop repeated storage calls until UTC midnight and resume afterwards", async context => {
   context.mock.timers.enable({ apis: ["Date"], now: Date.UTC(2026, 9, 9, 23, 0) });

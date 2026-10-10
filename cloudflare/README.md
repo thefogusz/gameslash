@@ -116,6 +116,13 @@ fix repeated scans. See [the evidence and decision](../docs/decisions/001-d1-rea
 
 ### Write-budget follow-up
 
+Catalog image uploads allow 200 new reservations per agent per hour and 1,000
+shared per 24-hour window. Existing counters keep their reset times; raising the
+cap takes effect immediately without clearing receipts. Feedback uploads retain
+40/hour and 200/day. `IMAGE_UPLOAD_LIMIT` reports scope, cap and `resetAt` with
+HTTP 429/Retry-After, separately from database quota and service outages. Identical
+reserved images remain retryable without another charge. Provider quotas still apply.
+
 Deploy the Worker before the app; no schema migration is required. New apps retain
 integer storage ranks for prepends, appends and deletes rather than rewriting every
 array offset. Old app instances are supported by transactional rank normalization.

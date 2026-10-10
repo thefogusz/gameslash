@@ -8,7 +8,7 @@ import { consumeLimit } from "./model";
 import { requireAgent } from "./catalog-service";
 import { storageReady, updateDatabase } from "./store";
 import { reserveD1Image } from "./d1-store";
-import { ImageUploadError } from "./media-errors";
+import { ImageUploadError, ImageUploadLimitError, imageUploadLimits } from "./media-errors";
 export const maxImageBytes = 2 * 1024 * 1024;
 const directory = (namespace = "media") => path.resolve(process.env.GAMESLASH_DATA_DIR || ".data", namespace);
 export async function normalizeImage(bytes: Buffer) {
@@ -28,8 +28,14 @@ export async function saveImage(bytes: Buffer, agentId?: string, namespace: "med
   if (process.env.GAMESLASH_STORAGE === "d1") await reserveD1Image(hash, agentId, namespace);
   else await updateDatabase(db => {
     if (agentId) requireAgent(db, agentId, true);
-    consumeLimit(db, `${namespace}:${agentId || "admin"}`, 40, 60 * 60 * 1000);
-    consumeLimit(db, `${namespace}:daily`, 200, 24 * 60 * 60 * 1000);
+    const policy = imageUploadLimits[namespace], actor = `${namespace}:${agentId || "admin"}`, daily = `${namespace}:daily`;
+    const exhausted = [actor, daily].filter(key => db.limits[key]?.reset > Date.now() && db.limits[key].count >= (key === actor ? policy.hourly : policy.daily));
+    if (exhausted.length) {
+      const blocked = exhausted.reduce((latest, key) => db.limits[key].reset > db.limits[latest].reset ? key : latest);
+      throw new ImageUploadLimitError(blocked === daily ? "shared_daily" : "agent_hourly", blocked === daily ? policy.daily : policy.hourly, new Date(db.limits[blocked].reset).toISOString());
+    }
+    consumeLimit(db, actor, policy.hourly, 60 * 60 * 1000);
+    consumeLimit(db, daily, policy.daily, 24 * 60 * 60 * 1000);
   }, undefined, false); // Upload counters do not change the catalog being edited.
   const id = `${hash}.webp`;
   try {
