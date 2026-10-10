@@ -114,10 +114,26 @@ test("MCP discovery reads only current credentials, catalog tools load lazily an
     assert.equal(catalogs, 0, "Connection setup must not load the catalog");
     for (const name of ["get_editorial_skills", "get_article_format"]) {
       reads = 0; catalogs = 0;
-      assert.equal((await rpc("tools/call", { name, arguments: {} })).response.status, 200);
+      const discovery = await rpc("tools/call", { name, arguments: {} });
+      assert.equal(discovery.response.status, 200);
+      const result = discovery.body.result.structuredContent;
+      const guides = name === "get_article_format" ? result.editorialGuides : result.skills;
+      assert.ok(guides.some((guide: { id: string }) => guide.id === "seo-ai-search"));
       assert.equal(reads, 1);
       assert.equal(catalogs, 0);
     }
+    reads = 0; catalogs = 0;
+    const seo = await rpc("tools/call", { name: "audit_entry_seo", arguments: { entry: {
+      kind: "article", title: "Private proposed SEO fixture", description: "Private proposed SEO fixture", author: "Fixture", category: "เทคนิค",
+    } } });
+    assert.equal(seo.body.result.isError, undefined);
+    assert.equal(seo.body.result.structuredContent.report.scope, "submitted-content-only");
+    assert.deepEqual(seo.body.result.structuredContent.report.issues.map((issue: { code: string }) => issue.code), ["redundant-description", "missing-body", "missing-source"]);
+    assert.equal(reads, 1, "Preflight authenticates a read-only agent without loading the catalog");
+    assert.equal(catalogs, 0);
+    const invalidSeo = await rpc("tools/call", { name: "audit_entry_seo", arguments: { entry: { kind: "article" } } });
+    assert.equal(invalidSeo.body.result.isError, true, "Preflight must validate the same entry schema as saves");
+    assert.equal(catalogs, 0);
     const rejectedToken = "gs_" + "x".repeat(43);
     assert.equal((await rpc("tools/list", {}, rejectedToken)).response.status, 401);
     assert.equal(catalogs, 0, "A rejected well-formed token must not load catalog content");

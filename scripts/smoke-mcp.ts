@@ -25,6 +25,15 @@ async function rpc(token: string, method: string, params: unknown = {}, protocol
   return value.result;
 }
 const call = (token: string, name: string, args: unknown = {}) => rpc(token, "tools/call", { name, arguments: args });
+async function waitForPublicPage(path: string, matches: (response: Response, html: string) => boolean) {
+  // The public catalog revalidates every 30 seconds; a mutation is not immediate cache visibility.
+  for (let attempt = 0; attempt < 35; attempt++) {
+    const response = await fetch(`${origin}${path}`), html = await response.text();
+    if (matches(response, html)) return { response, html };
+    await new Promise(resolve => setTimeout(resolve, 1000));
+  }
+  throw new Error(`Public catalog did not reflect the expected state within 35 seconds: ${path}`);
+}
 const agentIds: string[] = [];
 const entryIds: string[] = [];
 try {
@@ -50,15 +59,16 @@ try {
   assert.equal(iconMetadata.width, 512);
   assert.equal(iconMetadata.height, 512);
   const tools = (await rpc(token, "tools/list")).tools;
-  assert.equal(tools.length, 21);
+  assert.ok(tools.some((tool: { name: string }) => tool.name === "audit_entry_seo"));
   for (const name of ["list_collections", "get_collection_posts"]) assert.ok(tools.some((tool: { name: string }) => tool.name === name));
   assert.equal((await call(reader, "list_collections")).isError, true);
   assert.ok(Array.isArray((await call(token, "list_collections")).structuredContent.jobs));
   for (const method of ["GET", "POST"]) assert.equal((await fetch(origin + "/api/collections", { method })).status, 404);
   assert.equal((await call(token, "get_site_state")).isError, true);
   const site = (await call(manager, "get_site_state")).structuredContent;
-  const siteEntry = { kind: "tool", title: "MCP site verification", description: "Temporary tool for site management integration testing.", author: "Smoke test", category: "สไปรต์และภาพ 2D", url: "https://example.com/mcp-site-test", sourceUrl: "https://example.com/mcp-site-test" };
+  const siteEntry = { kind: "article", title: "MCP site verification", description: "Temporary article for site management integration testing.", author: "Smoke test", category: "เทคนิค", url: "https://example.com/mcp-site-test", sourceUrl: "https://example.com/mcp-site-test" };
   const siteId = `mcp-site-${crypto.randomUUID()}`;
+  assert.equal((await call(manager, "save_site_entry", { revision: site.revision, id: siteId, entry: { ...siteEntry, kind: "tool" }, status: "published" })).isError, true, "Tools still require QA before agent publication");
   const siteCreated = await call(manager, "save_site_entry", { revision: site.revision, id: siteId, entry: siteEntry, status: "published" });
   assert.equal(siteCreated.isError, undefined, JSON.stringify(siteCreated.content));
   entryIds.push(siteId);
@@ -88,7 +98,7 @@ try {
   assert.equal(downloaded.status,200); assert.equal(downloaded.headers.get("content-type"),"image/webp");
   const articleFormat = (await call(reader, "get_article_format")).structuredContent;
   assert.ok(articleFormat.example);
-  assert.deepEqual(articleFormat.editorialGuides.map((skill: { id: string }) => skill.id), ["image-research", "thai-editorial", "draft-workflow"]);
+  assert.deepEqual(articleFormat.editorialGuides.map((skill: { id: string }) => skill.id), ["image-research", "thai-editorial", "seo-ai-search", "draft-workflow"]);
   for (const guide of articleFormat.editorialGuides) {
     const canonical = (await call(reader, "get_editorial_skills", { skillId: guide.id })).structuredContent;
     assert.deepEqual(guide, canonical.skill, "Article format must reuse the canonical playbook");
@@ -97,7 +107,7 @@ try {
   }
   const skills = (await call(reader, "get_editorial_skills")).structuredContent;
   assert.equal(skills.permissions.canWriteDrafts, false);
-  assert.equal(skills.skills.length, 8);
+  assert.equal(skills.skills.length, 9);
   assert.ok((await call(token, "get_editorial_skills", { skillId: "global-news" })).structuredContent.skill.instructions.length);
   assert.equal((await call(token, "get_editorial_skills", { skillId: "missing" })).isError, true);
   const resources = await rpc(reader, "resources/list");
@@ -112,6 +122,10 @@ try {
   assert.deepEqual((await call(token, "get_entry", { id: gameDraft.structuredContent.entry.id })).structuredContent.entry.tags, ["CBT", "RPG", "PC"]);
   const content={type:"doc",content:[{type:"heading",attrs:{level:2},content:[{type:"text",text:"Illustrated MCP article"}]},{type:"paragraph",content:[{type:"text",text:"Article roundtrip test."}]},{type:"image",attrs:{src:media.url,alt:"MCP illustration",title:"Image credit"}}]};
   const entry = { kind:"article",title:"MCP illustrated verification",description:"Private temporary article for integration testing.",author:"Smoke test",category:"เทคนิค",url:"",sourceUrl:"https://example.com/source",image:media.url,imageAlt:"MCP cover",content };
+  const preflight = await call(reader, "audit_entry_seo", { entry });
+  assert.equal(preflight.isError, undefined);
+  assert.equal(preflight.structuredContent.report.scope, "submitted-content-only");
+  assert.deepEqual(preflight.structuredContent.report.issues, []);
 
   const requestId = crypto.randomUUID();
   const context = { provider: "Apify", runId: "local-fixture", reason: "Local integration fixture, no external API called." };
@@ -149,11 +163,11 @@ try {
   await manage({ action: "review", id: draft.id, expectedUpdatedAt: again.updatedAt, decision: "publish", note: "Private review note" });
   assert.equal((await (await fetch(`${origin}/api/notifications`,{headers})).json()).items.some((item:{id:string})=>item.id===draft.id),false);
   assert.equal((await call(reader, "get_entry", { id: draft.id })).structuredContent.review, null);
-  const publicHtml=await (await fetch(`${origin}/item/${draft.id}`)).text();
+  const { html: publicHtml } = await waitForPublicPage(`/item/${draft.id}`, (response, html) => response.status === 200 && html.includes("MCP illustration"));
   assert.equal(publicHtml.includes("Private review note"),false);
-  assert.ok(publicHtml.includes("MCP illustration")); assert.ok(publicHtml.includes("Image credit")); assert.ok(publicHtml.includes("MCP cover"));
+  assert.ok(publicHtml.includes("MCP illustration")); assert.ok(publicHtml.includes("Image credit")); assert.doesNotMatch(publicHtml, /<img\b[^>]*alt="MCP cover"/, "The first article image replaces the separate legacy cover");
   await manage({ action: "entry", entry: { ...again, status: "archived" } });
-  assert.equal((await fetch(`${origin}/item/${draft.id}`)).status, 404);
+  assert.equal((await waitForPublicPage(`/item/${draft.id}`, response => response.status === 404)).response.status, 404);
   const forbidden = await fetch(`${origin}/api/mcp`, { method: "POST", headers: { ...json, Authorization: `Bearer ${token}`, Origin: "https://foreign.test" }, body: "{}" });
   assert.equal(forbidden.status, 400);
   await manage({ action: "revoke_agent", id: agentIds[0] });

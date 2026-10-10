@@ -17,7 +17,7 @@ id). Clients supporting MCP resources can read the whole handbook at
 
 The canonical instructions live in `src/lib/editorial-skills.ts`; the MCP tool,
 resource and Console skill panel all use that same source. `get_article_format`
-also returns the canonical image, Thai-writing and draft-workflow guides so
+also returns the canonical image, Thai-writing, SEO/AI-search and draft-workflow guides so
 illustrated-entry clients receive the same rules without maintaining copies.
 
 | Skill | Purpose |
@@ -28,6 +28,7 @@ illustrated-entry clients receive the same rules without maintaining copies.
 | `audience-signals` | Comparable player statistics versus interest proxies |
 | `image-research` | Additional images, permissions, captions and credits |
 | `thai-editorial` | Clear, specific Thai writing without invented experience |
+| `seo-ai-search` | Search intent, evidence-led articles, titles/descriptions, stable URLs, image naming/alt and SEO preflight |
 | `draft-workflow` | Deduplication, provenance, version checks and review |
 
 These are playbooks for the connected agent. This server does not provide live
@@ -35,6 +36,33 @@ web search, translation, image generation or gameplay automation. Agents need
 their own tools for those operations. Collection tools read existing jobs;
 they do not initiate paid scraping. Permissions remain enforced by the existing
 server rules.
+
+## SEO and AI-search preflight
+
+Read `get_editorial_skills({ skillId: "seo-ai-search" })`, then call
+`audit_entry_seo({ entry: <exact proposed EntryInput> })` before saving.
+This read-only tool uses the same input validation as drafts, accepts read-only
+agents, and does not load the catalog or fetch URLs. It reports observable
+content issues and manual checks, not a ranking score, indexing confirmation,
+fact/rights verification or a `record_entry_qa` receipt. It does not add a
+publication gate or change human Console/news permissions.
+
+The guide covers intent, sourced Thai articles, titles/descriptions, internal
+links and image naming/alt. Respect the current storage contracts:
+
+- `create_draft` generates an `agent-<hash>` id for retry safety. It does not
+  accept a custom slug. Managers may choose a descriptive ASCII slug for a new
+  `save_site_entry`, after checking collisions. Keep existing ids/URLs stable.
+- `upload_image` returns `/api/media/<sha256>.webp` for deduplication. Use that
+  exact URL; descriptive original filenames do not rename uploaded assets.
+- Article titles already provide H1 and metadata. Use H2/H3 in rich content.
+  The first article image supplies the cover; audit it rather than an unused
+  legacy cover. Current article JSON does not support tables or raw JSON-LD.
+
+Validate current platform advice against the official sources linked in the
+guide. `llms.txt` is not a Google visibility requirement. Search and training
+crawler policies are independent. Measure changes with available Search Console
+reports and comparable AI-answer samples; a clean preflight does not prove impact.
 
 Release stages use the shared tag registry and remain separate from the entry's
 editorial `status` (`draft`, `pending`, `published`, `archived`). Fetch
@@ -49,7 +77,7 @@ production without explicit authorization.
 
 ## Collection-to-review workflow
 
-Use the existing seven playbooks together, not a second independent policy:
+Use the shared playbooks together, not a second independent policy:
 
 - `global-news` follows every collection page, public comments and shared-post
   links, preserving original post URLs. Deduplicate by canonical game URL and
